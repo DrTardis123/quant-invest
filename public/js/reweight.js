@@ -1,0 +1,32 @@
+// 클라이언트 사이드 재가중치 계산
+// src/scoring/index.js 의 recomputeWithWeights 와 동일 로직
+
+window.recomputeWithWeights = function (rows, weights) {
+  if (!Array.isArray(rows)) return [];
+  const W = weights || window.QUANT_STRATEGIES.balanced.weights;
+  const out = rows.map((r) => {
+    const total = (
+      (Number(r.value_score) || 0) * W.value +
+      (Number(r.momentum_score) || 0) * W.momentum +
+      (Number(r.quality_score) || 0) * W.quality +
+      (Number(r.volatility_score) || 0) * W.volatility +
+      (Number(r.growth_score) || 0) * W.growth
+    ) / 100;
+    return { ...r, recomputed_total: Math.round(total * 100) / 100 };
+  });
+  out.sort((a, b) => b.recomputed_total - a.recomputed_total);
+  out.forEach((r, i) => (r.recomputed_rank = i + 1));
+  return out;
+};
+
+// 점수 → 색상
+window.scoreColor = function (v) {
+  if (v === null || v === undefined || !Number.isFinite(v)) return '#adb5bd';
+  if (v >= 80) return '#198754';
+  if (v >= 70) return '#20c997';
+  if (v >= 60) return '#0dcaf0';
+  if (v >= 50) return '#0d6efd';
+  if (v >= 40) return '#fd7e14';
+  if (v >= 30) return '#dc3545';
+  return '#842029';
+};

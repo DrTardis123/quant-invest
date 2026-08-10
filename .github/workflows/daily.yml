@@ -1,0 +1,79 @@
+name: Daily Data Update
+
+on:
+  # 평일 17:00 KST = 08:00 UTC
+  schedule:
+    - cron: '0 8 * * 1-5'
+  # 수동 트리거 (GitHub UI 의 Actions 탭에서 "Run workflow")
+  workflow_dispatch:
+    inputs:
+      full:
+        description: '전체 백필 (느림, 초기화)'
+        required: false
+        type: choice
+        options: ['no', 'yes']
+        default: 'no'
+
+concurrency:
+  group: quant-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    permissions:
+      contents: write   # git push 위해
+
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 세팅
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm ci --no-audit --no-fund
+
+      - name: 데이터 갱신
+        env:
+          DATA_SOURCE: naver
+          # KIS API 키 (있으면 활성화, 없어도 동작)
+          KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
+          KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
+          KIS_ACCOUNT_NO: ${{ secrets.KIS_ACCOUNT_NO }}
+          KIS_IS_PAPER: 'true'
+          FULL: ${{ github.event.inputs.full || 'no' }}
+        run: |
+          if [ "$FULL" = "yes" ]; then
+            echo "FULL 모드 (전체 백필)"
+            export FULL=1
+          else
+            echo "증분 모드"
+          fi
+          npm run update
+
+      - name: 변경 확인
+        id: check
+        run: |
+          if git diff --quiet public/data/ 2>/dev/null; then
+            echo "변경 없음"
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "변경 있음"
+            echo "changed=true" >> $GITHUB_OUTPUT
+            git diff --stat public/data/ | head -20
+          fi
+
+      - name: 커밋 & 푸시
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add public/data/
+          git commit -m "data: $(date -u +%Y-%m-%d) 자동 갱신"
+          git push

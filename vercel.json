@@ -1,0 +1,37 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "public": true,
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/api/top",         "destination": "/data/top.json" },
+    { "source": "/api/scores",      "destination": "/data/all.json" },
+    { "source": "/api/sectors",     "destination": "/data/sectors.json" },
+    { "source": "/api/heatmap",     "destination": "/data/heatmap.json" },
+    { "source": "/api/correlation", "destination": "/data/correlation.json" },
+    { "source": "/api/log",         "destination": "/data/log.json" },
+    { "source": "/api/strategies",  "destination": "/data/strategies-static.json" },
+    { "source": "/api/indices",     "destination": "/data/indices.json" },
+    { "source": "/api/stock/:code", "destination": "/data/stock/:code.json" }
+  ],
+  "headers": [
+    {
+      "source": "/data/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=300, s-maxage=3600" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
+    }
+  ],
+  "functions": {
+    "api/*.js": {
+      "maxDuration": 30
+    }
+  }
+}

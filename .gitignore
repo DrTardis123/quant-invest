@@ -1,0 +1,18 @@
+node_modules/
+.env
+.env.local
+data/raw/
+data/quant.db
+data/quant.db.wal
+data/*.db
+data/*.duckdb
+logs/*.log
+logs/server.log
+.DS_Store
+*.swp
+*.bak
+*.tmp
+
+# public/data/ 안의 JSON 은 전부 커밋 (대시보드가 필요로 함)
+# 단 repo 가 너무 커지면 git lfs 도입 고려:
+#   git lfs track "public/data/stock/*.json"
