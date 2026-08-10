@@ -37,7 +37,9 @@ jobs:
           cache: 'npm'
 
       - name: 의존성 설치
-        run: npm ci --no-audit --no-fund
+        # npm install 사용 (lock 파일이 package.json과 달라도 동작)
+        # 캐시 활용으로 속도는 비슷
+        run: npm install --no-audit --no-fund --prefer-offline
 
       - name: 사전 스모크 테스트
         run: |
