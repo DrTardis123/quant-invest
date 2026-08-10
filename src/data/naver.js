@@ -11,18 +11,67 @@ const http = axios.create({
     'User-Agent': UA,
     'Referer': 'https://m.stock.naver.com/',
     'Accept': 'application/json,text/plain,*/*',
+    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
   },
+  // 연결 재사용 (TCP handshake 절약)
+  httpAgent: new (require('http').Agent)({ keepAlive: true }),
+  httpsAgent: new (require('https').Agent)({ keepAlive: true }),
 });
 
 const BASE = 'https://m.stock.naver.com/api/stock';
 
-// 시장별 종목 목록 (페이지네이션)
+// 재시도 대상 상태코드
+const RETRYABLE = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+// 지수 백오프 + 지터
+function backoff(attempt) {
+  const base = 500 * Math.pow(2, attempt); // 500, 1000, 2000, 4000...
+  const jitter = Math.random() * 300;
+  return Math.min(base + jitter, 15000);
+}
+
+async function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+// 429/5xx/네트워크 오류 시 자동 재시도
+async function get(url, { maxRetries = 3, minDelayMs = 200 } = {}) {
+  let lastErr;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const t0 = Date.now();
+    try {
+      const { data } = await http.get(url);
+      return data;
+    } catch (e) {
+      lastErr = e;
+      const status = e.response?.status;
+      const isRetryable = !status || RETRYABLE.has(status) || e.code === 'ECONNRESET' || e.code === 'ETIMEDOUT';
+
+      if (!isRetryable || attempt === maxRetries) {
+        throw e;
+      }
+
+      const wait = Math.max(backoff(attempt), minDelayMs);
+      console.warn(`[naver] ${status || e.code} ${url.split('?')[0].slice(-40)} → ${attempt + 1}/${maxRetries} retry in ${wait.toFixed(0)}ms`);
+      await sleep(wait);
+    }
+  }
+  throw lastErr;
+}
+
+// 시장별 종목 목록 (페이지네이션, 재시도 내장)
 async function listStocks(market) {
   const out = [];
   const pageSize = 100;
   for (let page = 1; ; page++) {
     const url = `${BASE}/marketList/${encodeURIComponent(market)}?page=${page}&pageSize=${pageSize}`;
-    const { data } = await http.get(url);
+    let data;
+    try {
+      data = await get(url, { maxRetries: 4 });
+    } catch (e) {
+      console.error(`[naver] listStocks(${market}) p${page} 실패:`, e.message);
+      break;
+    }
     if (!Array.isArray(data) || data.length === 0) break;
     for (const it of data) {
       out.push({
@@ -35,6 +84,7 @@ async function listStocks(market) {
       });
     }
     if (data.length < pageSize) break;
+    await sleep(200); // 페이지 간 지연
   }
   return out;
 }
@@ -42,16 +92,21 @@ async function listStocks(market) {
 // 종목 기본 정보
 async function getBasic(code) {
   const url = `${BASE}/${encodeURIComponent(code)}/basic`;
-  const { data } = await http.get(url);
-  return data || null;
+  return await get(url);
 }
 
-// 일봉 (페이지네이션, pageSize 최대 60)
+// 일봉 (페이지네이션, pageSize 최대 60, 재시도 내장)
 async function getDailyPrices(code, { fromDate = null, toDate = null, maxPages = 30 } = {}) {
   const out = [];
   for (let page = 1; page <= maxPages; page++) {
     const url = `${BASE}/${encodeURIComponent(code)}/price?pageSize=60&page=${page}`;
-    const { data } = await http.get(url);
+    let data;
+    try {
+      data = await get(url, { maxRetries: 4 });
+    } catch (e) {
+      console.error(`[naver] getDailyPrices(${code}) p${page} 실패:`, e.message);
+      break;
+    }
     if (!Array.isArray(data) || data.length === 0) break;
 
     let stop = false;
@@ -74,6 +129,7 @@ async function getDailyPrices(code, { fromDate = null, toDate = null, maxPages =
     }
     if (stop) break;
     if (data.length < 60) break;
+    await sleep(100); // 페이지 간 짧은 지연
   }
   return out;
 }
@@ -81,8 +137,13 @@ async function getDailyPrices(code, { fromDate = null, toDate = null, maxPages =
 // 재무 요약 (PER, PBR, EPS, BPS, 배당 등)
 async function getFinance(code) {
   const url = `${BASE}/${encodeURIComponent(code)}/finance`;
-  const { data } = await http.get(url);
-  // 응답 구조: { per, eps, pbr, bps, dividendYieldRatio, ... }
+  let data;
+  try {
+    data = await get(url, { maxRetries: 3 });
+  } catch (e) {
+    console.error(`[naver] getFinance(${code}) 실패:`, e.message);
+    return null;
+  }
   if (!data || typeof data !== 'object') return null;
   return {
     per: toNum(data.per),
