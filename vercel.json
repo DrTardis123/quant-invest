@@ -1,6 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
+  "build": {
+    "env": {
+      "NPM_CONFIG_PRODUCTION": "true"
+    }
+  },
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
@@ -34,4 +39,5 @@
     }
   }
 }
+
 
