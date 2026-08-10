@@ -17,6 +17,8 @@
     { "source": "/api/log",         "destination": "/data/log.json" },
     { "source": "/api/strategies",  "destination": "/data/strategies-static.json" },
     { "source": "/api/indices",     "destination": "/data/indices.json" },
+    { "source": "/api/optimizer",   "destination": "/data/optimizer.json" },
+    { "source": "/api/backtest",    "destination": "/data/backtest.json" },
     { "source": "/api/stock/:code", "destination": "/data/stock/:code.json" }
   ],
   "headers": [

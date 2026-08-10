@@ -1,9 +1,9 @@
 'use strict';
 
 // 퀀트 투자 대시보드
-// - 로컬: /api/* → Express + DuckDB (서버 사이드 가중치)
-// - 호스팅(Vercel): /api/* → /data/*.json 리라이트 (클라이언트 가중치)
-//   - 응답은 JSON 직접 형태 (배열 or 객체). apiGet() 으로 정규화.
+// - 호스팅(Vercel): /api/* → /data/*.json 리라이트 (정적 데이터)
+// - 로컬: /api/* → Express + DuckDB
+// 양쪽 모두 apiGet() 으로 정규화.
 
 function app() {
   return {
@@ -24,9 +24,9 @@ function app() {
     strategies: [],
     currentWeights: { value: 35, momentum: 20, quality: 20, volatility: 15, growth: 10 },
 
-    indices: [],            // KOSPI / KOSDAQ / KOSPI200
-    all: [],                // 전체 (가중치 적용 전 원본)
-    top: [],                // 상위 (전략 적용 후)
+    indices: [],
+    all: [],
+    top: [],
     logs: [],
     meta: { markets: [], sectors: [] },
     filter: { q: '', market: '', sector: '', grade: '' },
@@ -36,7 +36,10 @@ function app() {
     heatmapLimit: 80,
     sectorData: { markets: [], sectors: [] },
     correlation: { keys: [], matrix: {} },
-    bt: { topN: 20, months: 12, result: null },
+
+    // 옵티마이저 + 백테스트
+    optimizer: { ok: false, error: '로딩 중...' },
+    backtest: { ok: false, error: '로딩 중...' },
 
     _charts: {},
     _modal: null,
@@ -54,10 +57,11 @@ function app() {
         this.loadIndices(),
         this.loadAll(),
         this.loadLogs(),
+        this.loadOptimizer(),
+        this.loadBacktest(),
       ]);
       this._recomputeAndSet();
       this.$nextTick(() => this._drawAllSparklines());
-
       this._refreshTimer = setInterval(() => this._silentRefresh(), 120_000);
     },
 
@@ -68,7 +72,8 @@ function app() {
         else if (t === 'sector') this.loadSectors();
         else if (t === 'chart') this.drawCharts();
         else if (t === 'corr') this.loadCorrelation();
-        else if (t === 'backtest') this.runBacktest();
+        else if (t === 'optimizer') this.loadOptimizer();
+        else if (t === 'backtest') this.loadBacktest();
         else if (t === 'top') this._drawTopCharts();
       });
     },
@@ -86,18 +91,14 @@ function app() {
     async _silentRefresh() {
       try {
         await Promise.all([
-          this.loadHealth(),
-          this.loadMeta(),
-          this.loadIndices(),
-          this.loadAll(),
-          this.loadLogs(),
+          this.loadHealth(), this.loadMeta(), this.loadIndices(),
+          this.loadAll(), this.loadLogs(),
         ]);
         this._recomputeAndSet();
         this.$nextTick(() => this._drawAllSparklines());
       } catch (e) { /* ignore */ }
     },
 
-    // ----- 가중치 재계산 (클라이언트) -----
     _recomputeAndSet() {
       if (!this.all || this.all.length === 0) return;
       const reranked = window.recomputeWithWeights(this.all, this.currentWeights);
@@ -107,7 +108,6 @@ function app() {
         rank: r.recomputed_rank,
         grade: window.QUANT_GRADE(r.recomputed_total),
       }));
-      // 전체도 재계산 (필터링 위해)
       this.all = reranked.map((r) => ({
         ...r,
         total_score: r.recomputed_total,
@@ -117,7 +117,7 @@ function app() {
       this.$nextTick(() => this._drawTopCharts());
     },
 
-    // ----- API 로드 (래퍼로 정규화) -----
+    // ----- API 로드 -----
     async loadHealth() {
       try {
         const r = await window.apiGet('/api/health');
@@ -135,10 +135,6 @@ function app() {
         const r = await window.apiGet('/api/meta');
         if (!r || r.__error) return;
         this.meta = { markets: r.markets || [], sectors: r.sectors || [] };
-        if (r.stats) {
-          this.state.stockCount = r.stats.stocks || this.state.stockCount;
-          this.state.lastScoreDate = r.stats.last_score_date || this.state.lastScoreDate;
-        }
       } catch (e) { /* ignore */ }
     },
 
@@ -147,9 +143,7 @@ function app() {
         const r = await window.apiGet('/api/indices');
         this.indices = Array.isArray(r) ? r : (r.rows || []);
         this.$nextTick(() => this._drawAllSparklines());
-      } catch (e) {
-        this.indices = [];
-      }
+      } catch (e) { this.indices = []; }
     },
 
     async loadAll() {
@@ -157,14 +151,11 @@ function app() {
         const r = await window.apiGet('/api/scores?limit=2500');
         if (r && r.__error) return;
         const rows = Array.isArray(r) ? r : (r.rows || []);
-        // 점수 보존 (재가중치 계산용)
         this.all = rows.map((row) => ({
           ...row,
           grade: row.grade || window.QUANT_GRADE(row.total_score),
         }));
-      } catch (e) {
-        this.all = [];
-      }
+      } catch (e) { this.all = []; }
     },
 
     async loadLogs() {
@@ -186,11 +177,7 @@ function app() {
         this.heatmap = rows.map((c) => {
           const w = Math.sqrt(c.market_cap || 1);
           const norm = (w - min) / (max - min + 1e-9);
-          return {
-            ...c,
-            weight: 0.4 + norm * 2.0,
-            color: this.scoreColor(c.total_score),
-          };
+          return { ...c, weight: 0.4 + norm * 2.0, color: this.scoreColor(c.total_score) };
         });
       } catch (e) { this.heatmap = []; }
     },
@@ -211,12 +198,42 @@ function app() {
       } catch (e) { /* ignore */ }
     },
 
-    async runBacktest() {
+    async loadOptimizer() {
       try {
-        const r = await window.apiGet(`/api/backtest?topN=${this.bt.topN}&months=${this.bt.months}`);
-        this.bt.result = r || {};
-        if (r.ok) this.$nextTick(() => this._drawNavChart());
-      } catch (e) { /* ignore */ }
+        const r = await window.apiGet('/api/optimizer');
+        this.optimizer = r || { ok: false, error: '응답 없음' };
+      } catch (e) {
+        this.optimizer = { ok: false, error: e.message };
+      }
+    },
+
+    async loadBacktest() {
+      try {
+        const r = await window.apiGet('/api/backtest');
+        this.backtest = r || { ok: false, error: '응답 없음' };
+        if (r && r.ok) this.$nextTick(() => this._drawBacktestCharts());
+      } catch (e) {
+        this.backtest = { ok: false, error: e.message };
+      }
+    },
+
+    applyOptimizerWeights() {
+      if (!this.optimizer.best) return;
+      this.applyWeightsFromOptimizer(this.optimizer.best.weights);
+    },
+
+    applyWeightsFromOptimizer(w) {
+      if (!w) return;
+      this.currentWeights = {
+        value: Math.round(w.value || 0),
+        momentum: Math.round(w.momentum || 0),
+        quality: Math.round(w.quality || 0),
+        volatility: Math.round(w.volatility || 0),
+        growth: Math.round(w.growth || 0),
+      };
+      this.strategyKey = 'custom';
+      this._recomputeAndSet();
+      this.tab = 'top';
     },
 
     // ----- 스파크라인 -----
@@ -236,15 +253,12 @@ function app() {
       canvas.width = w * dpr; canvas.height = h * dpr;
       ctx2d.scale(dpr, dpr);
       ctx2d.clearRect(0, 0, w, h);
-
-      // 데이터 정규화
       const values = points.map((p) => p.close).filter((v) => v != null);
       if (values.length < 2) return;
       const min = Math.min(...values), max = Math.max(...values);
       const range = max - min || 1;
       const stepX = w / (values.length - 1);
-
-      const color = up ? '#dc3545' : '#0d6efd';  // 한국식: 빨강=상승, 파랑=하락
+      const color = up ? '#dc3545' : '#0d6efd';
       ctx2d.beginPath();
       ctx2d.strokeStyle = color;
       ctx2d.lineWidth = 1.5;
@@ -258,62 +272,15 @@ function app() {
     },
 
     // ----- 유틸 -----
-    fmt(v) {
-      if (v === null || v === undefined) return '—';
-      if (typeof v === 'number') return v.toFixed(2);
-      return v;
-    },
-    formatPct(v) {
-      if (v === null || v === undefined || !Number.isFinite(v)) return '—';
-      const sign = v >= 0 ? '+' : '';
-      return sign + (v * 100).toFixed(2) + '%';
-    },
-    formatIdx(v) {
-      if (v === null || v === undefined) return '—';
-      return Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    },
-    formatCap(v) {
-      if (!v) return '—';
-      const eok = v / 1e8;
-      if (eok >= 10000) return (eok / 10000).toFixed(1) + '조';
-      return eok.toFixed(0) + '억';
-    },
-    weightLabel(k) {
-      return ({ value: '가치', momentum: '모멘텀', quality: '퀄리티', volatility: '저변동', growth: '성장' })[k] || k;
-    },
-    factorLabel(k) {
-      return ({
-        value_score: '가치', momentum_score: '모멘텀', quality_score: '퀄리티',
-        volatility_score: '저변동', growth_score: '성장', total_score: '총점',
-        value: '가치', momentum: '모멘텀', quality: '퀄리티', volatility: '저변동', growth: '성장',
-      })[k] || k;
-    },
-    scoreClass(v) {
-      if (v === null || v === undefined) return '';
-      if (v >= 60) return 'text-success';
-      if (v <= 30) return 'text-danger';
-      return 'text-warning';
-    },
-    scoreColor(v) {
-      if (v === null || v === undefined || !Number.isFinite(v)) return '#adb5bd';
-      if (v >= 80) return '#198754';
-      if (v >= 70) return '#20c997';
-      if (v >= 60) return '#0dcaf0';
-      if (v >= 50) return '#0d6efd';
-      if (v >= 40) return '#fd7e14';
-      if (v >= 30) return '#dc3545';
-      return '#842029';
-    },
-    corrColor(v) {
-      const x = Math.max(-1, Math.min(1, v));
-      if (x >= 0) {
-        const r = 255, g = Math.round(255 - x * 200), b = Math.round(255 - x * 220);
-        return `rgb(${r},${g},${b})`;
-      } else {
-        const r = Math.round(255 + x * 200), g = Math.round(255 + x * 200), b = 255;
-        return `rgb(${r},${g},${b})`;
-      }
-    },
+    fmt(v) { if (v === null || v === undefined) return '—'; if (typeof v === 'number') return v.toFixed(2); return v; },
+    formatPct(v) { if (v === null || v === undefined || !Number.isFinite(v)) return '—'; const sign = v >= 0 ? '+' : ''; return sign + (v * 100).toFixed(2) + '%'; },
+    formatIdx(v) { if (v === null || v === undefined) return '—'; return Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
+    formatCap(v) { if (!v) return '—'; const eok = v / 1e8; if (eok >= 10000) return (eok / 10000).toFixed(1) + '조'; return eok.toFixed(0) + '억'; },
+    weightLabel(k) { return ({ value: '가치', momentum: '모멘텀', quality: '퀄리티', volatility: '저변동', growth: '성장' })[k] || k; },
+    factorLabel(k) { return ({ value_score: '가치', momentum_score: '모멘텀', quality_score: '퀄리티', volatility_score: '저변동', growth_score: '성장', total_score: '총점', value: '가치', momentum: '모멘텀', quality: '퀄리티', volatility: '저변동', growth: '성장' })[k] || k; },
+    scoreClass(v) { if (v === null || v === undefined) return ''; if (v >= 60) return 'text-success'; if (v <= 30) return 'text-danger'; return 'text-warning'; },
+    scoreColor(v) { if (v === null || v === undefined || !Number.isFinite(v)) return '#adb5bd'; if (v >= 80) return '#198754'; if (v >= 70) return '#20c997'; if (v >= 60) return '#0dcaf0'; if (v >= 50) return '#0d6efd'; if (v >= 40) return '#fd7e14'; if (v >= 30) return '#dc3545'; return '#842029'; },
+    corrColor(v) { const x = Math.max(-1, Math.min(1, v)); if (x >= 0) { const r = 255, g = Math.round(255 - x * 200), b = Math.round(255 - x * 220); return `rgb(${r},${g},${b})`; } else { const r = Math.round(255 + x * 200), g = Math.round(255 + x * 200), b = 255; return `rgb(${r},${g},${b})`; } },
 
     get filteredAll() {
       const q = this.filter.q.toLowerCase().trim();
@@ -326,51 +293,28 @@ function app() {
       });
     },
 
-    // ----- 차트 -----
-    _drawTopCharts() {
-      this._drawGradeChart();
-      this._drawFactorAvg();
-    },
+    // ----- TOP 차트 -----
+    _drawTopCharts() { this._drawGradeChart(); this._drawFactorAvg(); },
     _drawGradeChart() {
       const ctx = document.getElementById('gradeChart');
       if (!ctx) return;
       const counts = {};
-      for (const r of this.top) {
-        const g = r.grade?.letter || '?';
-        counts[g] = (counts[g] || 0) + 1;
-      }
+      for (const r of this.top) { const g = r.grade?.letter || '?'; counts[g] = (counts[g] || 0) + 1; }
       const order = ['A+', 'A', 'B+', 'B', 'C', 'D', 'F'];
       const data = order.map((g) => counts[g] || 0);
       const colors = { 'A+': '#198754', 'A': '#198754', 'B+': '#0d6efd', 'B': '#6c757d', 'C': '#fd7e14', 'D': '#dc3545', 'F': '#842029' };
       if (this._charts.grade) this._charts.grade.destroy();
-      this._charts.grade = new Chart(ctx, {
-        type: 'bar',
-        data: { labels: order, datasets: [{ data, backgroundColor: order.map((g) => colors[g]) }] },
-        options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { stepSize: 1 } } } },
-      });
+      this._charts.grade = new Chart(ctx, { type: 'bar', data: { labels: order, datasets: [{ data, backgroundColor: order.map((g) => colors[g]) }] }, options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { stepSize: 1 } } } } });
     },
     _drawFactorAvg() {
       const ctx = document.getElementById('factorAvgChart');
       if (!ctx || !this.top.length) return;
       const avg = (k) => this.top.reduce((a, b) => a + (b[k] || 0), 0) / this.top.length;
       if (this._charts.factorAvg) this._charts.factorAvg.destroy();
-      this._charts.factorAvg = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['가치', '모멘텀', '퀄리티', '저변동', '성장'],
-          datasets: [{
-            data: [avg('value_score'), avg('momentum_score'), avg('quality_score'), avg('volatility_score'), avg('growth_score')],
-            backgroundColor: ['#0d6efd', '#198754', '#fd7e14', '#6f42c1', '#dc3545'],
-          }],
-        },
-        options: {
-          indexAxis: 'y',
-          plugins: { legend: { display: false } },
-          scales: { x: { min: 0, max: 100 } },
-        },
-      });
+      this._charts.factorAvg = new Chart(ctx, { type: 'bar', data: { labels: ['가치', '모멘텀', '퀄리티', '저변동', '성장'], datasets: [{ data: [avg('value_score'), avg('momentum_score'), avg('quality_score'), avg('volatility_score'), avg('growth_score')], backgroundColor: ['#0d6efd', '#198754', '#fd7e14', '#6f42c1', '#dc3545'] }] }, options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { min: 0, max: 100 } } } });
     },
 
+    // ----- 분포 -----
     async drawCharts() {
       await this.loadAll();
       this._recomputeAndSet();
@@ -384,18 +328,11 @@ function app() {
       const ctx = document.getElementById('distChart');
       if (!ctx) return;
       const bins = new Array(10).fill(0);
-      for (const s of scores) {
-        const i = Math.min(9, Math.max(0, Math.floor(s / 10)));
-        bins[i]++;
-      }
+      for (const s of scores) { const i = Math.min(9, Math.max(0, Math.floor(s / 10))); bins[i]++; }
       const labels = bins.map((_, i) => `${i*10}-${i*10+10}`);
       const colors = bins.map((_, i) => this.scoreColor(i * 10 + 5));
       if (this._charts.dist) this._charts.dist.destroy();
-      this._charts.dist = new Chart(ctx, {
-        type: 'bar',
-        data: { labels, datasets: [{ label: '종목 수', data: bins, backgroundColor: colors }] },
-        options: { plugins: { legend: { display: false } } },
-      });
+      this._charts.dist = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: '종목 수', data: bins, backgroundColor: colors }] }, options: { plugins: { legend: { display: false } } } });
     },
     _drawFactorStack() {
       const ctx = document.getElementById('factorChart');
@@ -409,24 +346,113 @@ function app() {
         { label: '성장', data: this.top.map((r) => r.growth_score), backgroundColor: '#dc3545' },
       ];
       if (this._charts.factor) this._charts.factor.destroy();
-      this._charts.factor = new Chart(ctx, {
-        type: 'bar',
-        data: { labels, datasets },
-        options: { indexAxis: 'y', plugins: { legend: { position: 'bottom' } }, scales: { x: { max: 100, stacked: true }, y: { stacked: true } } },
-      });
+      this._charts.factor = new Chart(ctx, { type: 'bar', data: { labels, datasets }, options: { indexAxis: 'y', plugins: { legend: { position: 'bottom' } }, scales: { x: { max: 100, stacked: true }, y: { stacked: true } } } });
     },
 
+    // ----- 백테스트 4개 차트 -----
+    _drawBacktestCharts() {
+      this._drawNavChart();
+      this._drawYearlyChart();
+      this._drawMonthHeatmap();
+      this._drawDrawdownChart();
+    },
     _drawNavChart() {
       const ctx = document.getElementById('navChart');
-      if (!ctx || !this.bt.result?.nav) return;
+      if (!ctx || !this.backtest.nav) return;
       if (this._charts.nav) this._charts.nav.destroy();
+      const labels = this.backtest.nav.map((n) => n.idx);
       this._charts.nav = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: this.bt.result.nav.map((n) => n.idx),
-          datasets: [{ label: 'NAV', data: this.bt.result.nav.map((n) => n.value), borderColor: '#0d6efd', tension: 0.1, pointRadius: 0, fill: true, backgroundColor: 'rgba(13,110,253,0.1)' }],
+          labels,
+          datasets: [
+            { label: '전략', data: this.backtest.nav.map((n) => n.value), borderColor: '#dc3545', tension: 0.1, pointRadius: 0, fill: false },
+            { label: 'KOSPI', data: this.backtest.kospiNav?.map((n) => n.value) || [], borderColor: '#6c757d', tension: 0.1, pointRadius: 0, fill: false, borderDash: [5, 5] },
+          ],
         },
-        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: false } } },
+        options: { plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: false, ticks: { callback: (v) => v.toFixed(2) } } } },
+      });
+    },
+    _drawYearlyChart() {
+      const ctx = document.getElementById('yearlyChart');
+      if (!ctx || !this.backtest.yearlyReturns) return;
+      if (this._charts.yearly) this._charts.yearly.destroy();
+      const labels = this.backtest.yearlyReturns.map((y) => y.year);
+      this._charts.yearly = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: '전략', data: this.backtest.yearlyReturns.map((y) => (y.strategy * 100).toFixed(2)), backgroundColor: this.backtest.yearlyReturns.map((y) => y.strategy >= 0 ? '#dc3545' : '#0d6efd') },
+            { label: 'KOSPI', data: this.backtest.yearlyReturns.map((y) => (y.kospi * 100).toFixed(2)), backgroundColor: this.backtest.yearlyReturns.map((y) => y.kospi >= 0 ? '#fd7e14' : '#6c757d') },
+          ],
+        },
+        options: {
+          plugins: { legend: { position: 'bottom' } },
+          scales: {
+            y: { ticks: { callback: (v) => v + '%' } },
+          },
+        },
+      });
+    },
+    _drawMonthHeatmap() {
+      const el = document.getElementById('monthHeatmap');
+      if (!el || !this.backtest.monthGrid) return;
+      const grid = this.backtest.monthGrid;
+      const years = Object.keys(grid).sort();
+      if (years.length === 0) { el.innerHTML = '<p class="text-muted">데이터 없음</p>'; return; }
+
+      let html = '<table class="month-heatmap-table"><thead><tr><th>년</th>';
+      for (let m = 1; m <= 12; m++) html += `<th>${m}월</th>`;
+      html += '<th>연간</th></tr></thead><tbody>';
+
+      for (const year of years) {
+        html += `<tr><th>${year}</th>`;
+        let yearSum = 0, yearCount = 0;
+        for (let m = 0; m < 12; m++) {
+          const v = grid[year][m];
+          if (v === null || v === undefined) {
+            html += '<td class="mcell empty">-</td>';
+          } else {
+            const pct = (v * 100).toFixed(1);
+            const color = this.scoreColor(50 + v * 100); // scale: v=-0.2 → 30, v=0 → 50, v=0.5 → 100
+            html += `<td class="mcell" style="background:${color};color:#fff" title="${(v*100).toFixed(2)}%">${pct > 0 ? '+' : ''}${pct}</td>`;
+            yearSum += v;
+            yearCount++;
+          }
+        }
+        const yearAvg = yearCount > 0 ? (yearSum / yearCount * 100) : 0;
+        html += `<td class="mcell year-total" :class="">${yearAvg > 0 ? '+' : ''}${yearAvg.toFixed(1)}%</td>`;
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+      el.innerHTML = html;
+    },
+    _drawDrawdownChart() {
+      const ctx = document.getElementById('drawdownChart');
+      if (!ctx || !this.backtest.drawdown) return;
+      if (this._charts.dd) this._charts.dd.destroy();
+      this._charts.dd = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: this.backtest.drawdown.map((d) => d.idx),
+          datasets: [{
+            label: '드로우다운',
+            data: this.backtest.drawdown.map((d) => d.value * 100),
+            borderColor: '#0d6efd',
+            backgroundColor: 'rgba(13,110,253,0.1)',
+            tension: 0.1,
+            pointRadius: 0,
+            fill: true,
+          }],
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { ticks: { callback: (v) => v.toFixed(0) + '%' }, max: 0 },
+            x: { display: false },
+          },
+        },
       });
     },
 
@@ -434,8 +460,7 @@ function app() {
     async openStock(code) {
       try {
         const r = await window.apiGet('/api/stock/' + encodeURIComponent(code));
-        if (r && r.__error) return;
-        if (!r || !r.stock) return;
+        if (!r || r.__error || !r.stock) return;
         this.stockDetail = r;
         this.detailTab = 'overview';
         this._modal.show();
@@ -482,28 +507,16 @@ function app() {
       const ctx = document.getElementById('priceChart');
       if (!ctx || !this.stockDetail?.prices) return;
       const sorted = [...this.stockDetail.prices].sort((a, b) => new Date(a.date) - new Date(b.date));
-      const labels = sorted.map((p) => p.date);
-      const data = sorted.map((p) => p.close);
       if (this._charts.price) this._charts.price.destroy();
-      this._charts.price = new Chart(ctx, {
-        type: 'line',
-        data: { labels, datasets: [{ label: '종가', data, borderColor: '#0d6efd', tension: 0.15, pointRadius: 0 }] },
-        options: { plugins: { legend: { display: false } }, scales: { x: { display: false } } },
-      });
+      this._charts.price = new Chart(ctx, { type: 'line', data: { labels: sorted.map((p) => p.date), datasets: [{ label: '종가', data: sorted.map((p) => p.close), borderColor: '#0d6efd', tension: 0.15, pointRadius: 0 }] }, options: { plugins: { legend: { display: false } }, scales: { x: { display: false } } } });
     },
 
     _drawVolumeChart() {
       const ctx = document.getElementById('volumeChart');
       if (!ctx || !this.stockDetail?.prices) return;
       const sorted = [...this.stockDetail.prices].sort((a, b) => new Date(a.date) - new Date(b.date));
-      const labels = sorted.map((p) => p.date);
-      const data = sorted.map((p) => p.volume);
       if (this._charts.vol) this._charts.vol.destroy();
-      this._charts.vol = new Chart(ctx, {
-        type: 'bar',
-        data: { labels, datasets: [{ label: '거래량', data, backgroundColor: '#6c757d' }] },
-        options: { plugins: { legend: { display: false } }, scales: { x: { display: false } } },
-      });
+      this._charts.vol = new Chart(ctx, { type: 'bar', data: { labels: sorted.map((p) => p.date), datasets: [{ label: '거래량', data: sorted.map((p) => p.volume), backgroundColor: '#6c757d' }] }, options: { plugins: { legend: { display: false } }, scales: { x: { display: false } } } });
     },
 
     _drawRadarChart() {
@@ -512,26 +525,9 @@ function app() {
       const s = this.stockDetail.score;
       const data = [s.value_score, s.momentum_score, s.quality_score, s.volatility_score, s.growth_score];
       if (this._charts.radar) this._charts.radar.destroy();
-      this._charts.radar = new Chart(ctx, {
-        type: 'radar',
-        data: {
-          labels: ['가치', '모멘텀', '퀄리티', '저변동', '성장'],
-          datasets: [{
-            label: this.stockDetail.stock.name,
-            data,
-            backgroundColor: 'rgba(13,110,253,0.2)',
-            borderColor: '#0d6efd',
-            pointBackgroundColor: '#0d6efd',
-          }],
-        },
-        options: {
-          scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } },
-          plugins: { legend: { display: false } },
-        },
-      });
+      this._charts.radar = new Chart(ctx, { type: 'radar', data: { labels: ['가치', '모멘텀', '퀄리티', '저변동', '성장'], datasets: [{ label: this.stockDetail.stock.name, data, backgroundColor: 'rgba(13,110,253,0.2)', borderColor: '#0d6efd', pointBackgroundColor: '#0d6efd' }] }, options: { scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } }, plugins: { legend: { display: false } } } });
     },
 
-    // ----- 갱신 -----
     async triggerUpdate() {
       this.state.updating = true;
       try {

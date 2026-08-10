@@ -1,8 +1,12 @@
 'use strict';
 
-// 데이터 갱신 스크립트 (GitHub Actions 전용)
+// 데이터 갱신 스크립트 (GitHub Actions 전용, 로컬에서도 사용 가능)
 // 실행: npm run update
-// 동작: 네이버 금융 → DuckDB → 정적 JSON 출력 (public/data/)
+//
+// 주요 원칙:
+// 1) **증분 fetch**: 가격은 마지막 저장일 +1 부터, 재무는 30일 이상 경과 시에만 갱신
+// 2) **경량 연산**: grid search 80개, OLS 가우시안 소거법 직접 구현
+// 3) 데이터가 적으면 친절한 메시지 + 부분 데이터로 진행
 
 const fs = require('fs');
 const path = require('path');
@@ -17,14 +21,30 @@ const data = require('../src/data');
 const indices = require('../src/data/indices');
 const { calculateAll, persistScores } = require('../src/factors');
 const scoring = require('../src/scoring');
+const { backtest } = require('../src/scoring/backtest');
+const { exportOptimizer } = require('../src/scoring/optimizer');
 
 const DATA_DIR = path.join(ROOT, 'public', 'data');
 const STOCK_DIR = path.join(DATA_DIR, 'stock');
-const TOP_N_SHIPPED = 20;        // top.json 에 담을 종목 수
-const HEATMAP_LIMIT = 80;        // 히트맵 종목 수
-const STOCK_HISTORY_DAYS = 90;   // 종목별 상세에 담을 일수 (git 사이즈 절약)
+const TOP_N_SHIPPED = 20;
+const HEATMAP_LIMIT = 80;
+const STOCK_HISTORY_DAYS = 90;
+const FUND_REFRESH_DAYS = 30;          // 재무는 30일 이상 경과 시에만
+const FUND_FULL_FETCH_LIMIT = 30;       // 첫 실행 시 신규 종목 30개만 (점진적)
 
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+function nextDay(yyyy_mm_dd) {
+  if (!yyyy_mm_dd) return null;
+  const d = new Date(yyyy_mm_dd);
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function writeJson(name, obj) {
+  const p = path.join(DATA_DIR, name);
+  fs.writeFileSync(p, JSON.stringify(obj));
+  console.log(`  → ${name} (${(fs.statSync(p).size / 1024).toFixed(1)}KB)`);
+}
 
 async function refreshStocks() {
   let n = 0;
@@ -49,12 +69,16 @@ async function refreshStocks() {
   return n;
 }
 
+// === 증분 가격 fetch ===
 async function refreshPricesForAll() {
   const rows = await db.all(`SELECT code FROM stocks WHERE market IN ('KOSPI','KOSDAQ')`);
-  let n = 0;
+  let updated = 0, fetched = 0;
   for (const { code } of rows) {
     try {
-      const prices = await data.getDailyPrices(code);
+      const last = await db.one(`SELECT MAX(date) AS d FROM daily_prices WHERE code = ?`, [code]);
+      const fromDate = nextDay(last?.d ? String(last.d) : null);
+      const prices = await data.getDailyPrices(code, { fromDate });
+      if (prices.length === 0) continue;
       for (const p of prices) {
         await db.run(
           `INSERT INTO daily_prices (code, date, open, high, low, close, volume, trading_value, market_cap)
@@ -63,19 +87,38 @@ async function refreshPricesForAll() {
           [code, String(p.date), p.open, p.high, p.low, p.close, p.volume, p.trading_value, p.market_cap],
         );
       }
-      n += prices.length;
+      updated += prices.length;
+      fetched++;
     } catch (e) {
       console.error(`[price] ${code} 실패:`, e.message);
     }
-    await sleep(80);
+    await sleep(60); // 60ms (기존 80ms에서 단축)
   }
-  return n;
+  console.log(`     → ${fetched}개 종목, ${updated} 행`);
+  return updated;
 }
 
-async function refreshFundamentalsForAll() {
-  const rows = await db.all(`SELECT code FROM stocks WHERE market IN ('KOSPI','KOSDAQ')`);
-  let n = 0;
-  for (const { code } of rows) {
+// === 증분 재무 fetch (30일 이상 경과 시만) ===
+async function refreshFundamentalsForAll({ limit = null } = {}) {
+  // limit: 첫 실행 시 일부만 처리 (부하 분산)
+  const rows = await db.all(`
+    SELECT s.code,
+           MAX(f.updated_at) AS last_update
+    FROM stocks s
+    LEFT JOIN fundamentals f ON f.code = s.code
+    WHERE s.market IN ('KOSPI','KOSDAQ')
+    GROUP BY s.code
+    ${limit ? 'LIMIT ?' : ''}
+  `, limit ? [limit] : []);
+
+  const cutoff = new Date(Date.now() - FUND_REFRESH_DAYS * 86400_000).toISOString();
+  let updated = 0, skipped = 0;
+  for (const { code, last_update } of rows) {
+    // 30일 이내 갱신했으면 스킵
+    if (last_update && new Date(last_update).toISOString() > cutoff) {
+      skipped++;
+      continue;
+    }
     try {
       const f = await data.getFinance(code);
       if (!f) continue;
@@ -93,19 +136,14 @@ async function refreshFundamentalsForAll() {
         [code, period, f.per, f.pbr, f.psr, f.eps, f.bps, f.roe, f.roa,
          f.revenue, f.operating_profit, f.net_profit, f.debt_ratio, f.dividend_yield],
       );
-      n++;
+      updated++;
     } catch (e) {
       console.error(`[fund] ${code} 실패:`, e.message);
     }
-    await sleep(100);
+    await sleep(80);
   }
-  return n;
-}
-
-function writeJson(name, obj) {
-  const p = path.join(DATA_DIR, name);
-  fs.writeFileSync(p, JSON.stringify(obj));
-  console.log(`  → ${name} (${(fs.statSync(p).size / 1024).toFixed(1)}KB)`);
+  console.log(`     → ${updated}개 갱신, ${skipped}개 30일 내 갱신됨 (스킵)`);
+  return updated;
 }
 
 async function exportStatic() {
@@ -118,6 +156,7 @@ async function exportStatic() {
     SELECT
       (SELECT COUNT(*) FROM stocks WHERE market IN ('KOSPI','KOSDAQ')) AS stock_count,
       (SELECT COUNT(DISTINCT sector) FROM stocks WHERE sector IS NOT NULL) AS sector_count,
+      (SELECT COUNT(DISTINCT date) FROM factor_scores) AS score_days,
       (SELECT MAX(date) FROM daily_prices) AS last_price_date,
       (SELECT MAX(date) FROM factor_scores) AS last_score_date,
       (SELECT MAX(run_at) FROM update_log) AS last_update
@@ -135,7 +174,7 @@ async function exportStatic() {
     writeJson('indices.json', []);
   }
 
-  // TOP 20 (재가중치 적용은 클라이언트)
+  // TOP 20
   const top = await db.all(`
     SELECT fs.rank, fs.code, s.name, s.market, s.sector,
            fs.value_score, fs.momentum_score, fs.quality_score,
@@ -146,16 +185,16 @@ async function exportStatic() {
   top.forEach((r) => (r.grade = scoring.gradeFor(r.total_score)));
   writeJson('top.json', top);
 
-  // 전체 (클라이언트에서 필터링 + 재가중치)
-  const all = await db.all(`
+  // 전체
+  const allRows = await db.all(`
     SELECT fs.rank, fs.code, s.name, s.market, s.sector, s.industry,
            fs.value_score, fs.momentum_score, fs.quality_score,
            fs.volatility_score, fs.growth_score, fs.total_score
     FROM factor_scores fs JOIN stocks s ON s.code = fs.code
     WHERE fs.date = (SELECT MAX(date) FROM factor_scores)
     ORDER BY fs.code`);
-  all.forEach((r) => (r.grade = scoring.gradeFor(r.total_score)));
-  writeJson('all.json', all);
+  allRows.forEach((r) => (r.grade = scoring.gradeFor(r.total_score)));
+  writeJson('all.json', allRows);
 
   // 섹터
   const sectorsData = await scoring.getSectorScores();
@@ -170,7 +209,7 @@ async function exportStatic() {
   const corr = await scoring.getFactorCorrelation();
   writeJson('correlation.json', { keys: corr.keys, matrix: corr.matrix });
 
-  // 분포 (전체 점수)
+  // 분포
   const dist = await db.all(`
     WITH latest AS (SELECT MAX(date) AS d FROM factor_scores)
     SELECT total_score FROM factor_scores, latest WHERE date = latest.d`);
@@ -180,7 +219,27 @@ async function exportStatic() {
   const logs = await db.all(`SELECT * FROM update_log ORDER BY id DESC LIMIT 10`);
   writeJson('log.json', logs);
 
-  // 종목별 상세 (최근 90일 일봉만)
+  // 가중치 최적화
+  try {
+    console.log('[export] 가중치 최적화...');
+    const opt = await exportOptimizer();
+    writeJson('optimizer.json', opt);
+  } catch (e) {
+    console.error('[export] optimizer 실패:', e.message);
+    writeJson('optimizer.json', { ok: false, error: e.message });
+  }
+
+  // 백테스트 (4개 차트 + KOSPI)
+  try {
+    console.log('[export] 백테스트 (4개 차트)...');
+    const bt = await backtest({ topN: 20, lookbackMonths: 24 });
+    writeJson('backtest.json', bt);
+  } catch (e) {
+    console.error('[export] backtest 실패:', e.message);
+    writeJson('backtest.json', { ok: false, error: e.message });
+  }
+
+  // 종목별 상세
   console.log('[export] 종목별 상세 JSON 생성...');
   const stockList = await db.all(`SELECT code FROM stocks WHERE market IN ('KOSPI','KOSDAQ')`);
   for (const { code } of stockList) {
@@ -204,35 +263,38 @@ async function exportStatic() {
 
 (async () => {
   const t0 = Date.now();
-  const isFull = process.env.FULL === '1' || !fs.existsSync(path.join(ROOT, 'data', 'quant.db'));
-  console.log(`[update] 시작 (모드: ${isFull ? 'FULL' : 'INCREMENTAL'})`);
+  const isFirst = !fs.existsSync(path.join(ROOT, 'data', 'quant.db'));
+  console.log(`[update] 시작 (모드: ${isFirst ? 'FIRST (전체)' : 'INCREMENTAL'})`);
 
   await initSchema();
 
   let stocksN = 0, pricesN = 0, fundN = 0;
   try {
-    if (isFull) {
-      console.log('[update] 1/4 종목 목록...');
+    if (isFirst) {
+      console.log('[update] 1/5 종목 목록...');
       stocksN = await refreshStocks();
       console.log(`     → ${stocksN}개`);
 
-      console.log('[update] 2/4 일봉...');
+      console.log('[update] 2/5 일봉 (전체 첫 fetch)...');
       pricesN = await refreshPricesForAll();
       console.log(`     → ${pricesN} 행`);
 
-      console.log('[update] 3/4 재무...');
-      fundN = await refreshFundamentalsForAll();
+      console.log('[update] 3/5 재무 (첫 fetch: 일부만 — 점진적)...');
+      fundN = await refreshFundamentalsForAll({ limit: FUND_FULL_FETCH_LIMIT });
       console.log(`     → ${fundN} 행`);
+
+      console.log('[update] 4/5 나머지 재무 (백그라운드, 다음 실행에서 계속)...');
+      // 첫 실행은 시간이 오래 걸리므로 30개만, 나머지는 다음 실행에
     } else {
-      console.log('[update] 1/3 종목 목록 갱신...');
+      console.log('[update] 1/4 종목 목록 갱신...');
       stocksN = await refreshStocks();
       console.log(`     → ${stocksN}개`);
 
-      console.log('[update] 2/3 최근 일봉 (누락분만)...');
+      console.log('[update] 2/4 일봉 (증분)...');
       pricesN = await refreshPricesForAll();
       console.log(`     → ${pricesN} 행`);
 
-      console.log('[update] 3/3 재무...');
+      console.log('[update] 3/4 재무 (30일 경과분만)...');
       fundN = await refreshFundamentalsForAll();
       console.log(`     → ${fundN} 행`);
     }
@@ -242,7 +304,6 @@ async function exportStatic() {
     const scoreN = await persistScores(rows);
     console.log(`     → ${scoreN}개 점수`);
 
-    // 로그 기록
     await db.run(
       `INSERT INTO update_log (status, message, stocks_updated, duration_ms)
        VALUES ('ok', ?, ?, ?)`,

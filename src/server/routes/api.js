@@ -6,6 +6,8 @@ const cfg = require('../../config');
 const strategies = require('../../strategies');
 const scoring = require('../../scoring');
 const indices = require('../../data/indices');
+const { exportOptimizer } = require('../../scoring/optimizer');
+const { backtest } = require('../../scoring/backtest');
 
 const router = express.Router();
 
@@ -235,6 +237,28 @@ router.get('/log', async (_req, res) => {
   try {
     const rows = await db.all(`SELECT * FROM update_log ORDER BY id DESC LIMIT 20`);
     send(res, { ok: true, rows });
+  } catch (e) {
+    send(res, { ok: false, error: e.message });
+  }
+});
+
+// 가중치 최적화 (로컬 전용 — 호스팅은 정적 JSON)
+router.get('/optimizer', async (_req, res) => {
+  try {
+    const result = await exportOptimizer();
+    send(res, result);
+  } catch (e) {
+    send(res, { ok: false, error: e.message });
+  }
+});
+
+// 백테스트 (4개 차트, 로컬 전용)
+router.get('/backtest', async (req, res) => {
+  try {
+    const topN = Math.min(Math.max(Number(req.query.topN) || 20, 5), 50);
+    const months = Math.min(Math.max(Number(req.query.months) || 24, 3), 24);
+    const result = await backtest({ topN, lookbackMonths: months });
+    send(res, result);
   } catch (e) {
     send(res, { ok: false, error: e.message });
   }

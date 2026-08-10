@@ -25,31 +25,25 @@ async function getConnection() {
 
 async function run(sql, params) {
   const conn = await getConnection();
+  // @duckdb/node-api: ? → $N 자동 변환
   if (params && params.length) {
-    const stmt = await conn.prepare(sql);
-    try {
-      const res = await stmt.run(...params);
-      return res;
-    } finally {
-      stmt.closeSync?.();
-    }
+    let i = 0;
+    const converted = sql.replace(/\?/g, () => `$${++i}`);
+    return await conn.run(converted, params);
   }
-  await conn.run(sql);
+  return await conn.run(sql);
 }
 
 async function all(sql, params) {
   const conn = await getConnection();
+  // @duckdb/node-api 는 ? 대신 $1, $2 플레이스홀더 사용.
+  // ? → $N 자동 변환으로 기존 SQL 그대로 사용 가능.
   if (params && params.length) {
-    const stmt = await conn.prepare(sql);
-    try {
-      const reader = await stmt.runAndReadAll(...params);
-      return reader.getRowObjects();
-    } finally {
-      stmt.closeSync?.();
-    }
+    let i = 0;
+    const converted = sql.replace(/\?/g, () => `$${++i}`);
+    return (await conn.runAndReadAll(converted, params)).getRowObjects();
   }
-  const reader = await conn.runAndReadAll(sql);
-  return reader.getRowObjects();
+  return (await conn.runAndReadAll(sql)).getRowObjects();
 }
 
 async function one(sql, params) {

@@ -9,6 +9,12 @@ const { calculateAll, persistScores } = require('../factors');
 const { run } = db;
 
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+function nextDay(yyyy_mm_dd) {
+  if (!yyyy_mm_dd) return null;
+  const d = new Date(yyyy_mm_dd);
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
 
 async function refreshStocks() {
   let n = 0;
@@ -35,12 +41,15 @@ async function refreshStocks() {
 }
 
 async function refreshPricesForAll() {
-  // 모든 종목에 대해 누락된 최근 일봉을 채움
+  // **증분 fetch**: 마지막 저장일 +1 부터만 다운로드 (시간/네트워크 대폭 절약)
   const rows = await db.all(`SELECT code FROM stocks WHERE market IN ('KOSPI','KOSDAQ')`);
   let n = 0;
   for (const { code } of rows) {
     try {
-      const prices = await data.getDailyPrices(code);
+      const last = await db.one(`SELECT MAX(date) AS d FROM daily_prices WHERE code = ?`, [code]);
+      const fromDate = nextDay(last?.d ? String(last.d) : null);
+      const prices = await data.getDailyPrices(code, { fromDate });
+      if (prices.length === 0) continue;
       for (const p of prices) {
         await run(
           `INSERT INTO daily_prices (code, date, open, high, low, close, volume, trading_value, market_cap)
@@ -53,16 +62,23 @@ async function refreshPricesForAll() {
     } catch (e) {
       console.error(`[price] ${code} 실패:`, e.message);
     }
-    // 매 종목마다 약간의 슬립 (네이버 rate limit 보호)
-    await sleep(120);
+    await sleep(60);
   }
   return n;
 }
 
 async function refreshFundamentalsForAll() {
-  const rows = await db.all(`SELECT code FROM stocks WHERE market IN ('KOSPI','KOSDAQ')`);
-  let n = 0;
-  for (const { code } of rows) {
+  // **증분 fetch**: 30일 이내 갱신된 종목은 스킵 (재무는 자주 안 바뀜)
+  const cutoff = new Date(Date.now() - 30 * 86400_000).toISOString();
+  const rows = await db.all(`
+    SELECT s.code, MAX(f.updated_at) AS last_update
+    FROM stocks s LEFT JOIN fundamentals f ON f.code = s.code
+    WHERE s.market IN ('KOSPI','KOSDAQ')
+    GROUP BY s.code
+  `);
+  let n = 0, skipped = 0;
+  for (const { code, last_update } of rows) {
+    if (last_update && new Date(last_update).toISOString() > cutoff) { skipped++; continue; }
     try {
       const f = await data.getFinance(code);
       if (!f) continue;
@@ -84,8 +100,9 @@ async function refreshFundamentalsForAll() {
     } catch (e) {
       console.error(`[fund] ${code} 실패:`, e.message);
     }
-    await sleep(150);
+    await sleep(80);
   }
+  console.log(`[fund] ${n}개 갱신, ${skipped}개 30일 내 (스킵)`);
   return n;
 }
 

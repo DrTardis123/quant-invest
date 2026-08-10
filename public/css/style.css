@@ -150,6 +150,54 @@ table td { font-size: 0.9rem; }
   font-variant-numeric: tabular-nums;
 }
 
+/* === 월별 히트맵 (백테스트) === */
+.month-heatmap-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.month-heatmap-table th,
+.month-heatmap-table td {
+  text-align: center;
+  padding: 6px 4px;
+  border-radius: 3px;
+}
+.month-heatmap-table thead th {
+  background: #f8f9fa;
+  color: #6c757d;
+  font-weight: 600;
+}
+.month-heatmap-table tbody th {
+  background: #f8f9fa;
+  color: #495057;
+  font-weight: 600;
+}
+.month-heatmap-table .mcell {
+  font-weight: 600;
+  min-width: 50px;
+}
+.month-heatmap-table .mcell.empty {
+  background: #f8f9fa;
+  color: #adb5bd;
+}
+.month-heatmap-table .mcell.year-total {
+  background: #212529;
+  color: #fff;
+}
+
+/* === 옵티마이저 + 백테스트 탭 강조 === */
+.nav-tabs .nav-link.text-warning {
+  color: #b8860b !important;
+  font-weight: 600;
+}
+.nav-tabs .nav-link.text-warning.active {
+  color: #fff !important;
+  background: #b8860b;
+  border-color: #b8860b;
+}
+
 /* === 지수 카드 === */
 .index-card {
   border-left: 4px solid #0d6efd;
