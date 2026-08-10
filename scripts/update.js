@@ -320,11 +320,15 @@ async function exportStatic() {
     await db.close();
     process.exit(0);
   } catch (e) {
+    console.error('=========================================');
     console.error('[update] 실패:', e);
+    console.error('  message:', e?.message);
+    console.error('  stack:', e?.stack);
+    console.error('=========================================');
     try {
       await db.run(
         `INSERT INTO update_log (status, message) VALUES ('error', ?)`,
-        [String(e.message || e)],
+        [String(e.message || e).slice(0, 500)],
       );
     } catch (_) { /* ignore */ }
     process.exit(1);

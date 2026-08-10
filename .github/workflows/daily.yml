@@ -30,14 +30,26 @@ jobs:
       - name: 체크아웃
         uses: actions/checkout@v4
 
-      - name: Node.js 세팅
+      - name: Node.js 24 세팅
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: 의존성 설치
         run: npm ci --no-audit --no-fund
+
+      - name: 사전 스모크 테스트
+        run: |
+          echo "=== 모듈 로드 검증 ==="
+          node -e "
+            const m = ['./src/scheduler/jobs','./src/scoring/optimizer','./src/scoring/backtest','./src/data/indices','./src/factors','./src/scoring','./src/strategies','./src/db/connection'];
+            for (const p of m) {
+              try { require(p); console.log('  ✓', p); } catch (e) { console.error('  ✗', p, ':', e.message); process.exit(1); }
+            }
+          "
+          echo "=== 스모크 테스트 ==="
+          node tests/smoke.js && node tests/smoke2.js && node tests/smoke3.js
 
       - name: 데이터 갱신
         env:
@@ -49,13 +61,16 @@ jobs:
           KIS_IS_PAPER: 'true'
           FULL: ${{ github.event.inputs.full || 'no' }}
         run: |
+          set -e
           if [ "$FULL" = "yes" ]; then
             echo "FULL 모드 (전체 백필)"
             export FULL=1
           else
             echo "증분 모드"
           fi
-          npm run update
+          echo "=== npm run update 시작 ==="
+          npm run update 2>&1 | tee logs/run.log
+          echo "=== 완료 ==="
 
       - name: 변경 확인
         id: check
@@ -77,3 +92,13 @@ jobs:
           git add public/data/
           git commit -m "data: $(date -u +%Y-%m-%d) 자동 갱신"
           git push
+
+      - name: 실패시 로그
+        if: failure()
+        run: |
+          echo "=== 실패 로그 (logs/run.log) ==="
+          if [ -f logs/run.log ]; then
+            tail -100 logs/run.log
+          else
+            echo "run.log 없음"
+          fi
