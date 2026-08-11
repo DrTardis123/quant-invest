@@ -276,6 +276,10 @@ async function exportStatic() {
     writeJson('indices.json', []);
   }
 
+  // 7팩터 점수 (DB에 저장 안 된 유동/수급 포함, 메모리 캐시)
+  const { rows: allFactors } = await calculateAll();
+  const factorMap = new Map(allFactors.map((r) => [r.code, r]));
+
   // TOP 20
   const top = await db.all(`
     SELECT fs.rank, fs.code, s.name, s.market, s.sector,
@@ -284,7 +288,11 @@ async function exportStatic() {
     FROM factor_scores fs JOIN stocks s ON s.code = fs.code
     WHERE fs.date = (SELECT MAX(date) FROM factor_scores)
     ORDER BY fs.rank LIMIT ?`, [TOP_N_SHIPPED]);
-  top.forEach((r) => (r.grade = scoring.gradeFor(r.total_score)));
+  top.forEach((r) => {
+    r.grade = scoring.gradeFor(r.total_score);
+    const f = factorMap.get(r.code);
+    if (f) { r.liquidity_score = f.liquidity_score; r.supply_score = f.supply_score; }
+  });
   writeJson('top.json', top);
 
   // 전체
@@ -295,7 +303,11 @@ async function exportStatic() {
     FROM factor_scores fs JOIN stocks s ON s.code = fs.code
     WHERE fs.date = (SELECT MAX(date) FROM factor_scores)
     ORDER BY fs.code`);
-  allRows.forEach((r) => (r.grade = scoring.gradeFor(r.total_score)));
+  allRows.forEach((r) => {
+    r.grade = scoring.gradeFor(r.total_score);
+    const f = factorMap.get(r.code);
+    if (f) { r.liquidity_score = f.liquidity_score; r.supply_score = f.supply_score; }
+  });
   writeJson('all.json', allRows);
 
   // 섹터
@@ -365,26 +377,32 @@ async function exportStatic() {
     const weights = cfg.factors.weights;
     const total = score?.total_score || 0;
     let contributions = null;
+    // 7팩터 캐시에서 liquidity/supply 가져오기
+    const f7 = factorMap.get(code) || {};
     if (score) {
       const parts = {
-        value: (Number(score.value_score) || 0) * weights.value,
-        momentum: (Number(score.momentum_score) || 0) * weights.momentum,
-        quality: (Number(score.quality_score) || 0) * weights.quality,
-        volatility: (Number(score.volatility_score) || 0) * weights.volatility,
-        growth: (Number(score.growth_score) || 0) * weights.growth,
+        value: (Number(score.value_score) || 0) * (weights.value || 0),
+        momentum: (Number(score.momentum_score) || 0) * (weights.momentum || 0),
+        quality: (Number(score.quality_score) || 0) * (weights.quality || 0),
+        volatility: (Number(score.volatility_score) || 0) * (weights.volatility || 0),
+        growth: (Number(score.growth_score) || 0) * (weights.growth || 0),
+        liquidity: (Number(f7.liquidity_score) || 0) * (weights.liquidity || 0),
+        supply: (Number(f7.supply_score) || 0) * (weights.supply || 0),
       };
-      const sumP = parts.value + parts.momentum + parts.quality + parts.volatility + parts.growth;
+      const sumP = parts.value + parts.momentum + parts.quality + parts.volatility + parts.growth + parts.liquidity + parts.supply;
       contributions = sumP > 0 ? {
         value: Math.round(parts.value / sumP * 100),
         momentum: Math.round(parts.momentum / sumP * 100),
         quality: Math.round(parts.quality / sumP * 100),
         volatility: Math.round(parts.volatility / sumP * 100),
         growth: Math.round(parts.growth / sumP * 100),
+        liquidity: Math.round(parts.liquidity / sumP * 100),
+        supply: Math.round(parts.supply / sumP * 100),
       } : null;
     }
     const detail = {
       stock,
-      score: score ? { ...score, grade: scoring.gradeFor(total) } : null,
+      score: score ? { ...score, grade: scoring.gradeFor(total), liquidity_score: f7.liquidity_score, supply_score: f7.supply_score, status: f7.status } : null,
       contributions,
       weights,
       fundamentals: fund,

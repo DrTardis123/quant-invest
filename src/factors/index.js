@@ -196,8 +196,6 @@ function calcLowVol(prices) {
   return percentileScore(rows, false);
 }
 
-// ---------- 메인 ----------
-
 // ---------- 거래정지/거래주의 감지 ----------
 
 async function fetchTradingStatus() {
@@ -240,12 +238,72 @@ function applyStatusPenalty(rows, statusMap) {
   }
 }
 
+// ---------- 유동성 (거래량/거래대금) ----------
+
+async function fetchLiquidity() {
+  // 최근 20일 평균 거래대금 (거래량 × 종가)
+  // 단순 거래량보다 거래대금이 시총 보정 효과가 있음
+  return all(`
+    WITH recent AS (
+      SELECT code, date, volume, close,
+             ROW_NUMBER() OVER (PARTITION BY code ORDER BY date DESC) AS rn
+      FROM daily_prices
+    )
+    SELECT code, AVG(volume * close) FILTER (WHERE rn <= 20) AS turnover_20d
+    FROM recent
+    GROUP BY code
+  `);
+}
+
+function calcLiquidity(liquidity) {
+  // 거래대금 백분위 (높을수록 좋음, 유동성)
+  const rows = liquidity
+    .filter((r) => r.turnover_20d > 0)
+    .map((r) => ({ code: r.code, raw: Number(r.turnover_20d) }));
+  return percentileScore(rows, true);
+}
+
+// ---------- 수급 (외인/기관) ----------
+
+async function fetchSupply() {
+  // 외인+기관 5일 + 20일 누적 순매수
+  return all(`
+    WITH ranked AS (
+      SELECT code, date, foreign_net, institution_net,
+             ROW_NUMBER() OVER (PARTITION BY code ORDER BY date DESC) AS rn
+      FROM investor_flow
+    )
+    SELECT code,
+           SUM(foreign_net) FILTER (WHERE rn <= 5) AS foreign_5d,
+           SUM(institution_net) FILTER (WHERE rn <= 5) AS inst_5d,
+           SUM(foreign_net) FILTER (WHERE rn <= 20) AS foreign_20d,
+           SUM(institution_net) FILTER (WHERE rn <= 20) AS inst_20d
+    FROM ranked
+    GROUP BY code
+  `);
+}
+
+function calcSupply(supply) {
+  // 외인+기관 5일 누적 백분위 (높을수록 좋음)
+  const rows = supply
+    .filter((r) => r.foreign_5d != null)
+    .map((r) => ({
+      code: r.code,
+      raw: (Number(r.foreign_5d) || 0) + (Number(r.inst_5d) || 0),
+    }));
+  return percentileScore(rows, true);
+}
+
+// ---------- 메인 ----------
+
 async function calculateAll(weights = null) {
-  const [fundamentals, prices, prevFundamentals, statusRows] = await Promise.all([
+  const [fundamentals, prices, prevFundamentals, statusRows, liquidity, supply] = await Promise.all([
     fetchLatestFundamentals(),
     fetchPricesForFactors(),
     fetchPrevYearFundamentals(),
     fetchTradingStatus(),
+    fetchLiquidity(),
+    fetchSupply(),
   ]);
 
   if (fundamentals.length === 0) {
@@ -257,9 +315,23 @@ async function calculateAll(weights = null) {
   const q = calcQuality(fundamentals);
   const lv = calcLowVol(prices);
   const g = calcGrowth(fundamentals, prevFundamentals);
+  const liq = calcLiquidity(liquidity);
+  const sup = calcSupply(supply);
 
   const W = weights || cfg.factors.weights;
-  const codes = new Set([...v.keys(), ...m.keys(), ...q.keys(), ...lv.keys(), ...g.keys()]);
+  const wv = W.value || 0;
+  const wm = W.momentum || 0;
+  const wq = W.quality || 0;
+  const wlv = W.volatility || 0;
+  const wg = W.growth || 0;
+  const wliq = W.liquidity || 0;
+  const wsup = W.supply || 0;
+  const totalWeight = wv + wm + wq + wlv + wg + wliq + wsup || 100;
+
+  const codes = new Set([
+    ...v.keys(), ...m.keys(), ...q.keys(), ...lv.keys(), ...g.keys(),
+    ...liq.keys(), ...sup.keys(),
+  ]);
 
   // 오늘 날짜 (DuckDB의 max(date))
   const dateRow = await all(`SELECT MAX(date) AS d FROM daily_prices`);
@@ -279,7 +351,9 @@ async function calculateAll(weights = null) {
     const qs = q.get(code) ?? 50;
     const lvs = lv.get(code) ?? 50;
     const gs = g.get(code) ?? 50;
-    let total = (vs * W.value + ms * W.momentum + qs * W.quality + lvs * W.volatility + gs * W.growth) / 100;
+    const liqs = liq.get(code) ?? 50;
+    const sups = sup.get(code) ?? 50;
+    let total = (vs * wv + ms * wm + qs * wq + lvs * wlv + gs * wg + liqs * wliq + sups * wsup) / totalWeight;
 
     // 코스닥 작은 페널티 (-3점, 무시 가능한 수준)
     if (marketMap.get(code) === 'KOSDAQ') {
@@ -294,6 +368,8 @@ async function calculateAll(weights = null) {
       quality_score: round2(qs),
       volatility_score: round2(lvs),
       growth_score: round2(gs),
+      liquidity_score: round2(liqs),
+      supply_score: round2(sups),
       total_score: round2(total),
       market: marketMap.get(code) || null,
     });

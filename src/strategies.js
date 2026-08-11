@@ -1,47 +1,49 @@
 'use strict';
 
-// 5가지 전략 프로파일
+// 5가지 전략 프로파일 (7팩터)
 // 가중치 합 = 100
-// 한국 시장 멀티팩터 실무 가중치 기반 (삼성증권·Morgan Stanley·quantgt.io 참고):
-// - 재무제표(퀄리티+성장)가 가장 강력 (50-60%)
-// - 가치(PER/PBR)는 2020년대 약세기 → 10-15%로 하향
-// - 모멘텀은 꾸준한 효과 (15-25%)
-// - 저변동성은 보너스 (5-15%)
+// 한국 시장 멀티팩터 실무 가중치 기반 (삼성증권·AQR·quantgt.io 참고):
+// - 재무제표(퀄리티+성장) 50%+ (삼성증권 54%, AQR 퀄리티 25%)
+// - 가치(PER/PBR)는 2020년대 약세기 → 8-12%로 하향
+// - 모멘텀은 꾸준한 효과 (22-25%)
+// - 저변동성은 방어 (8-10%)
+// - 유동성(거래대금): 한국 외인/기관 매매 영향 반영 (5-8%)
+// - 수급(외인/기관): 단기 순매수 (5-8%)
 const STRATEGIES = {
   balanced: {
     key: 'balanced',
     name: '밸런스',
     emoji: '⚖️',
-    description: '가치 10 + 모멘텀 20 + 퀄리티 30 + 저변동 10 + 성장 30. 재무 중시 기본값.',
-    weights: { value: 10, momentum: 20, quality: 30, volatility: 10, growth: 30 },
+    description: '재무중시 기본. 가치 8 + 모멘텀 22 + 퀄리티 27 + 저변동 8 + 성장 20 + 유동 8 + 수급 7.',
+    weights: { value: 8, momentum: 22, quality: 27, volatility: 8, growth: 20, liquidity: 8, supply: 7 },
   },
   value: {
     key: 'value',
     name: '가치 강화',
     emoji: '💎',
-    description: '그레이엄/버핏 스타일. 저PER·저PBR + ROE 필터.',
-    weights: { value: 40, momentum: 5, quality: 35, volatility: 5, growth: 15 },
+    description: '그레이엄/버핏 스타일. 가치 35 + 퀄리티 30 + 유동 10 + 성장 15.',
+    weights: { value: 35, momentum: 5, quality: 30, volatility: 5, growth: 15, liquidity: 5, supply: 5 },
   },
   growth: {
     key: 'growth',
     name: '성장 강화',
     emoji: '🚀',
-    description: '고성장 종목 위주. ROE + 매출·이익 성장률 + 모멘텀 중시.',
-    weights: { value: 5, momentum: 20, quality: 35, volatility: 5, growth: 35 },
+    description: '고성장 종목. 성장 35 + 퀄리티 25 + 모멘텀 20 + 수급 10.',
+    weights: { value: 5, momentum: 20, quality: 25, volatility: 5, growth: 35, liquidity: 5, supply: 5 },
   },
   momentum: {
     key: 'momentum',
     name: '모멘텀',
     emoji: '📈',
-    description: 'Jegadeesh-Titman 12-1 모멘텀 + 최소 퀄리티 필터.',
-    weights: { value: 5, momentum: 45, quality: 25, volatility: 5, growth: 20 },
+    description: '12-1 모멘텀 + 수급 추종. 모멘텀 40 + 수급 15 + 퀄리티 20 + 성장 15.',
+    weights: { value: 5, momentum: 40, quality: 20, volatility: 5, growth: 15, liquidity: 5, supply: 10 },
   },
   defensive: {
     key: 'defensive',
     name: '방어형',
     emoji: '🛡️',
-    description: '하락장 방어. 퀄리티 + 저변동성 + 안정적 성장 중시.',
-    weights: { value: 15, momentum: 5, quality: 40, volatility: 25, growth: 15 },
+    description: '하락장 방어. 퀄리티 35 + 저변동 25 + 성장 15 + 가치 15.',
+    weights: { value: 15, momentum: 5, quality: 35, volatility: 25, growth: 15, liquidity: 5, supply: 0 },
   },
 };
 

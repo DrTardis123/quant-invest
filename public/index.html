@@ -651,7 +651,7 @@
         </div>
         <div class="modal-body" x-show="stockDetail">
           <div class="row g-2 mb-3" x-show="stockDetail?.score">
-            <template x-for="k in ['value_score','momentum_score','quality_score','volatility_score','growth_score','total_score']" :key="k">
+            <template x-for="k in ['value_score','momentum_score','quality_score','volatility_score','growth_score','liquidity_score','supply_score','total_score']" :key="k">
               <div class="col-4 col-md-2">
                 <div class="text-muted small" x-text="factorLabel(k)"></div>
                 <div class="fs-5 fw-bold" :class="scoreClass(stockDetail?.score?.[k])" x-text="fmt(stockDetail?.score?.[k])"></div>
