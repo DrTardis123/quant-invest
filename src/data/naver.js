@@ -244,7 +244,7 @@ async function getDailyPrices(code, { fromDate = null, toDate = null, maxPages =
         /<a[^>]+class="on"[^>]*>\s*\d+\s*<\/a>[\s\S]{0,200}<\/td>/.test(html)) {
       // 마지막 페이지에 도달
     }
-    await sleep(120);
+    await sleep(80);
   }
   return out;
 }

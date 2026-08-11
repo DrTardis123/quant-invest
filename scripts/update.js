@@ -70,14 +70,22 @@ async function refreshStocks() {
 }
 
 // === 증분 가격 fetch ===
-async function refreshPricesForAll() {
+async function refreshPricesForAll({ maxDays = null } = {}) {
   const rows = await db.all(`SELECT code FROM stocks WHERE market IN ('KOSPI','KOSDAQ')`);
   let updated = 0, fetched = 0;
+  // DB에 기존 일봉이 있는지 확인 (없으면 첫 실행 모드)
+  const existingCount = await db.one(`SELECT COUNT(*) AS c FROM daily_prices LIMIT 1`);
+  const isInitial = (Number(existingCount?.c) || 0) === 0;
+  // 첫 실행이면 페이지 수 제한 (90일 = 2페이지, 60일/페이지)
+  const maxPages = isInitial ? 2 : 30;
+  if (isInitial) console.log(`     (첫 실행 감지: 페이지당 ${60}일, 최대 ${maxPages}페이지 = ${maxPages * 60}일)`);
   for (const { code } of rows) {
     try {
       const last = await db.one(`SELECT MAX(date) AS d FROM daily_prices WHERE code = ?`, [code]);
       const fromDate = nextDay(last?.d ? String(last.d) : null);
-      const prices = await data.getDailyPrices(code, { fromDate });
+      // maxDays 파라미터가 있으면 maxPages 계산
+      const mp = maxDays ? Math.ceil(maxDays / 60) : maxPages;
+      const prices = await data.getDailyPrices(code, { fromDate, maxPages: mp });
       if (prices.length === 0) continue;
       for (const p of prices) {
         await db.run(
@@ -89,10 +97,14 @@ async function refreshPricesForAll() {
       }
       updated += prices.length;
       fetched++;
+      // 첫 실행 진행 상황 표시 (100개마다)
+      if (isInitial && fetched % 200 === 0) {
+        console.log(`     ... ${fetched}/${rows.length} 종목, ${updated} 행`);
+      }
     } catch (e) {
       console.error(`[price] ${code} 실패:`, e.message);
     }
-    await sleep(60); // 60ms (기존 80ms에서 단축)
+    await sleep(isInitial ? 30 : 60); // 첫 실행: 빠른 fetch, 이후: 안정성 우선
   }
   console.log(`     → ${fetched}개 종목, ${updated} 행`);
   return updated;
