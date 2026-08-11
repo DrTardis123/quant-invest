@@ -1,1 +1,1 @@
-{"stock_count":0,"sector_count":0,"markets":[],"sectors":[],"last_price_date":null,"last_score_date":null,"last_update":null}
+{"stock_count":3921,"sector_count":0,"score_days":1,"last_price_date":{"days":20676},"last_score_date":{"days":20676},"last_update":{"micros":1786491719959995},"markets":["KOSDAQ","KOSPI"],"sectors":[]}

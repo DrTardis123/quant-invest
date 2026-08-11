@@ -1,1 +1,1 @@
-{"ok":false,"error":"아직 가중치 최적화 데이터가 없습니다. GitHub Actions가 점수를 누적하면 자동으로 채워집니다 (최소 30일치 필요).","computedAt":null,"nDays":0,"nStocks":0}
+{"ok":false,"error":"데이터 부족 (현재 0일치). 최소 30일 필요. 매일 갱신되면 자동으로 채워집니다.","nDays":0,"nStocks":0,"computedAt":"2026-08-11T14:42:00.470Z"}
