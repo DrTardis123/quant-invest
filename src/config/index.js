@@ -52,8 +52,9 @@ const cfg = {
   },
 
   factors: {
-    // 가중치 합 = 100
-    weights: { value: 35, momentum: 20, quality: 20, volatility: 15, growth: 10 },
+    // 7팩터 가중치 (한국 시장 + AQR + 삼성증권 종합, 2026-08)
+    // strategies.js의 'balanced'와 동기화
+    weights: { value: 8, momentum: 22, quality: 27, volatility: 8, growth: 20, liquidity: 8, supply: 7 },
   },
 
   // KIS 키가 모두 있으면 자동으로 KIS 모드

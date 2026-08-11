@@ -61,6 +61,9 @@ CREATE TABLE IF NOT EXISTS factor_scores (
   rank            INTEGER,
   PRIMARY KEY (code, date)
 );
+-- 7팩터 확장 (2026-08): 유동성 + 수급
+ALTER TABLE factor_scores ADD COLUMN IF NOT EXISTS liquidity_score DOUBLE;
+ALTER TABLE factor_scores ADD COLUMN IF NOT EXISTS supply_score DOUBLE;
 CREATE INDEX IF NOT EXISTS idx_factor_scores_date ON factor_scores(date);
 CREATE INDEX IF NOT EXISTS idx_factor_scores_rank ON factor_scores(date, rank);
 

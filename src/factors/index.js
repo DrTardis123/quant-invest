@@ -398,17 +398,20 @@ async function persistScores(rows) {
     const values = [];
     const placeholders = [];
     for (const r of slice) {
-      placeholders.push('(?,?,?,?,?,?,?,?,?)');
+      placeholders.push('(?,?,?,?,?,?,?,?,?,?,?)');
       values.push(
         r.code, String(r.date),
         r.value_score, r.momentum_score, r.quality_score,
-        r.volatility_score, r.growth_score, r.total_score, r.rank,
+        r.volatility_score, r.growth_score,
+        r.liquidity_score ?? null, r.supply_score ?? null,
+        r.total_score, r.rank,
       );
     }
     const sql = `
       INSERT INTO factor_scores
         (code, date, value_score, momentum_score, quality_score,
-         volatility_score, growth_score, total_score, rank)
+         volatility_score, growth_score, liquidity_score, supply_score,
+         total_score, rank)
       VALUES ${placeholders.join(',')}
       ON CONFLICT (code, date) DO UPDATE SET
         value_score = EXCLUDED.value_score,
@@ -416,6 +419,8 @@ async function persistScores(rows) {
         quality_score = EXCLUDED.quality_score,
         volatility_score = EXCLUDED.volatility_score,
         growth_score = EXCLUDED.growth_score,
+        liquidity_score = EXCLUDED.liquidity_score,
+        supply_score = EXCLUDED.supply_score,
         total_score = EXCLUDED.total_score,
         rank = EXCLUDED.rank
     `;

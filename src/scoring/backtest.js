@@ -10,6 +10,7 @@
 
 const { all, one } = require('../db/connection');
 const { getIndexHistory } = require('../data/indices');
+const strategies = require('../strategies');
 
 const TOP_N = 20;
 const DEFAULT_LOOKBACK_MONTHS = 24;
@@ -56,14 +57,19 @@ async function backtest({ topN = TOP_N, lookbackMonths = DEFAULT_LOOKBACK_MONTHS
   }
 
   // 3) 매 스냅샷마다 TOP N → 다음 스냅샷까지 수익률
-  const W = strategy?.weights || { value: 35, momentum: 20, quality: 20, volatility: 15, growth: 10 };
+  const strat = strategy || strategies.get('balanced');
+  const W = strat.weights;
+  const wv = W.value || 0, wm = W.momentum || 0, wq = W.quality || 0, wlv = W.volatility || 0, wg = W.growth || 0;
+  const wliq = W.liquidity || 0, wsup = W.supply || 0;
+  const totalWeight = wv + wm + wq + wlv + wg + wliq + wsup || 100;
   const monthlyReturns = [];
   for (let i = 0; i < snapshots.length - 1; i++) {
     const d1 = String(snapshots[i].date);
     const d2 = String(snapshots[i + 1].date);
 
     const top = await all(`
-      SELECT code, value_score, momentum_score, quality_score, volatility_score, growth_score
+      SELECT code, value_score, momentum_score, quality_score, volatility_score, growth_score,
+             liquidity_score, supply_score
       FROM factor_scores WHERE date = ? ORDER BY rank ASC LIMIT ?
     `, [d1, topN]);
     if (top.length === 0) continue;
@@ -78,14 +84,15 @@ async function backtest({ topN = TOP_N, lookbackMonths = DEFAULT_LOOKBACK_MONTHS
       [d1, d2, ...codes, d1, d2],
     );
 
-    // 가중치 적용 재랭킹
+    // 가중치 적용 재랭킹 (7팩터)
     const scored = top.map((t) => {
       const s = safe.find((r) => r.code === t.code);
       return {
         code: t.code,
-        score: (Number(t.value_score) || 0) * W.value + (Number(t.momentum_score) || 0) * W.momentum +
-               (Number(t.quality_score) || 0) * W.quality + (Number(t.volatility_score) || 0) * W.volatility +
-               (Number(t.growth_score) || 0) * W.growth,
+        score: (Number(t.value_score) || 0) * wv + (Number(t.momentum_score) || 0) * wm +
+               (Number(t.quality_score) || 0) * wq + (Number(t.volatility_score) || 0) * wlv +
+               (Number(t.growth_score) || 0) * wg + (Number(t.liquidity_score) || 0) * wliq +
+               (Number(t.supply_score) || 0) * wsup,
         ret: (s?.p1 && s?.p2) ? (s.p2 - s.p1) / s.p1 : null,
       };
     }).filter((r) => r.ret !== null);
