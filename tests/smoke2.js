@@ -8,12 +8,17 @@
     console.log('✓', msg);
   };
 
-  // 1) strategies 모듈
+  // 1) strategies 모듈 (7팩터)
   const strategies = require('../src/strategies');
   ok(strategies.list().length === 5, '전략 5개');
-  ok(strategies.get('balanced').weights.value === 35, '밸런스 가치 35');
-  ok(strategies.get('value').weights.value === 50, '가치 전략 가치 50');
+  ok(strategies.get('balanced').weights.value === 8, '밸런스 가치 8');
+  ok(strategies.get('value').weights.value === 35, '가치 전략 가치 35');
   ok(strategies.get('momentum').weights.momentum === 40, '모멘텀 전략 40');
+  // 7팩터 합 = 100
+  for (const k of Object.keys(strategies.STRATEGIES)) {
+    const sum = Object.values(strategies.STRATEGIES[k].weights).reduce((a, b) => a + b, 0);
+    ok(sum === 100, `${k} 가중치 합 100 (현재 ${sum})`);
+  }
 
   // 2) scoring 모듈
   const scoring = require('../src/scoring');

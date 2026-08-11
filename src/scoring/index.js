@@ -223,14 +223,16 @@ async function backtest({ topN = 20, lookbackMonths = 12 } = {}) {
 
 function recomputeWithWeights(rows, weights) {
   const W = weights;
-  const factorKeys = ['value_score', 'momentum_score', 'quality_score', 'volatility_score', 'growth_score'];
   const out = rows.map((r) => {
+    // 7팩터 (liquidity/supply가 없으면 0 처리)
     const total = (
-      (r.value_score || 0) * W.value +
-      (r.momentum_score || 0) * W.momentum +
-      (r.quality_score || 0) * W.quality +
-      (r.volatility_score || 0) * W.volatility +
-      (r.growth_score || 0) * W.growth
+      (r.value_score || 0) * (W.value || 0) +
+      (r.momentum_score || 0) * (W.momentum || 0) +
+      (r.quality_score || 0) * (W.quality || 0) +
+      (r.volatility_score || 0) * (W.volatility || 0) +
+      (r.growth_score || 0) * (W.growth || 0) +
+      (r.liquidity_score || 0) * (W.liquidity || 0) +
+      (r.supply_score || 0) * (W.supply || 0)
     ) / 100;
     return { ...r, recomputed_total: Math.round(total * 100) / 100 };
   });
