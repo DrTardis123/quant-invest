@@ -137,8 +137,8 @@ function calcGrowth(fundamentals, prevFundamentals) {
   for (const f of fundamentals) {
     const history = byCode.get(f.code) || [];
     if (history.length < 2) continue;
-    const latestRev = f.revenue;
-    const oldRev = history[history.length - 1].revenue;
+    const latestRev = Number(f.revenue);
+    const oldRev = Number(history[history.length - 1].revenue);
     if (latestRev && oldRev && oldRev > 0) {
       growthRows.push({ code: f.code, raw: (latestRev - oldRev) / oldRev });
     }
@@ -157,9 +157,9 @@ function calcMomentum(prices) {
   const rows = [];
   for (const [code, arr] of byCode) {
     if (arr.length < 30) continue;
-    const last = arr[arr.length - 1].close;
-    const monthAgo = arr[Math.max(0, arr.length - 21)].close;
-    const yearAgo = arr[0].close;
+    const last = Number(arr[arr.length - 1].close);
+    const monthAgo = Number(arr[Math.max(0, arr.length - 21)].close);
+    const yearAgo = Number(arr[0].close);
     if (!last || !monthAgo || !yearAgo) continue;
     const ret12 = (last - yearAgo) / yearAgo;
     const ret1 = (last - monthAgo) / monthAgo;
@@ -181,8 +181,10 @@ function calcLowVol(prices) {
     const tail = arr.slice(-60);
     const rets = [];
     for (let i = 1; i < tail.length; i++) {
-      if (tail[i - 1].close && tail[i].close) {
-        rets.push(Math.log(tail[i].close / tail[i - 1].close));
+      const c0 = Number(tail[i - 1].close);
+      const c1 = Number(tail[i].close);
+      if (c0 > 0 && c1 > 0) {
+        rets.push(Math.log(c1 / c0));
       }
     }
     if (rets.length < 20) continue;

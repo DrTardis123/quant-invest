@@ -73,3 +73,32 @@ CREATE TABLE IF NOT EXISTS update_log (
   stocks_updated  INTEGER,
   duration_ms     INTEGER
 );
+
+-- 외인/기관 매매동향 (일별)
+CREATE TABLE IF NOT EXISTS investor_flow (
+  code                   VARCHAR(20) NOT NULL,
+  date                   DATE        NOT NULL,
+  close                  BIGINT,
+  change                 BIGINT,
+  volume                 BIGINT,
+  institution_net        BIGINT,    -- 기관 순매매량 (양수=매수, 음수=매도)
+  foreign_net            BIGINT,    -- 외국인 순매매량
+  foreign_holding_ratio  DOUBLE,    -- 외국인 보유율 (%)
+  PRIMARY KEY (code, date)
+);
+CREATE INDEX IF NOT EXISTS idx_investor_flow_date ON investor_flow(date);
+CREATE INDEX IF NOT EXISTS idx_investor_flow_code ON investor_flow(code);
+
+-- 실시간 시세 (스냅샷)
+CREATE TABLE IF NOT EXISTS realtime_quotes (
+  code           VARCHAR(20) PRIMARY KEY,
+  as_of          TIMESTAMP,
+  close          BIGINT,
+  change         BIGINT,
+  change_pct     DOUBLE,
+  open           BIGINT,
+  high           BIGINT,
+  low            BIGINT,
+  volume         BIGINT,
+  market_cap     BIGINT
+);

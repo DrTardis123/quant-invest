@@ -59,7 +59,7 @@ async function refreshStocks() {
            sector = COALESCE(EXCLUDED.sector, stocks.sector),
            industry = COALESCE(EXCLUDED.industry, stocks.industry),
            listed_shares = COALESCE(EXCLUDED.listed_shares, stocks.listed_shares),
-           updated_at = CURRENT_TIMESTAMP`,
+           updated_at = now()`,
         [s.code, s.name, s.market, s.sector, s.industry, s.listed_shares || null],
       );
       n++;
@@ -132,7 +132,7 @@ async function refreshFundamentalsForAll({ limit = null } = {}) {
            eps = EXCLUDED.eps, bps = EXCLUDED.bps, roe = EXCLUDED.roe, roa = EXCLUDED.roa,
            revenue = EXCLUDED.revenue, operating_profit = EXCLUDED.operating_profit,
            net_profit = EXCLUDED.net_profit, debt_ratio = EXCLUDED.debt_ratio,
-           dividend_yield = EXCLUDED.dividend_yield, updated_at = CURRENT_TIMESTAMP`,
+           dividend_yield = EXCLUDED.dividend_yield, updated_at = now()`,
         [code, period, f.per, f.pbr, f.psr, f.eps, f.bps, f.roe, f.roa,
          f.revenue, f.operating_profit, f.net_profit, f.debt_ratio, f.dividend_yield],
       );
@@ -143,6 +143,44 @@ async function refreshFundamentalsForAll({ limit = null } = {}) {
     await sleep(80);
   }
   console.log(`     → ${updated}개 갱신, ${skipped}개 30일 내 갱신됨 (스킵)`);
+  return updated;
+}
+
+// === 외인/기관 매매동향 fetch ===
+async function refreshInvestorFlowForAll({ limit = null } = {}) {
+  // limit: 첫 실행 시 일부만 처리
+  const rows = await db.all(`
+    SELECT s.code
+    FROM stocks s
+    WHERE s.market IN ('KOSPI','KOSDAQ')
+    ${limit ? 'LIMIT ?' : ''}
+  `, limit ? [limit] : []);
+
+  let updated = 0, failed = 0;
+  for (const { code } of rows) {
+    try {
+      const flow = await data.getInvestorFlow(code, { days: 20 });
+      if (!flow || flow.length === 0) { failed++; continue; }
+      for (const r of flow) {
+        await db.run(
+          `INSERT INTO investor_flow
+            (code, date, close, change, volume, institution_net, foreign_net, foreign_holding_ratio)
+           VALUES (?,?,?,?,?,?,?,?)
+           ON CONFLICT (code, date) DO UPDATE SET
+             close = EXCLUDED.close, change = EXCLUDED.change, volume = EXCLUDED.volume,
+             institution_net = EXCLUDED.institution_net, foreign_net = EXCLUDED.foreign_net,
+             foreign_holding_ratio = EXCLUDED.foreign_holding_ratio`,
+          [code, r.date, r.close, r.change, r.volume, r.institution_net, r.foreign_net, r.foreign_holding_ratio],
+        );
+      }
+      updated++;
+    } catch (e) {
+      console.error(`[flow] ${code} 실패:`, e.message);
+      failed++;
+    }
+    await sleep(120);
+  }
+  console.log(`     → ${updated}개 갱신, ${failed}개 실패`);
   return updated;
 }
 
@@ -241,6 +279,7 @@ async function exportStatic() {
 
   // 종목별 상세
   console.log('[export] 종목별 상세 JSON 생성...');
+  const technical = require('../src/scoring/technical');
   const stockList = await db.all(`SELECT code FROM stocks WHERE market IN ('KOSPI','KOSDAQ')`);
   for (const { code } of stockList) {
     const stock = await db.one(`SELECT * FROM stocks WHERE code = ?`, [code]);
@@ -251,10 +290,44 @@ async function exportStatic() {
     const prices = await db.all(`
       SELECT date, close, volume FROM daily_prices WHERE code = ?
       ORDER BY date DESC LIMIT ?`, [code, STOCK_HISTORY_DAYS]);
+    // 외인/기관 매매 (최근 20일)
+    const flow = await db.all(`
+      SELECT date, close, change, volume, institution_net, foreign_net, foreign_holding_ratio
+      FROM investor_flow WHERE code = ?
+      ORDER BY date DESC LIMIT 20`, [code]);
+    // 기술분석 (MA, RSI, MACD, BB)
+    const tech = technical.analyze(prices);
+    // 팩터 기여도 (weights × score, %)
+    const weights = cfg.factors.weights;
     const total = score?.total_score || 0;
+    let contributions = null;
+    if (score) {
+      const parts = {
+        value: (Number(score.value_score) || 0) * weights.value,
+        momentum: (Number(score.momentum_score) || 0) * weights.momentum,
+        quality: (Number(score.quality_score) || 0) * weights.quality,
+        volatility: (Number(score.volatility_score) || 0) * weights.volatility,
+        growth: (Number(score.growth_score) || 0) * weights.growth,
+      };
+      const sumP = parts.value + parts.momentum + parts.quality + parts.volatility + parts.growth;
+      contributions = sumP > 0 ? {
+        value: Math.round(parts.value / sumP * 100),
+        momentum: Math.round(parts.momentum / sumP * 100),
+        quality: Math.round(parts.quality / sumP * 100),
+        volatility: Math.round(parts.volatility / sumP * 100),
+        growth: Math.round(parts.growth / sumP * 100),
+      } : null;
+    }
     const detail = {
-      stock, score: score ? { ...score, grade: scoring.gradeFor(total) } : null,
-      fundamentals: fund, prices,
+      stock,
+      score: score ? { ...score, grade: scoring.gradeFor(total) } : null,
+      contributions,
+      weights,
+      fundamentals: fund,
+      prices,
+      investor_flow: flow,
+      technical: tech.summary,
+      technical_series: tech.indicators,
     };
     fs.writeFileSync(path.join(STOCK_DIR, `${code}.json`), JSON.stringify(detail));
   }
@@ -268,7 +341,7 @@ async function exportStatic() {
 
   await initSchema();
 
-  let stocksN = 0, pricesN = 0, fundN = 0;
+  let stocksN = 0, pricesN = 0, fundN = 0, flowN = 0;
   try {
     if (isFirst) {
       console.log('[update] 1/5 종목 목록...');
@@ -283,20 +356,28 @@ async function exportStatic() {
       fundN = await refreshFundamentalsForAll({ limit: FUND_FULL_FETCH_LIMIT });
       console.log(`     → ${fundN} 행`);
 
-      console.log('[update] 4/5 나머지 재무 (백그라운드, 다음 실행에서 계속)...');
-      // 첫 실행은 시간이 오래 걸리므로 30개만, 나머지는 다음 실행에
+      console.log('[update] 4/5 외인/기관 매매 (TOP 종목만 — 점진적)...');
+      // 첫 실행: TOP 50 종목만 (이후 실행에서 계속 채움)
+      flowN = await refreshInvestorFlowForAll({ limit: 50 });
+      console.log(`     → ${flowN} 행`);
+
+      console.log('[update] 5/5 나머지 재무/수급 (백그라운드, 다음 실행에서 계속)...');
     } else {
-      console.log('[update] 1/4 종목 목록 갱신...');
+      console.log('[update] 1/5 종목 목록 갱신...');
       stocksN = await refreshStocks();
       console.log(`     → ${stocksN}개`);
 
-      console.log('[update] 2/4 일봉 (증분)...');
+      console.log('[update] 2/5 일봉 (증분)...');
       pricesN = await refreshPricesForAll();
       console.log(`     → ${pricesN} 행`);
 
-      console.log('[update] 3/4 재무 (30일 경과분만)...');
+      console.log('[update] 3/5 재무 (30일 경과분만)...');
       fundN = await refreshFundamentalsForAll();
       console.log(`     → ${fundN} 행`);
+
+      console.log('[update] 4/5 외인/기관 매매 (TOP 50)...');
+      flowN = await refreshInvestorFlowForAll({ limit: 50 });
+      console.log(`     → ${flowN} 행`);
     }
 
     console.log('[update] 점수 계산...');
@@ -307,7 +388,7 @@ async function exportStatic() {
     await db.run(
       `INSERT INTO update_log (status, message, stocks_updated, duration_ms)
        VALUES ('ok', ?, ?, ?)`,
-      [`stocks=${stocksN} prices=${pricesN} fund=${fundN} scores=${scoreN}`,
+      [`stocks=${stocksN} prices=${pricesN} fund=${fundN} flow=${flowN} scores=${scoreN}`,
        stocksN, Date.now() - t0],
     );
 

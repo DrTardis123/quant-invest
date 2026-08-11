@@ -273,4 +273,112 @@ async function getFinance(code) {
   return result;
 }
 
-module.exports = { listStocks, getBasic, getDailyPrices, getFinance };
+// === 외인/기관 매매동향 ===
+// frgn.naver 페이지에서 최근 20일치 일자별 외인/기관 순매수 추출
+async function getInvestorFlow(code, { days = 20 } = {}) {
+  const out = [];
+  let pages = Math.ceil(days / 10); // 페이지당 약 10행
+  for (let page = 1; page <= pages; page++) {
+    const url = `${BASE}/item/frgn.naver?code=${code}&page=${page}`;
+    let html;
+    try { html = await get(url); } catch (e) { break; }
+    // table.type2 안의 일별 데이터 추출
+    // 두 번째 table: 일자 / 종가 / 전일비 / 등락률 / 거래량 / 기관 / 외국인 순매매량 / 보유주수 / 보유율
+    const tables = [...html.matchAll(/<table[^>]+class="[^"]*type2[^"]*"[^>]*>([\s\S]*?)<\/table>/g)];
+    if (tables.length < 2) break;
+    const dailyTable = tables[1][1];
+    const rowRe = /<tr[^>]*>([\s\S]*?)<\/tr>/g;
+    let m;
+    let countThisPage = 0;
+    while ((m = rowRe.exec(dailyTable)) !== null) {
+      const row = m[1];
+      // 헤더/공백 row 스킵
+      if (/<th[> ]/i.test(row)) continue;
+      // 날짜
+      const dateMatch = /(\d{4}\.\d{2}\.\d{2})/.exec(row);
+      if (!dateMatch) continue;
+      const d = dateMatch[1].replace(/\./g, '-');
+      // 모든 <span class="tah..."> 추출
+      // 순서: [date, close, change, change%, volume, institution, foreign, holding_qty, holding_ratio]
+      const nums = [...row.matchAll(/<span[^>]+class="[^"]*tah[^"]*"[^>]*>([^<]+)<\/span>/g)]
+        .map((c) => toNum(c[1]));
+      if (nums.length < 9) continue;
+      // nums[0] = date (toNum null), nums[1] = close
+      const close = nums[1];
+      const change = nums[2];
+      const volume = nums[4];
+      const institution = nums[5];
+      const foreign = nums[6];
+      const holdingRatio = nums[8];
+      if (close == null) continue;
+      out.push({
+        date: d,
+        close,
+        change,
+        volume,
+        institution_net: institution,
+        foreign_net: foreign,
+        foreign_holding_ratio: holdingRatio,
+      });
+      countThisPage++;
+    }
+    if (countThisPage === 0) break;
+    await sleep(100);
+  }
+  return out.slice(0, days);
+}
+
+// === 실시간 시세 (polling.finance.naver.com) ===
+async function getRealtime(code) {
+  const url = `https://polling.finance.naver.com/api/realtime/domestic/stock/${code}`;
+  let resp;
+  try {
+    resp = await axios.get(url, {
+      headers: { 'User-Agent': UA, 'Referer': 'https://finance.naver.com/' },
+      timeout: 10000,
+    });
+  } catch (e) {
+    return null;
+  }
+  const d = resp.data?.datas?.[0];
+  if (!d) return null;
+  return {
+    code: d.itemCode,
+    name: d.stockName,
+    close: toNum(d.closePrice),
+    change: toNum(d.compareToPreviousClosePrice),
+    change_pct: toNum(d.fluctuationsRatio),
+    open: toNum(d.openPrice),
+    high: toNum(d.highPrice),
+    low: toNum(d.lowPrice),
+    volume: d.accumulatedTradingVolumeRaw ?? null,
+    trading_value: d.accumulatedTradingValueRaw ?? null,
+    market_cap: d.marketValueFullRaw ?? null,
+    as_of: d.localTradedAt,
+  };
+}
+
+// === 여러 종목 실시간 일괄 조회 ===
+async function getRealtimeBatch(codes) {
+  if (codes.length === 0) return [];
+  const url = `https://polling.finance.naver.com/api/realtime/domestic/stock/${codes.join(',')}`;
+  try {
+    const resp = await axios.get(url, {
+      headers: { 'User-Agent': UA, 'Referer': 'https://finance.naver.com/' },
+      timeout: 15000,
+    });
+    const arr = resp.data?.datas || [];
+    return arr.map((d) => ({
+      code: d.itemCode,
+      close: toNum(d.closePrice),
+      change: toNum(d.compareToPreviousClosePrice),
+      change_pct: toNum(d.fluctuationsRatio),
+      volume: d.accumulatedTradingVolumeRaw ?? null,
+      market_cap: d.marketValueFullRaw ?? null,
+    }));
+  } catch (e) {
+    return [];
+  }
+}
+
+module.exports = { listStocks, getBasic, getDailyPrices, getFinance, getInvestorFlow, getRealtime, getRealtimeBatch };

@@ -135,6 +135,7 @@ function regressionWeights(data) {
   }
 
   const W = { value: 0, momentum: 0, quality: 0, volatility: 0, growth: 0 };
+  const rawBetas = { value: 0, momentum: 0, quality: 0, volatility: 0, growth: 0 };
   const r2List = [];
   const icList = [];
   let nDates = 0;
@@ -163,12 +164,18 @@ function regressionWeights(data) {
     r2List.push(r2);
     icList.push(pearsonCorr(preds, y));
 
-    // 가중치 누적 (절대값으로)
+    // 가중치 누적 (절대값으로 정규화용)
     W.value += Math.max(0, coef[1]);
     W.momentum += Math.max(0, coef[2]);
     W.quality += Math.max(0, coef[3]);
     W.volatility += Math.max(0, coef[4]);
     W.growth += Math.max(0, coef[5]);
+    // raw beta (signed 평균)
+    rawBetas.value += coef[1];
+    rawBetas.momentum += coef[2];
+    rawBetas.quality += coef[3];
+    rawBetas.volatility += coef[4];
+    rawBetas.growth += coef[5];
   }
 
   if (nDates === 0) return { weights: null, r2: 0, ic: 0, nDates: 0 };
@@ -183,11 +190,31 @@ function regressionWeights(data) {
     volatility: Math.round((W.volatility / total) * 100),
     growth: Math.round((W.growth / total) * 100),
   };
+  // rawBeta 평균 (signed, 정규화 안 함)
+  const avgBetas = {
+    value: round4(rawBetas.value / nDates),
+    momentum: round4(rawBetas.momentum / nDates),
+    quality: round4(rawBetas.quality / nDates),
+    volatility: round4(rawBetas.volatility / nDates),
+    growth: round4(rawBetas.growth / nDates),
+  };
+  // factor importance = abs(beta) 의 비율
+  const absSum = Math.abs(avgBetas.value) + Math.abs(avgBetas.momentum) + Math.abs(avgBetas.quality) +
+    Math.abs(avgBetas.volatility) + Math.abs(avgBetas.growth);
+  const importance = absSum > 0 ? {
+    value: round4(Math.abs(avgBetas.value) / absSum * 100),
+    momentum: round4(Math.abs(avgBetas.momentum) / absSum * 100),
+    quality: round4(Math.abs(avgBetas.quality) / absSum * 100),
+    volatility: round4(Math.abs(avgBetas.volatility) / absSum * 100),
+    growth: round4(Math.abs(avgBetas.growth) / absSum * 100),
+  } : null;
   return {
     weights: norm,
     r2: round4(avg(r2List)),
     ic: round4(avg(icList)),
     nDates,
+    rawBetas: avgBetas,
+    importance,
   };
 }
 
