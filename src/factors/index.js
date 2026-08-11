@@ -198,11 +198,54 @@ function calcLowVol(prices) {
 
 // ---------- 메인 ----------
 
+// ---------- 거래정지/거래주의 감지 ----------
+
+async function fetchTradingStatus() {
+  // 최근 5일 종가 동일 + 거래량 0 → 거래정지
+  // 최근 5일 평균 거래량이 전체 평균의 5% 미만 → 거래주의 (유동성 부족)
+  return all(`
+    WITH recent AS (
+      SELECT code, date, close, volume,
+             ROW_NUMBER() OVER (PARTITION BY code ORDER BY date DESC) AS rn,
+             AVG(volume) OVER (PARTITION BY code) AS avg_vol_all
+      FROM daily_prices
+    )
+    SELECT code,
+           COUNT(*) FILTER (WHERE rn <= 5) AS recent_days,
+           MAX(close) FILTER (WHERE rn <= 5) AS max_close,
+           MIN(close) FILTER (WHERE rn <= 5) AS min_close,
+           SUM(volume) FILTER (WHERE rn <= 5) AS vol5,
+           AVG(avg_vol_all) AS avg_vol_all
+    FROM recent
+    GROUP BY code
+  `);
+}
+
+function applyStatusPenalty(rows, statusMap) {
+  // 거래정지: -80점 (사실상 0점)
+  // 거래주의:  -30점 (유동성 부족)
+  // 코스닥:    -3점 (작은 페널티, 무시할 수준)
+  for (const r of rows) {
+    const st = statusMap.get(r.code);
+    if (!st) continue;
+    if (st.max_close === st.min_close && Number(st.vol5) === 0) {
+      r.total_score = Math.max(0, r.total_score - 80);
+      r.status = 'halt';
+    } else if (st.vol5 !== null && st.avg_vol_all > 0 && Number(st.vol5) < st.avg_vol_all * 0.05) {
+      r.total_score = Math.max(0, r.total_score - 30);
+      r.status = 'caution';
+    } else {
+      r.status = 'normal';
+    }
+  }
+}
+
 async function calculateAll(weights = null) {
-  const [fundamentals, prices, prevFundamentals] = await Promise.all([
+  const [fundamentals, prices, prevFundamentals, statusRows] = await Promise.all([
     fetchLatestFundamentals(),
     fetchPricesForFactors(),
     fetchPrevYearFundamentals(),
+    fetchTradingStatus(),
   ]);
 
   if (fundamentals.length === 0) {
@@ -223,6 +266,12 @@ async function calculateAll(weights = null) {
   const asOf = dateRow[0]?.d || null;
   if (!asOf) return { codes: [...codes], rows: [], asOf: null };
 
+  // 거래정지/거래주의 맵
+  const statusMap = new Map(statusRows.map((s) => [s.code, s]));
+
+  // market 정보 (코스닥 페널티용)
+  const marketMap = new Map(fundamentals.map((f) => [f.code, f.market]));
+
   const rows = [];
   for (const code of codes) {
     const vs = v.get(code) ?? 50;
@@ -230,7 +279,13 @@ async function calculateAll(weights = null) {
     const qs = q.get(code) ?? 50;
     const lvs = lv.get(code) ?? 50;
     const gs = g.get(code) ?? 50;
-    const total = (vs * W.value + ms * W.momentum + qs * W.quality + lvs * W.volatility + gs * W.growth) / 100;
+    let total = (vs * W.value + ms * W.momentum + qs * W.quality + lvs * W.volatility + gs * W.growth) / 100;
+
+    // 코스닥 작은 페널티 (-3점, 무시 가능한 수준)
+    if (marketMap.get(code) === 'KOSDAQ') {
+      total -= 3;
+    }
+
     rows.push({
       code,
       date: asOf,
@@ -240,8 +295,13 @@ async function calculateAll(weights = null) {
       volatility_score: round2(lvs),
       growth_score: round2(gs),
       total_score: round2(total),
+      market: marketMap.get(code) || null,
     });
   }
+
+  // 거래정지/거래주의 패널티 적용
+  applyStatusPenalty(rows, statusMap);
+
   rows.sort((a, b) => b.total_score - a.total_score);
   rows.forEach((r, i) => (r.rank = i + 1));
 
