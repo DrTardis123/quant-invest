@@ -188,6 +188,17 @@ async function getBasic(code) {
   return { raw: true, html: html.length };
 }
 
+// === 종목 업종/섹터 ===
+async function getStockSector(code) {
+  // 메인 페이지에서 업종 링크 추출
+  // 패턴: <a href="/sise/sise_group_detail.naver?type=upjong&no=278">반도체/반도체장비</a>
+  const url = `${BASE}/item/main.naver?code=${code}`;
+  const html = await get(url);
+  const m = html.match(/<a[^>]*href="\/sise\/sise_group_detail\.naver\?type=upjong&no=(\d+)"[^>]*>([^<]+)<\/a>/);
+  if (!m) return { code, sector: null, industry: null };
+  return { code, sector: cleanText(m[2]), industry: null };
+}
+
 // === 일봉 ===
 async function getDailyPrices(code, { fromDate = null, toDate = null, maxPages = 30 } = {}) {
   const out = [];
@@ -380,4 +391,4 @@ async function getRealtimeBatch(codes) {
   }
 }
 
-module.exports = { listStocks, getBasic, getDailyPrices, getFinance, getInvestorFlow, getRealtime, getRealtimeBatch };
+module.exports = { listStocks, getBasic, getStockSector, getDailyPrices, getFinance, getInvestorFlow, getRealtime, getRealtimeBatch };

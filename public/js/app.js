@@ -561,6 +561,62 @@ function app() {
       };
     },
 
+    get oneLiner() {
+      // 퀀트투자 관점 한줄평 (status + score + signals 종합)
+      const s = this.stockDetail?.score;
+      if (!s) return '—';
+      const tech = this.stockDetail?.technical?.signals || {};
+      const flow = this.stockDetail?.investor_flow || [];
+
+      // 거래 정지/유동성 (DB에 status 필드 있으면)
+      if (s.status === 'halt') return '🚫 거래정지 — 매매 불가. 즉시 제외.';
+      if (s.status === 'caution') return '⚠️ 거래주의 — 유동성 부족. 회피 권장.';
+
+      // 기술적 신호 강조
+      const isUpTrend = (tech.ma_trend || '').includes('상승');
+      const isDownTrend = (tech.ma_trend || '').includes('하락');
+      const isOverbought = tech.rsi_zone === '과매수';
+      const isOversold = tech.rsi_zone === '과매도';
+
+      // 점수 최상위
+      if (s.total_score >= 80) {
+        if (isUpTrend && !isOverbought) return '🏆 종합 최상위 + 상승추세. 핵심 보유 후보.';
+        if (isOverbought) return '🏆 점수 최상위이나 단기 과열 — 분할 진입 고려.';
+        return '🏆 종합 최상위. 핵심 보유 후보.';
+      }
+
+      // 영역별 강한 점수
+      const scores = {
+        퀄리티: s.quality_score || 0,
+        성장: s.growth_score || 0,
+        모멘텀: s.momentum_score || 0,
+        가치: s.value_score || 0,
+      };
+      const top = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
+      if (top[1] >= 80) {
+        if (top[0] === '퀄리티') return '💎 ROE·ROA 우수. 재무 건전 우량주.';
+        if (top[0] === '성장') return '🚀 매출·이익 고성장. 모멘텀 강세 동반 시 매수 적기.';
+        if (top[0] === '모멘텀') return '📈 12개월 모멘텀 최상위. 추세 추종.';
+        if (top[0] === '가치') return '💰 저PER·저PBR. 전통 가치주 — 그러나 2020년대 약세 지속 주의.';
+      }
+
+      // 기술적 매수/매도 신호
+      if (isOversold && isUpTrend) return '🟢 과매도 + 상승추세 — 분할 매수 구간.';
+      if (isOverbought && isDownTrend) return '🔴 과매수 + 하락추세 — 차익 실현 또는 회피.';
+
+      // 수급
+      if (flow.length >= 5) {
+        const f5 = flow.slice(0, 5).reduce((sum, r) => sum + (Number(r.foreign_net) || 0), 0);
+        if (f5 > 0 && s.total_score >= 50) return '🌍 외국인 5일 연속 순매수. 수급 호전.';
+        if (f5 < 0 && s.total_score < 50) return '🌍 외국인 5일 연속 순매도. 수급 부진.';
+      }
+
+      // 일반
+      if (s.total_score >= 60) return '✅ 종합 우량. 분산 후보.';
+      if (s.total_score >= 40) return '⚖️ 중립. 관망.';
+      return '⚠️ 종합 약세. 신중 접근 권장.';
+    },
+
     get optimizerData() { return this.optimizer; },
 
     // ===== 차트 그리기 =====

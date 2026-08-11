@@ -212,6 +212,42 @@ async function refreshInvestorFlowForAll({ limit = null } = {}) {
   return updated;
 }
 
+async function refreshSectorsForAll({ limit = 100 } = {}) {
+  // sector가 NULL인 종목을 우선 갱신 (점진적)
+  const rows = await db.all(`
+    SELECT s.code
+    FROM stocks s
+    WHERE s.market IN ('KOSPI','KOSDAQ')
+      AND (s.sector IS NULL OR s.sector = '')
+    ORDER BY s.market_cap DESC NULLS LAST
+    LIMIT ?
+  `, [limit]);
+
+  if (rows.length === 0) {
+    console.log('     → 갱신할 sector 없음 (전체 완료)');
+    return 0;
+  }
+
+  let updated = 0, failed = 0;
+  for (const { code } of rows) {
+    try {
+      const r = await data.getStockSector(code);
+      if (r.sector) {
+        await db.run('UPDATE stocks SET sector = ? WHERE code = ?', [r.sector, code]);
+        updated++;
+      } else {
+        failed++;
+      }
+    } catch (e) {
+      console.error(`[sector] ${code} 실패:`, e.message);
+      failed++;
+    }
+    await sleep(200);
+  }
+  console.log(`     → ${updated}개 sector 갱신, ${failed}개 실패/없음`);
+  return updated;
+}
+
 async function exportStatic() {
   console.log('[export] 정적 JSON 생성...');
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -369,7 +405,7 @@ async function exportStatic() {
 
   await initSchema();
 
-  let stocksN = 0, pricesN = 0, fundN = 0, flowN = 0;
+  let stocksN = 0, pricesN = 0, fundN = 0, flowN = 0, sectorN = 0;
   try {
     if (isFirst) {
       console.log('[update] 1/5 종목 목록...');
@@ -389,6 +425,10 @@ async function exportStatic() {
       flowN = await refreshInvestorFlowForAll({ limit: 50 });
       console.log(`     → ${flowN} 행`);
 
+      console.log('[update] 4.5/5 섹터 분류 (TOP 100 — 점진적)...');
+      sectorN = await refreshSectorsForAll({ limit: 100 });
+      console.log(`     → ${sectorN}개`);
+
       console.log('[update] 5/5 나머지 재무/수급 (백그라운드, 다음 실행에서 계속)...');
     } else {
       console.log('[update] 1/5 종목 목록 갱신...');
@@ -406,6 +446,10 @@ async function exportStatic() {
       console.log('[update] 4/5 외인/기관 매매 (TOP 50)...');
       flowN = await refreshInvestorFlowForAll({ limit: 50 });
       console.log(`     → ${flowN} 행`);
+
+      console.log('[update] 4.5/5 섹터 분류 (TOP 100 — 점진적)...');
+      sectorN = await refreshSectorsForAll({ limit: 100 });
+      console.log(`     → ${sectorN}개`);
     }
 
     console.log('[update] 점수 계산...');
@@ -416,7 +460,7 @@ async function exportStatic() {
     await db.run(
       `INSERT INTO update_log (status, message, stocks_updated, duration_ms)
        VALUES ('ok', ?, ?, ?)`,
-      [`stocks=${stocksN} prices=${pricesN} fund=${fundN} flow=${flowN} scores=${scoreN}`,
+      [`stocks=${stocksN} prices=${pricesN} fund=${fundN} flow=${flowN} sector=${sectorN} scores=${scoreN}`,
        stocksN, Date.now() - t0],
     );
 

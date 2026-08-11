@@ -658,6 +658,12 @@
               </div>
             </template>
           </div>
+          <div class="alert alert-primary border-0 py-2 mb-3" x-show="stockDetail" role="alert" style="background:linear-gradient(135deg,#e3f2fd,#bbdefb)">
+            <div class="d-flex align-items-center">
+              <strong class="me-2">📊 퀀트 한줄평:</strong>
+              <span x-text="oneLiner"></span>
+            </div>
+          </div>
           <ul class="nav nav-pills nav-fill mb-3 flex-wrap">
             <li class="nav-item"><a class="nav-link" :class="{active: detailTab==='overview'}" href="#" @click.prevent="detailTab='overview'">개요</a></li>
             <li class="nav-item"><a class="nav-link" :class="{active: detailTab==='valuation'}" href="#" @click.prevent="detailTab='valuation'">밸류에이션</a></li>
