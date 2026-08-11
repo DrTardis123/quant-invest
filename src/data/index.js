@@ -21,4 +21,19 @@ async function getFinance(code) {
   return getClient().getFinance(code);
 }
 
-module.exports = { listStocks, getDailyPrices, getFinance, getClient };
+async function getInvestorFlow(code, opts) {
+  return getClient().getInvestorFlow(code, opts);
+}
+
+async function getRealtime(code) {
+  return getClient().getRealtime(code);
+}
+
+async function getRealtimeBatch(codes) {
+  return getClient().getRealtimeBatch(codes);
+}
+
+module.exports = {
+  listStocks, getDailyPrices, getFinance, getInvestorFlow,
+  getRealtime, getRealtimeBatch, getClient,
+};
