@@ -81,41 +81,46 @@ async function refreshStocks() {
 }
 
 // === 증분 가격 fetch ===
-async function refreshPricesForAll({ maxDays = null } = {}) {
+async function refreshPricesForAll({ maxDays = null, concurrency = 5 } = {}) {
   const rows = await db.all(`SELECT code FROM stocks WHERE market IN ('KOSPI','KOSDAQ')`);
   let updated = 0, fetched = 0;
   // DB에 기존 일봉이 있는지 확인 (없으면 첫 실행 모드)
   const existingCount = await db.one(`SELECT COUNT(*) AS c FROM daily_prices LIMIT 1`);
   const isInitial = (Number(existingCount?.c) || 0) === 0;
-  // 첫 실행이면 페이지 수 제한 (90일 = 2페이지, 60일/페이지)
-  const maxPages = isInitial ? 2 : 30;
-  if (isInitial) console.log(`     (첫 실행 감지: 페이지당 ${60}일, 최대 ${maxPages}페이지 = ${maxPages * 60}일)`);
-  for (const { code } of rows) {
-    try {
-      const last = await db.one(`SELECT MAX(date) AS d FROM daily_prices WHERE code = ?`, [code]);
-      const fromDate = nextDay(last?.d ? String(last.d) : null);
-      // maxDays 파라미터가 있으면 maxPages 계산
-      const mp = maxDays ? Math.ceil(maxDays / 60) : maxPages;
-      const prices = await data.getDailyPrices(code, { fromDate, maxPages: mp });
-      if (prices.length === 0) continue;
-      for (const p of prices) {
-        await db.run(
-          `INSERT INTO daily_prices (code, date, open, high, low, close, volume, trading_value, market_cap)
-           VALUES (?,?,?,?,?,?,?,?,?)
-           ON CONFLICT (code, date) DO NOTHING`,
-          [code, String(p.date), p.open, p.high, p.low, p.close, p.volume, p.trading_value, p.market_cap],
-        );
+  // maxPages = 1 (60일) 으로 고정 → 100분 → 5~10분으로 단축
+  // maxDays 파라미터 있으면 그에 맞춰 페이지 수 조정
+  const maxPages = maxDays ? Math.min(Math.ceil(maxDays / 60), 30) : 1;
+  if (isInitial) console.log(`     (첫 실행 감지: maxPages=${maxPages}, ${maxPages * 60}일치)`);
+  console.log(`     (병렬 ${concurrency}개씩 fetch 시작: ${rows.length} 종목)`);
+
+  // 배치 처리 (concurrency만큼 동시 실행)
+  for (let i = 0; i < rows.length; i += concurrency) {
+    const batch = rows.slice(i, i + concurrency);
+    await Promise.all(batch.map(async ({ code }) => {
+      try {
+        const last = await db.one(`SELECT MAX(date) AS d FROM daily_prices WHERE code = ?`, [code]);
+        const fromDate = nextDay(last?.d ? String(last.d) : null);
+        const prices = await data.getDailyPrices(code, { fromDate, maxPages });
+        if (prices.length === 0) return;
+        for (const p of prices) {
+          await db.run(
+            `INSERT INTO daily_prices (code, date, open, high, low, close, volume, trading_value, market_cap)
+             VALUES (?,?,?,?,?,?,?,?,?)
+             ON CONFLICT (code, date) DO NOTHING`,
+            [code, String(p.date), p.open, p.high, p.low, p.close, p.volume, p.trading_value, p.market_cap],
+          );
+        }
+        updated += prices.length;
+      } catch (e) {
+        // quiet log for first run (avoid 4K lines of errors)
       }
-      updated += prices.length;
-      fetched++;
-      // 첫 실행 진행 상황 표시 (100개마다)
-      if (isInitial && fetched % 200 === 0) {
-        console.log(`     ... ${fetched}/${rows.length} 종목, ${updated} 행`);
-      }
-    } catch (e) {
-      console.error(`[price] ${code} 실패:`, e.message);
+    }));
+    fetched += batch.length;
+    if (fetched % 200 === 0 || fetched === rows.length) {
+      console.log(`     ... ${fetched}/${rows.length} 종목, ${updated} 행`);
     }
-    await sleep(isInitial ? 30 : 60); // 첫 실행: 빠른 fetch, 이후: 안정성 우선
+    // 배치 간 짧은 sleep
+    await sleep(isInitial ? 50 : 100);
   }
   console.log(`     → ${fetched}개 종목, ${updated} 행`);
   return updated;
