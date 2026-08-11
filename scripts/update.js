@@ -42,7 +42,18 @@ function nextDay(yyyy_mm_dd) {
 
 function writeJson(name, obj) {
   const p = path.join(DATA_DIR, name);
-  fs.writeFileSync(p, JSON.stringify(obj));
+  // DuckDB BIGINT는 JavaScript BigInt로 옴 → JSON.stringify는 처리 못 함
+  // → 재귀적으로 BigInt → Number 변환
+  const plain = JSON.stringify(obj, (_k, v) => {
+    if (typeof v === 'bigint') return Number(v);
+    if (v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date)) {
+      const o = {};
+      for (const k of Object.keys(v)) o[k] = v[k] instanceof Date ? v[k].toISOString() : v[k];
+      return o;
+    }
+    return v;
+  });
+  fs.writeFileSync(p, plain);
   console.log(`  → ${name} (${(fs.statSync(p).size / 1024).toFixed(1)}KB)`);
 }
 
@@ -341,7 +352,7 @@ async function exportStatic() {
       technical: tech.summary,
       technical_series: tech.indicators,
     };
-    fs.writeFileSync(path.join(STOCK_DIR, `${code}.json`), JSON.stringify(detail));
+    fs.writeFileSync(path.join(STOCK_DIR, `${code}.json`), JSON.stringify(detail, (_k, v) => typeof v === 'bigint' ? Number(v) : v));
   }
   console.log(`  → stock/*.json (${stockList.length}개)`);
 }
