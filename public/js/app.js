@@ -48,6 +48,13 @@ function app() {
     // ----- 초기화 -----
     async init() {
       this._modal = new bootstrap.Modal(document.getElementById('stockModal'));
+
+      // 모달 닫힐 때 모든 chart destroy (메모리 leak 방지)
+      document.getElementById('stockModal').addEventListener('hidden.bs.modal', () => {
+        this._destroyModalCharts();
+        this.stockDetail = null;  // 큰 데이터 해제
+      });
+
       this.strategies = Object.values(window.QUANT_STRATEGIES || {});
       this.currentWeights = window.QUANT_STRATEGIES[this.strategyKey].weights;
 
@@ -75,7 +82,26 @@ function app() {
       ]);
       this._recomputeAndSet();
       this.$nextTick(() => this._drawAllSparklines());
-      this._refreshTimer = setInterval(() => this._silentRefresh(), 120_000);
+      // 자동 새로고침 OFF (수동 새로고침 버튼으로만) — CPU/메모리 보호
+      // this._refreshTimer = setInterval(() => this._silentRefresh(), 300_000);
+    },
+
+    _destroyModalCharts() {
+      // 모달 안의 모든 chart 인스턴스 destroy (Chart.js 메모리 leak 방지)
+      const keys = ['price', 'vol', 'radar', 'supply', 'holding', 'ma', 'rsi', 'macd', 'bb', 'weight', 'contrib', 'imp'];
+      for (const k of keys) {
+        if (this._charts[k]) { try { this._charts[k].destroy(); } catch (_) {} this._charts[k] = null; }
+      }
+    },
+
+    async manualRefresh() {
+      // 수동 새로고침 — 사용자가 버튼 눌렀을 때만 호출
+      const btn = document.querySelector('[data-action="refresh"]');
+      if (btn) { btn.disabled = true; btn.textContent = '갱신 중...'; }
+      try { await this._silentRefresh(); }
+      finally {
+        if (btn) { btn.disabled = false; btn.textContent = '🔄 새로고침'; }
+      }
     },
 
     setTab(t) {
