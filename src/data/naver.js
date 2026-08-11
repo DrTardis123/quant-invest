@@ -8,9 +8,18 @@
 //   1) 시장별 종목 목록:
 //      KOSPI: /sise/sise_market_sum.naver?sosok=0&page=N
 //      KOSDAQ: /sise/sise_market_sum.naver?sosok=1&page=N
-//   2) 종목 기본정보: /item/main.naver?code=XXXXXX
-//   3) 일봉: /item/sise_day.naver?code=XXXXXX&page=N
-//   4) 재무: /item/finance.naver?code=XXXXXX (연간/분기 탭)
+//   2) 종목 기본정보: /item/main.naver?code=XXXXXX (JS 렌더링 - 직접 파싱 어려움)
+//   3) 일봉: /item/sise_day.naver?code=XXXXXX&page=N (EUC-KR, 안정적)
+//   4) 외인/기관 매매: /item/frgn.naver?code=XXXXXX&page=N
+//   5) 실시간 시세: polling.finance.naver.com/api/realtime/domestic/stock/{codes} (JSON)
+//
+// 주의 (404 / 폐기된 엔드포인트):
+//   - /item/finance.naver: 2024~2025 사이 폐기됨 → getFinance()는 stub
+//   - /item/short.naver: 공매도 정보 → 폐기됨
+//   - m.stock.naver.com/api/*: 모바일 API 구조 변경으로 404 → 사용 안 함
+//
+// PER/PBR/ROE 등 재무 데이터는 현재 무료 소스 없음 (KIS API 또는 DART API 필요)
+// → 가치/퀄리티 점수는 다른 팩터 (모멘텀, 저변동성, 성장)로 대체 또는 null 처리
 
 const axios = require('axios');
 const iconv = (() => {
@@ -251,26 +260,16 @@ async function getDailyPrices(code, { fromDate = null, toDate = null, maxPages =
 
 // === 재무 ===
 async function getFinance(code) {
-  const url = `${BASE}/item/finance.naver?code=${code}`;
-  const html = await get(url);
-  // finance.naver의 재무 페이지는 iframe이거나 직접 테이블
-  // 직접 테이블인 경우 (대부분의 경우):
-  // <table class="tb_type1"> 안에 연도별/분기별 데이터
-  // 최근 연도 컬럼: PER, EPS, ROE 등
-  const result = {
+  // 주의: item/finance.naver 엔드포인트는 2024~2025 사이에 404 반환 (폐기됨)
+  // main.naver 페이지는 JS 렌더링으로 PER/PBR 추출 어려움
+  // 현재 가능한 무료 소스 없음 → null 반환 (DB에 빈 row 들어감, 점수는 다른 팩터로 계산)
+  // TODO: KRX data.krx.co.kr, DART API, KIS API (인증 필요) 등으로 대체 검토
+  return {
     per: null, pbr: null, psr: null,
     eps: null, bps: null, roe: null, roa: null,
     revenue: null, operating_profit: null, net_profit: null,
     debt_ratio: null, dividend_yield: null,
   };
-
-  // 간단한 휴리스틱: 페이지에 등장하는 "PER" 또는 "EPS" 라벨 근처 숫자 추출은 너무 fragile
-  // 안전하게: 페이지가 비어있거나 에러면 null 반환
-  if (html.length < 5000) return result;
-
-  // TODO: 더 견고한 파싱. 일단 raw 플래그만 반환.
-  // 사용 예: 추후 main 페이지의 table.summary에서 PER/PBR 추출
-  return result;
 }
 
 // === 외인/기관 매매동향 ===
