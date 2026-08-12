@@ -1,0 +1,4 @@
+# Vercel deploy에서 제외할 파일/폴더
+# stock/*.json은 3,921개 × 150KB = 약 588MB로 Vercel deploy를 멎게 함
+# → serverless function (api/stock/[code].js)이 github raw에서 동적 fetch
+public/data/stock/
