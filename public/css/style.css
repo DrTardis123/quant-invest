@@ -1,226 +1,208 @@
-/* 점수 색상 (0-50 빨강, 50 중립, 50-100 초록) */
-.score {
-  display: inline-block;
-  min-width: 42px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+/* 퀀트 투자 대시보드 스타일 */
+
+/* === 별표 (관심종목) === */
+.star-btn {
+  border: none;
+  background: transparent;
+  font-size: 1.2em;
+  cursor: pointer;
+  padding: 0 4px;
 }
-.score[data-s="50"] { color: #6c757d; }
-.score[data-s^="5"], .score[data-s^="6"], .score[data-s^="7"], .score[data-s^="8"], .score[data-s^="9"] {
-  color: #198754; font-weight: 500;
-}
-.score[data-s^="0"], .score[data-s^="1"], .score[data-s^="2"], .score[data-s^="3"] {
-  color: #dc3545; font-weight: 500;
-}
+.star-on { color: #ffc107; }
+.star-off { color: #adb5bd; }
+.star-on:hover { color: #ff9800; }
+.star-off:hover { color: #ffc107; }
+
+/* === 점수 색상 === */
+.score[data-s] { font-variant-numeric: tabular-nums; }
+.total-score { font-size: 1.05em; }
+.score[data-s^="8"] { color: #198754; font-weight: 600; }
+.score[data-s^="7"] { color: #20c997; }
+.score[data-s^="6"] { color: #0dcaf0; }
+.score[data-s^="5"] { color: #0d6efd; }
 .score[data-s^="4"] { color: #fd7e14; }
+.score[data-s^="3"] { color: #dc3545; }
+.score[data-s^="2"] { color: #842029; }
+.score[data-s^="1"] { color: #842029; }
 
-.total-score {
+/* === 등급 뱃지 === */
+.grade-badge {
   display: inline-block;
-  min-width: 48px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-size: 1.05em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.85em;
+  color: #fff;
 }
-.total-score[data-s^="6"], .total-score[data-s^="7"], .total-score[data-s^="8"], .total-score[data-s^="9"] {
-  color: #198754;
-}
-.total-score[data-s^="5"] { color: #0d6efd; }
-.total-score[data-s^="4"] { color: #fd7e14; }
-.total-score[data-s^="3"], .total-score[data-s^="2"], .total-score[data-s^="1"], .total-score[data-s^="0"] {
-  color: #6c757d;
-}
+.grade-success { background: #198754; }
+.grade-info { background: #0dcaf0; color: #000; }
+.grade-primary { background: #0d6efd; }
+.grade-secondary { background: #6c757d; }
+.grade-warning { background: #fd7e14; }
+.grade-danger { background: #dc3545; }
+.grade-dark { background: #842029; }
 
-body { background: #f5f7fa; }
-.card { border: none; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
-.navbar-brand small { font-weight: 400; }
-.nav-tabs .nav-link { color: #495057; }
-.nav-tabs .nav-link.active { font-weight: 600; }
-.nav-pills .nav-link { color: #495057; }
-.nav-pills .nav-link.active { background-color: #0d6efd; color: #fff; }
-table th { font-size: 0.85rem; font-weight: 600; }
-table td { font-size: 0.9rem; }
-.sticky-top { z-index: 1020; }
-
-/* === 통계 카드 === */
-.stat-card .card-body { padding: 0.75rem 1rem; }
-.stat-card .fs-3 { line-height: 1.1; }
+/* === 인덱스 스파크라인 === */
+.index-sparkline {
+  width: 100%;
+  height: 60px;
+  display: block;
+}
 
 /* === 가중치 칩 === */
 .weight-chip {
   display: inline-block;
   padding: 2px 8px;
-  background: #e9ecef;
-  color: #495057;
-  border-radius: 10px;
-  font-size: 0.75rem;
+  background: #e7f1ff;
+  color: #0d6efd;
+  border-radius: 12px;
+  font-size: 0.8em;
   font-weight: 500;
 }
-
-/* === 등급 배지 === */
-.grade-badge {
-  display: inline-block;
-  min-width: 32px;
-  padding: 2px 8px;
-  text-align: center;
-  font-weight: 700;
-  font-size: 0.85rem;
-  border-radius: 4px;
-  color: #fff;
-}
-.grade-success { background: #198754; }
-.grade-primary { background: #0d6efd; }
-.grade-secondary { background: #6c757d; }
-.grade-warning { background: #fd7e14; }
-.grade-danger { background: #dc3545; }
 
 /* === 히트맵 === */
 .heatmap-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
-  min-height: 480px;
-  padding: 4px;
-  background: #f0f0f0;
-  border-radius: 4px;
-  align-content: flex-start;
+  width: 100%;
 }
 .heatmap-cell {
   min-width: 50px;
-  min-height: 50px;
-  flex-basis: 60px;
-  border-radius: 2px;
+  height: 60px;
+  padding: 4px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
+  justify-content: space-between;
   color: #fff;
-  text-shadow: 0 1px 2px rgba(0,0,0,.4);
-  transition: transform 0.1s, box-shadow 0.1s;
-  overflow: hidden;
-  padding: 4px;
+  cursor: pointer;
+  transition: transform 0.1s;
+  border-radius: 2px;
 }
 .heatmap-cell:hover {
   transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0,0,0,.3);
   z-index: 10;
-  position: relative;
 }
-.hc-name {
-  font-size: 0.7rem;
-  font-weight: 600;
-  line-height: 1.1;
-  text-align: center;
-  word-break: keep-all;
-  max-width: 100%;
-}
-.hc-score {
-  font-size: 0.85rem;
-  font-weight: 700;
-  margin-top: 2px;
-}
-.heatmap-legend {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.legend-label { font-size: 0.75rem; color: #6c757d; }
+.hc-name { font-size: 0.75em; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hc-score { font-size: 0.7em; opacity: 0.9; }
+
+.heatmap-legend { display: flex; align-items: center; gap: 4px; }
+.legend-label { font-size: 0.75em; color: #6c757d; }
 .legend-bar {
-  width: 100px;
-  height: 12px;
-  background: linear-gradient(to right, #dc3545 0%, #fd7e14 25%, #ffc107 50%, #20c997 75%, #198754 100%);
-  border-radius: 2px;
+  width: 80px;
+  height: 8px;
+  background: linear-gradient(to right, #842029, #dc3545, #fd7e14, #0d6efd, #20c997, #198754);
+  border-radius: 4px;
 }
+
+/* === 상관 행렬 === */
+.corr-matrix th, .corr-matrix td { width: 60px; height: 40px; text-align: center; font-size: 0.85em; }
+.corr-cell { transition: transform 0.1s; cursor: default; }
+.corr-cell:hover { transform: scale(1.1); z-index: 10; }
+
+/* === 백테스트 === */
+.month-heatmap-table { width: 100%; border-collapse: separate; border-spacing: 2px; }
+.month-heatmap-table th, .month-heatmap-table td { width: 60px; height: 36px; text-align: center; font-size: 0.85em; padding: 4px; }
+.month-heatmap-table .mcell { color: #fff; font-weight: 600; border-radius: 2px; }
+.month-heatmap-table .mcell.empty { background: #f0f0f0; color: #999; }
+.month-heatmap-table .year-total { background: #212529; color: #fff; }
 
 /* === 섹터 바 === */
-.sector-bar {
-  background: #e9ecef;
+.sector-bar { height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden; }
+.sector-bar-fill { height: 100%; transition: width 0.3s; }
+
+/* === 슬라이더 === */
+.weight-slider {
+  width: 100%;
+  margin: 4px 0;
+}
+.weight-slider::-webkit-slider-thumb { background: #0d6efd; }
+.weight-slider::-moz-range-thumb { background: #0d6efd; }
+
+/* === 모바일 반응형 === */
+@media (max-width: 768px) {
+  .navbar-brand { font-size: 1rem; }
+  .nav-tabs { font-size: 0.85em; overflow-x: auto; flex-wrap: nowrap; }
+  .nav-tabs .nav-item { flex-shrink: 0; }
+  .table-responsive { font-size: 0.8em; }
+  .fs-3 { font-size: 1.5rem !important; }
+  .fs-4 { font-size: 1.2rem !important; }
+  .index-sparkline { height: 40px; }
+  .heatmap-cell { min-width: 35px; height: 40px; }
+  .hc-name { font-size: 0.6em; }
+  .btn-group-sm > .btn { padding: 0.15rem 0.3rem; font-size: 0.7rem; }
+}
+
+@media (max-width: 480px) {
+  .modal-xl { max-width: 100%; margin: 0; }
+  .modal-body { padding: 0.5rem; }
+  .col-md-2, .col-md-3, .col-md-4, .col-md-6, .col-md-8 { flex: 0 0 100%; max-width: 100%; }
+}
+
+/* === 다크모드 === */
+body.dark-mode {
+  background: #1a1d20;
+  color: #e9ecef;
+}
+body.dark-mode .navbar { background: #000 !important; }
+body.dark-mode .card { background: #2b2f33; color: #e9ecef; border-color: #495057; }
+body.dark-mode .card-body { color: #e9ecef; }
+body.dark-mode .table { color: #e9ecef; }
+body.dark-mode .table-light { background: #343a40; color: #e9ecef; }
+body.dark-mode .table-light th { background: #343a40; color: #e9ecef; }
+body.dark-mode .table > :not(caption) > * > * { background-color: transparent; color: #e9ecef; }
+body.dark-mode .table-hover > tbody > tr:hover > * { background-color: rgba(255,255,255,0.05); color: #fff; }
+body.dark-mode .form-control, body.dark-mode .form-select { background: #343a40; color: #e9ecef; border-color: #495057; }
+body.dark-mode .nav-tabs { border-bottom-color: #495057; }
+body.dark-mode .nav-tabs .nav-link { color: #adb5bd; }
+body.dark-mode .nav-tabs .nav-link.active { background: #2b2f33; border-color: #495057 #495057 #2b2f33; color: #fff; }
+body.dark-mode .nav-pills .nav-link { color: #adb5bd; }
+body.dark-mode .nav-pills .nav-link.active { background: #0d6efd; }
+body.dark-mode .text-muted { color: #adb5bd !important; }
+body.dark-mode .text-dark { color: #e9ecef !important; }
+body.dark-mode .alert-info { background: #0c5460; color: #d1ecf1; }
+body.dark-mode .alert-primary { background: #084298; color: #cfe2ff; }
+body.dark-mode .alert-secondary { background: #343a40; color: #e9ecef; }
+body.dark-mode .alert-warning { background: #664d03; color: #fff3cd; }
+body.dark-mode .weight-chip { background: #084298; color: #cfe2ff; }
+body.dark-mode .heatmap-cell { color: #fff; }
+body.dark-mode .mcell.empty { background: #343a40 !important; color: #adb5bd; }
+body.dark-mode .corr-cell { color: #fff; }
+body.dark-mode .index-card { background: #2b2f33; }
+body.dark-mode .stat-card { background: #2b2f33; }
+body.dark-mode .table-warning { background: rgba(255,193,7,0.15) !important; }
+body.dark-mode .badge.bg-light { background: #495057 !important; color: #e9ecef !important; }
+body.dark-mode .modal-content { background: #2b2f33; color: #e9ecef; }
+body.dark-mode .modal-header, body.dark-mode .modal-footer { border-color: #495057; }
+body.dark-mode .close, body.dark-mode .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
+body.dark-mode kbd { background: #495057; color: #e9ecef; border-color: #6c757d; }
+body.dark-mode .tooltip-inner { background: #000; color: #fff; }
+
+/* === 도움말 모달 === */
+.shortcuts-table { font-size: 0.9em; }
+.shortcuts-table kbd { background: #f8f9fa; color: #212529; padding: 2px 6px; border-radius: 3px; border: 1px solid #ced4da; font-family: monospace; }
+body.dark-mode .shortcuts-table kbd { background: #495057; color: #e9ecef; border-color: #6c757d; }
+
+/* === 시가총액 포맷 === */
+.cap { font-variant-numeric: tabular-nums; }
+
+/* === 로딩 스피너 === */
+.loading-spinner {
+  display: inline-block;
+  width: 16px;
   height: 16px;
-  border-radius: 2px;
-  overflow: hidden;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #0d6efd;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
-.sector-bar-fill {
-  height: 100%;
-  transition: width 0.3s;
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
+body.dark-mode .loading-spinner { border-color: #495057; border-top-color: #0dcaf0; }
 
-/* === 상관 매트릭스 === */
-.corr-cell {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-/* === 월별 히트맵 (백테스트) === */
-.month-heatmap-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 2px;
-  font-size: 0.85rem;
-  font-variant-numeric: tabular-nums;
-}
-.month-heatmap-table th,
-.month-heatmap-table td {
-  text-align: center;
-  padding: 6px 4px;
-  border-radius: 3px;
-}
-.month-heatmap-table thead th {
-  background: #f8f9fa;
-  color: #6c757d;
-  font-weight: 600;
-}
-.month-heatmap-table tbody th {
-  background: #f8f9fa;
-  color: #495057;
-  font-weight: 600;
-}
-.month-heatmap-table .mcell {
-  font-weight: 600;
-  min-width: 50px;
-}
-.month-heatmap-table .mcell.empty {
-  background: #f8f9fa;
-  color: #adb5bd;
-}
-.month-heatmap-table .mcell.year-total {
-  background: #212529;
-  color: #fff;
-}
-
-/* === 옵티마이저 + 백테스트 탭 강조 === */
-.nav-tabs .nav-link.text-warning {
-  color: #b8860b !important;
-  font-weight: 600;
-}
-.nav-tabs .nav-link.text-warning.active {
-  color: #fff !important;
-  background: #b8860b;
-  border-color: #b8860b;
-}
-
-/* === 지수 카드 === */
-.index-card {
-  border-left: 4px solid #0d6efd;
-  transition: transform 0.15s, box-shadow 0.15s;
-}
-.index-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,.08);
-}
-.index-sparkline {
-  width: 100%;
-  height: 40px;
-  margin-top: 4px;
-}
-
-/* === 클릭 가능 행 === */
-.clickable-row {
-  cursor: pointer;
-  transition: background-color 0.1s;
-}
-.clickable-row:hover {
-  background-color: #e7f1ff !important;
-}
-.clickable-row:hover td {
-  background-color: transparent;
-}
+/* === 클릭 가능한 행 === */
+.clickable-row { cursor: pointer; }
+.clickable-row:hover { background: rgba(13,110,253,0.05); }
+body.dark-mode .clickable-row:hover { background: rgba(255,255,255,0.05); }

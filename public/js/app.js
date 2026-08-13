@@ -11,6 +11,7 @@ function app() {
     tab: 'top',
     hosted: false,
     marketFilter: 'KOSPI',  // 기본 KOSPI만 (KOSDAQ은 별도 페이지)
+    darkMode: false,
     state: {
       dataSource: '',
       kisEnabled: false,
@@ -38,6 +39,17 @@ function app() {
     sectorData: { markets: [], sectors: [] },
     correlation: { keys: [], matrix: {} },
 
+    // 신규 기능 상태
+    watchlist: [],
+    compareSet: [],
+    gainers: [],
+    losers: [],
+    newHighs: [],
+    newLows: [],
+    strongBuy: [],
+    strongSell: [],
+    briefing: '',
+
     // 옵티마이저 + 백테스트
     optimizer: { ok: false, error: '로딩 중...' },
     backtest: { ok: false, error: '로딩 중...' },
@@ -45,7 +57,7 @@ function app() {
     _charts: {},
     _modal: null,
     _refreshTimer: null,
-    _tabDraws: { chart: false, backtest: false, corr: false, heatmap: false, sector: false },
+    _tabDraws: { chart: false, backtest: false, corr: false, heatmap: false, sector: false, movers: false, highlow: false, supply: false, watchlist: false },
 
     // ----- 초기화 -----
     async init() {
@@ -64,6 +76,13 @@ function app() {
       this.strategies = Object.values(window.QUANT_STRATEGIES || {});
       this.currentWeights = window.QUANT_STRATEGIES[this.strategyKey].weights;
 
+      // localStorage에서 관심종목 + 다크모드 + 가중치 복원
+      this.watchlist = JSON.parse(localStorage.getItem('quant_watchlist') || '[]');
+      const savedWeights = JSON.parse(localStorage.getItem('quant_weights') || 'null');
+      if (savedWeights) this.currentWeights = savedWeights;
+      const savedDark = localStorage.getItem('quant_darkmode');
+      if (savedDark === '1') { this.darkMode = true; document.body.classList.add('dark-mode'); }
+
       // 새 탭으로 전환되면 해당 차트 다시 그리기
       this.$watch('detailTab', (t) => {
         if (!t) return;
@@ -77,22 +96,55 @@ function app() {
         });
       });
 
-      // URL에서 market 파라미터 읽기
+      // URL에서 파라미터 읽기
       const urlParams = new URLSearchParams(window.location.search);
       const m = urlParams.get('market');
       if (m === 'KOSPI' || m === 'KOSDAQ') this.marketFilter = m;
+      const code = urlParams.get('code');
+      if (code) setTimeout(() => this.openStock(code), 1500);
 
       // tab 변경 시 차트 다시 그리기 (display:none 문제 해결)
       this.$watch('tab', (t) => {
         if (!t) return;
         this.$nextTick(() => {
-          if (t === 'chart') { this.drawCharts(); this._tabDraws.chart = true; }
-          else if (t === 'backtest') { this.loadBacktest(); this._tabDraws.backtest = true; }
+          if (t === 'chart') { this.drawCharts(); }
+          else if (t === 'backtest') { this.loadBacktest(); }
           else if (t === 'corr') { this.loadCorrelation(); }
           else if (t === 'heatmap') { this.loadHeatmap(); }
           else if (t === 'sector') { this.loadSectors(); }
           else if (t === 'top') { this._drawTopCharts(); }
+          else if (t === 'movers') { this.loadMovers(); }
+          else if (t === 'highlow') { this.loadHighLow(); }
+          else if (t === 'supply') { this.loadSupplySignals(); }
+          else if (t === 'watchlist') { this._tabDraws.watchlist = true; }
         });
+      });
+
+      // 다크모드 토글 시 class 적용
+      this.$watch('darkMode', (v) => {
+        document.body.classList.toggle('dark-mode', v);
+        localStorage.setItem('quant_darkmode', v ? '1' : '0');
+      });
+
+      // 가중치 변경 시 자동 저장
+      this.$watch('currentWeights', (w) => {
+        localStorage.setItem('quant_weights', JSON.stringify(w));
+        this._recomputeAndSet();
+      });
+
+      // 키보드 단축키
+      document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+        if (e.key === 't' || e.key === 'T') { e.preventDefault(); this.setTab('top'); }
+        else if (e.key === 'h' || e.key === 'H') { e.preventDefault(); this.setTab('highlow'); }
+        else if (e.key === 'b' || e.key === 'B') { e.preventDefault(); this.setTab('backtest'); }
+        else if (e.key === 'm' || e.key === 'M') { e.preventDefault(); this.setTab('movers'); }
+        else if (e.key === 'w' || e.key === 'W') { e.preventDefault(); this.setTab('watchlist'); }
+        else if (e.key === 'd' || e.key === 'D') { e.preventDefault(); this.toggleDark(); }
+        else if (e.key === '?') { e.preventDefault(); this.showShortcuts(); }
+        else if (e.key === 'Escape') {
+          if (this._modal && document.getElementById('stockModal').classList.contains('show')) this._modal.hide();
+        }
       });
 
       await Promise.all([
@@ -106,6 +158,7 @@ function app() {
       ]);
       this._recomputeAndSet();
       this.$nextTick(() => this._drawAllSparklines());
+      this._generateBriefing();
       // 자동 새로고침 OFF (수동 새로고침 버튼으로만) — CPU/메모리 보호
     },
 
@@ -132,6 +185,14 @@ function app() {
       for (const k of keys) {
         if (this._charts[k]) { try { this._charts[k].destroy(); } catch (_) {} this._charts[k] = null; }
       }
+    },
+
+    // 비교 모달 열기
+    openCompareModal() {
+      if (this.compareSet.length < 2) { alert('2개 이상 선택해주세요'); return; }
+      const el = document.getElementById('compareModal');
+      if (!this._compareModal) this._compareModal = new bootstrap.Modal(el);
+      this._compareModal.show();
     },
 
     async manualRefresh() {
@@ -958,6 +1019,155 @@ function app() {
         console.error(e);
         this.state.updating = false;
       }
+    },
+
+    // ===== 관심종목 (Watchlist) =====
+    isWatch(code) { return this.watchlist.includes(code); },
+    toggleWatch(r) {
+      const code = r.code;
+      if (this.isWatch(code)) {
+        this.watchlist = this.watchlist.filter((c) => c !== code);
+      } else {
+        this.watchlist = [...this.watchlist, code];
+      }
+      localStorage.setItem('quant_watchlist', JSON.stringify(this.watchlist));
+    },
+    get watchlistRows() {
+      const codeSet = new Set(this.watchlist);
+      return this.all.filter((r) => codeSet.has(r.code)).sort((a, b) => b.total_score - a.total_score);
+    },
+
+    // ===== 비교 모드 =====
+    toggleCompare(r, on) {
+      if (on) {
+        if (this.compareSet.length >= 5) {
+          alert('최대 5개까지 비교 가능');
+          r._compareOn = false;
+          return;
+        }
+        this.compareSet = [...this.compareSet, r.code];
+      } else {
+        this.compareSet = this.compareSet.filter((c) => c !== r.code);
+      }
+    },
+    get compareRows() {
+      return this.all.filter((r) => this.compareSet.includes(r.code));
+    },
+    openCompare() {
+      if (this.compareSet.length < 2) { alert('2개 이상 선택해주세요'); return; }
+      this.tab = 'all';
+      // TODO: 별도 모달
+    },
+
+    // ===== 다크모드 =====
+    toggleDark() { this.darkMode = !this.darkMode; },
+
+    // ===== 단축키 도움말 =====
+    showShortcuts() {
+      const el = document.getElementById('helpModal');
+      if (!this._helpModal) this._helpModal = new bootstrap.Modal(el);
+      this._helpModal.show();
+    },
+
+    // ===== 자동 시장 브리핑 =====
+    _generateBriefing() {
+      const idx = this.indices || [];
+      const kospi = idx.find((i) => i.market === 'KOSPI');
+      const kosdaq = idx.find((i) => i.market === 'KOSDAQ');
+      const lines = [];
+      if (kospi) {
+        const sign = kospi.change >= 0 ? '▲' : '▼';
+        lines.push(`코스피 ${sign} ${Math.abs(kospi.change).toFixed(2)}pt (${(kospi.changePct >= 0 ? '+' : '') + kospi.changePct.toFixed(2)}%) ${kospi.asOf || ''} 종가 ${kospi.value.toFixed(2)}.`);
+      }
+      if (kosdaq) {
+        const sign = kosdaq.change >= 0 ? '▲' : '▼';
+        lines.push(`코스닥 ${sign} ${Math.abs(kosdaq.change).toFixed(2)}pt (${(kosdaq.changePct >= 0 ? '+' : '') + kosdaq.changePct.toFixed(2)}%).`);
+      }
+      if (this.top.length > 0) {
+        lines.push(`7팩터 종합 상위는 ${this.top[0].name}(${this.top[0].code}, ${this.top[0].total_score.toFixed(1)}점).`);
+      }
+      if (this.meta?.factor_stats) {
+        const s = this.meta.factor_stats;
+        if (s.halt + s.zeroVolume > 0) {
+          lines.push(`🚫 거래정지·거래량0 ${s.halt + s.zeroVolume}개 자동 제외.`);
+        }
+        if (this.marketFilter === 'KOSPI' && s.kosdaq > 0) {
+          lines.push(`KOSDAQ ${s.kosdaq}개는 메인에서 제외. ?market=KOSDAQ 으로 확인.`);
+        }
+      }
+      this.briefing = lines.join(' ');
+    },
+
+    // ===== 급등/급락 =====
+    async loadMovers() {
+      if (this.all.length === 0) await this.loadAll();
+      // 1일 등락률 계산 (간단 버전: change_pct 필드가 있으면 사용, 없으면 daily_prices에서 계산)
+      const sorted = [...this.all].filter((r) => r.total_score > 0);
+      // change_pct 필드가 있다면 활용
+      if (sorted[0] && sorted[0].change_pct !== undefined) {
+        const byChange = [...sorted].sort((a, b) => (b.change_pct || 0) - (a.change_pct || 0));
+        this.gainers = byChange.slice(0, 10);
+        this.losers = byChange.slice(-10).reverse();
+      } else {
+        // change_pct 없으면 daily prices에서 fetch (lazy)
+        this.gainers = [];
+        this.losers = [];
+        this._loadMoversFromPrices();
+      }
+    },
+    async _loadMoversFromPrices() {
+      try {
+        const r = await window.apiGet('/api/movers');
+        if (r && !r.__error) {
+          this.gainers = r.gainers || [];
+          this.losers = r.losers || [];
+        }
+      } catch (e) { /* ignore */ }
+    },
+
+    // ===== 신고가/신저가 =====
+    async loadHighLow() {
+      if (this.all.length === 0) await this.loadAll();
+      try {
+        const r = await window.apiGet('/api/highlow');
+        if (r && !r.__error) {
+          this.newHighs = (r.highs || []).filter((x) => x.total_score > 0).slice(0, 10);
+          this.newLows = (r.lows || []).filter((x) => x.total_score > 0).slice(0, 10);
+        }
+      } catch (e) { /* ignore */ }
+    },
+
+    // ===== 수급 이상 =====
+    async loadSupplySignals() {
+      if (this.all.length === 0) await this.loadAll();
+      try {
+        const r = await window.apiGet('/api/supply-signals');
+        if (r && !r.__error) {
+          this.strongBuy = (r.buy || []).slice(0, 15);
+          this.strongSell = (r.sell || []).slice(0, 15);
+        }
+      } catch (e) { /* ignore */ }
+    },
+
+    // ===== 가중치 슬라이더 (실시간) =====
+    updateWeight(key, value) {
+      // 슬라이더 변경 시 정규화
+      this.currentWeights = { ...this.currentWeights, [key]: Number(value) };
+    },
+    normalizeWeights() {
+      const w = this.currentWeights;
+      const sum = (w.value || 0) + (w.momentum || 0) + (w.quality || 0) +
+                  (w.volatility || 0) + (w.growth || 0) + (w.liquidity || 0) + (w.supply || 0);
+      if (sum === 0) return;
+      this.currentWeights = {
+        value: Math.round((w.value / sum) * 100),
+        momentum: Math.round((w.momentum / sum) * 100),
+        quality: Math.round((w.quality / sum) * 100),
+        volatility: Math.round((w.volatility / sum) * 100),
+        growth: Math.round((w.growth / sum) * 100),
+        liquidity: Math.round((w.liquidity / sum) * 100),
+        supply: Math.round((w.supply / sum) * 100),
+      };
     },
 
     // CSV 다운로드 (전 종목 점수) — 다른 퀀트 대시보드와 차별화

@@ -18,7 +18,10 @@
     { "source": "/api/strategies",  "destination": "/data/strategies-static.json" },
     { "source": "/api/indices",     "destination": "/data/indices.json" },
     { "source": "/api/optimizer",   "destination": "/data/optimizer.json" },
-    { "source": "/api/backtest",    "destination": "/data/backtest.json" }
+    { "source": "/api/backtest",    "destination": "/data/backtest.json" },
+    { "source": "/api/movers",      "destination": "/data/movers.json" },
+    { "source": "/api/highlow",     "destination": "/data/highlow.json" },
+    { "source": "/api/supply-signals", "destination": "/data/supply-signals.json" }
   ],
   "headers": [
     {

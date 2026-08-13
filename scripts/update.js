@@ -420,6 +420,162 @@ async function exportStatic() {
   const corr = await scoring.getFactorCorrelation();
   writeJson('correlation.json', { keys: corr.keys, matrix: corr.matrix });
 
+  // === 신규: 급등/급락 TOP 10 ===
+  try {
+    const movers = await db.all(`
+      WITH latest AS (
+        SELECT code, MAX(date) AS d, MAX(close) AS close_now
+        FROM daily_prices
+        GROUP BY code
+      ),
+      prev AS (
+        SELECT code, close AS close_prev
+        FROM daily_prices dp
+        WHERE (code, date) IN (
+          SELECT code, MAX(date) FROM daily_prices WHERE date < (SELECT MAX(date) FROM daily_prices) GROUP BY code
+        )
+      )
+      SELECT s.code, s.name, s.market, s.sector,
+             fs.total_score,
+             ((l.close_now - p.close_prev) / p.close_prev * 100) AS change_pct
+      FROM latest l
+      JOIN prev p ON p.code = l.code
+      JOIN stocks s ON s.code = l.code
+      LEFT JOIN factor_scores fs ON fs.code = l.code AND fs.date = (SELECT MAX(date) FROM factor_scores)
+      WHERE s.market IN ('KOSPI','KOSDAQ') AND p.close_prev > 0
+      ORDER BY change_pct DESC
+      LIMIT 10
+    `);
+    const losersRows = await db.all(`
+      WITH latest AS (
+        SELECT code, MAX(date) AS d, MAX(close) AS close_now
+        FROM daily_prices
+        GROUP BY code
+      ),
+      prev AS (
+        SELECT code, close AS close_prev
+        FROM daily_prices dp
+        WHERE (code, date) IN (
+          SELECT code, MAX(date) FROM daily_prices WHERE date < (SELECT MAX(date) FROM daily_prices) GROUP BY code
+        )
+      )
+      SELECT s.code, s.name, s.market, s.sector,
+             fs.total_score,
+             ((l.close_now - p.close_prev) / p.close_prev * 100) AS change_pct
+      FROM latest l
+      JOIN prev p ON p.code = l.code
+      JOIN stocks s ON s.code = l.code
+      LEFT JOIN factor_scores fs ON fs.code = l.code AND fs.date = (SELECT MAX(date) FROM factor_scores)
+      WHERE s.market IN ('KOSPI','KOSDAQ') AND p.close_prev > 0
+      ORDER BY change_pct ASC
+      LIMIT 10
+    `);
+    writeJson('movers.json', {
+      gainers: movers.map((r) => ({
+        code: r.code, name: r.name, market: r.market, sector: r.sector,
+        total_score: r.total_score ? Number(r.total_score) : 0,
+        change_pct: r.change_pct ? Number(r.change_pct) : 0,
+      })),
+      losers: losersRows.map((r) => ({
+        code: r.code, name: r.name, market: r.market, sector: r.sector,
+        total_score: r.total_score ? Number(r.total_score) : 0,
+        change_pct: r.change_pct ? Number(r.change_pct) : 0,
+      })),
+    });
+  } catch (e) {
+    console.error('[export] movers 실패:', e.message);
+    writeJson('movers.json', { gainers: [], losers: [] });
+  }
+
+  // === 신규: 52주 신고가/신저가 TOP 10 ===
+  try {
+    const highLow = await db.all(`
+      WITH last52w AS (
+        SELECT code, MAX(high) AS week52_high, MIN(low) AS week52_low
+        FROM daily_prices
+        WHERE date >= (SELECT MAX(date) FROM daily_prices) - INTERVAL '52 weeks'
+        GROUP BY code
+      ),
+      latest AS (
+        SELECT code, MAX(close) AS close_now, MAX(date) AS d
+        FROM daily_prices
+        GROUP BY code
+      )
+      SELECT CAST(s.code AS VARCHAR) AS code, s.name, s.market, s.sector,
+             fs.total_score,
+             l52.week52_high, l52.week52_low, lt.close_now
+      FROM last52w l52
+      JOIN latest lt ON lt.code = l52.code
+      JOIN stocks s ON s.code = l52.code
+      LEFT JOIN factor_scores fs ON fs.code = l52.code AND fs.date = (SELECT MAX(date) FROM factor_scores)
+      WHERE s.market IN ('KOSPI','KOSDAQ')
+    `);
+    // 52주 신고가 = 현재가가 52주고가의 99.5% 이상 (신고가 근접 또는 돌파)
+    const highs = highLow
+      .map((r) => ({ ...r, week52_high: Number(r.week52_high), week52_low: Number(r.week52_low), close_now: Number(r.close_now), total_score: r.total_score ? Number(r.total_score) : 0 }))
+      .filter((r) => r.close_now && r.week52_high && r.close_now >= r.week52_high * 0.995)
+      .sort((a, b) => b.close_now / b.week52_high - a.close_now / a.week52_high)
+      .slice(0, 10);
+    // 52주 신저가 = 현재가가 52주저가의 105% 이하 (신저가 근접)
+    const lows = highLow
+      .map((r) => ({ ...r, week52_high: Number(r.week52_high), week52_low: Number(r.week52_low), close_now: Number(r.close_now), total_score: r.total_score ? Number(r.total_score) : 0 }))
+      .filter((r) => r.close_now && r.week52_low && r.close_now <= r.week52_low * 1.005)
+      .sort((a, b) => a.close_now / a.week52_low - b.close_now / b.week52_low)
+      .slice(0, 10);
+    writeJson('highlow.json', {
+      highs,
+      lows,
+    });
+  } catch (e) {
+    console.error('[export] highlow 실패:', e.message);
+    writeJson('highlow.json', { highs: [], lows: [] });
+  }
+
+  // === 신규: 수급 이상 신호 (외인+기관 동시 순매수/매도) ===
+  try {
+    const supplyRows = await db.all(`
+      WITH ranked AS (
+        SELECT code, date, foreign_net, institution_net,
+               ROW_NUMBER() OVER (PARTITION BY code ORDER BY date DESC) AS rn
+        FROM investor_flow
+      )
+      SELECT s.code, s.name, s.market, s.sector,
+             fs.total_score,
+             SUM(foreign_net) FILTER (WHERE rn <= 5) AS foreign_5d,
+             SUM(institution_net) FILTER (WHERE rn <= 5) AS inst_5d
+      FROM ranked r
+      JOIN stocks s ON s.code = r.code
+      LEFT JOIN factor_scores fs ON fs.code = r.code AND fs.date = (SELECT MAX(date) FROM factor_scores)
+      WHERE s.market IN ('KOSPI','KOSDAQ') AND fs.total_score > 0
+      GROUP BY s.code, s.name, s.market, s.sector, fs.total_score
+    `);
+    const buy = supplyRows
+      .filter((r) => r.foreign_5d > 0 && r.inst_5d > 0)
+      .sort((a, b) => (Number(b.foreign_5d) + Number(b.inst_5d)) - (Number(a.foreign_5d) + Number(a.inst_5d)))
+      .slice(0, 15);
+    const sell = supplyRows
+      .filter((r) => r.foreign_5d < 0 && r.inst_5d < 0)
+      .sort((a, b) => (Number(a.foreign_5d) + Number(a.inst_5d)) - (Number(b.foreign_5d) + Number(b.inst_5d)))
+      .slice(0, 15);
+    writeJson('supply-signals.json', {
+      buy: buy.map((r) => ({
+        code: r.code, name: r.name, market: r.market, sector: r.sector,
+        total_score: r.total_score ? Number(r.total_score) : 0,
+        foreign_5d: Number(r.foreign_5d) || 0,
+        inst_5d: Number(r.inst_5d) || 0,
+      })),
+      sell: sell.map((r) => ({
+        code: r.code, name: r.name, market: r.market, sector: r.sector,
+        total_score: r.total_score ? Number(r.total_score) : 0,
+        foreign_5d: Number(r.foreign_5d) || 0,
+        inst_5d: Number(r.inst_5d) || 0,
+      })),
+    });
+  } catch (e) {
+    console.error('[export] supply-signals 실패:', e.message);
+    writeJson('supply-signals.json', { buy: [], sell: [] });
+  }
+
   // 분포 (제외 종목 빼고)
   const distScores = allRowsRaw.map((r) => r.total_score);
   writeJson('distribution.json', { scores: distScores });

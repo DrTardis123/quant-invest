@@ -134,6 +134,35 @@ async function backtest({ topN = TOP_N, lookbackMonths = DEFAULT_LOOKBACK_MONTHS
   const stdR = Math.sqrt(monthlyReturns.reduce((a, b) => a + (b.strategy - meanR) ** 2, 0) / months);
   const sharpe = stdR > 0 ? (meanR / stdR) * Math.sqrt(12) : 0;
 
+  // === 신규 통계: Win Rate, Profit Factor, Beta, Information Ratio ===
+  const winMonths = monthlyReturns.filter((m) => m.strategy > 0).length;
+  const winRate = months > 0 ? winMonths / months : 0;
+  const grossProfit = monthlyReturns.filter((m) => m.strategy > 0).reduce((a, b) => a + b.strategy, 0);
+  const grossLoss = Math.abs(monthlyReturns.filter((m) => m.strategy < 0).reduce((a, b) => a + b.strategy, 0));
+  const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : (grossProfit > 0 ? 99 : 0);
+  // Beta: 공분산(strat, kospi) / 분산(kospi)
+  const validRet = monthlyReturns.filter((m) => m.kospi !== null);
+  let beta = 0;
+  let informationRatio = 0;
+  if (validRet.length >= 3) {
+    const kMean = validRet.reduce((a, b) => a + b.kospi, 0) / validRet.length;
+    const sMean = validRet.reduce((a, b) => a + b.strategy, 0) / validRet.length;
+    let cov = 0, varK = 0;
+    for (const m of validRet) {
+      cov += (m.strategy - sMean) * (m.kospi - kMean);
+      varK += (m.kospi - kMean) ** 2;
+    }
+    cov /= validRet.length;
+    varK /= validRet.length;
+    beta = varK > 0 ? cov / varK : 0;
+    // IR: (전략 평균 - KOSPI 평균) / 추적오차
+    const alpha = sMean - kMean;
+    let trackingErr = 0;
+    for (const m of validRet) trackingErr += (m.strategy - m.kospi - alpha) ** 2;
+    trackingErr = Math.sqrt(trackingErr / validRet.length);
+    informationRatio = trackingErr > 0 ? (alpha / trackingErr) * Math.sqrt(12) : 0;
+  }
+
   // 5) MDD
   let peak = stratNav[0], mdd = 0, mddIdx = 0;
   let curPeak = stratNav[0], curPeakIdx = 0;
@@ -197,6 +226,11 @@ async function backtest({ topN = TOP_N, lookbackMonths = DEFAULT_LOOKBACK_MONTHS
     sharpe: round4(sharpe),
     mdd: round4(mdd),
     mddRecoveryMonths: recoveryMonths,
+    winRate: round4(winRate),
+    winMonths,
+    profitFactor: round4(Math.min(profitFactor, 99)),
+    beta: round4(beta),
+    informationRatio: round4(informationRatio),
     nav: stratNav.map((v, i) => ({ idx: i, value: round4(v) })),
     kospiNav: kospiNav.map((v, i) => ({ idx: i, value: round4(v) })),
     monthlyReturns,
