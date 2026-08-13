@@ -1,0 +1,257 @@
+{
+  "asOf": "2026-08-13T04:26:23.284Z",
+  "period": "2025-07-31 ~ 2026-07-31",
+  "kospi": {
+    "total": 0,
+    "cagr": 0,
+    "months": 48
+  },
+  "results": [
+    {
+      "name": "균등(7팩터)",
+      "weights": {
+        "value": 14,
+        "momentum": 14,
+        "quality": 14,
+        "volatility": 14,
+        "growth": 14,
+        "liquidity": 15,
+        "supply": 15
+      },
+      "total": 0.39888735401897146,
+      "cagr": 0.08754111849715596,
+      "sharpe": 0.5911879964113665,
+      "mdd": -0.13676623496766163,
+      "winRate": 0.16666666666666666,
+      "alpha": 0.39888735401897146,
+      "months": 48
+    },
+    {
+      "name": "현재(balanced)",
+      "weights": {
+        "value": 8,
+        "momentum": 22,
+        "quality": 27,
+        "volatility": 8,
+        "growth": 20,
+        "liquidity": 8,
+        "supply": 7
+      },
+      "total": 0.9854136794858204,
+      "cagr": 0.1870328900533984,
+      "sharpe": 0.7190962209342775,
+      "mdd": -0.20203024865097116,
+      "winRate": 0.16666666666666666,
+      "alpha": 0.9854136794858204,
+      "months": 48
+    },
+    {
+      "name": "AQR-Sharpe",
+      "weights": {
+        "value": 11,
+        "momentum": 32,
+        "quality": 23,
+        "volatility": 23,
+        "growth": 11
+      },
+      "total": 0.42397874741001207,
+      "cagr": 0.09238537445603034,
+      "sharpe": 0.6962439877303611,
+      "mdd": -0.09907544801941048,
+      "winRate": 0.16666666666666666,
+      "alpha": 0.42397874741001207,
+      "months": 48
+    },
+    {
+      "name": "모멘텀강조",
+      "weights": {
+        "value": 5,
+        "momentum": 40,
+        "quality": 20,
+        "volatility": 5,
+        "growth": 15,
+        "liquidity": 8,
+        "supply": 7
+      },
+      "total": 1.006550520773252,
+      "cagr": 0.1901796620509617,
+      "sharpe": 0.6221807917183125,
+      "mdd": -0.27958245291347655,
+      "winRate": 0.16666666666666666,
+      "alpha": 1.006550520773252,
+      "months": 48
+    },
+    {
+      "name": "퀄리티강조",
+      "weights": {
+        "value": 10,
+        "momentum": 15,
+        "quality": 40,
+        "volatility": 10,
+        "growth": 15,
+        "liquidity": 5,
+        "supply": 5
+      },
+      "total": 0.5433907096373469,
+      "cagr": 0.11459982472822916,
+      "sharpe": 0.680491598517055,
+      "mdd": -0.14377518791543115,
+      "winRate": 0.16666666666666666,
+      "alpha": 0.5433907096373469,
+      "months": 48
+    },
+    {
+      "name": "삼성증권식",
+      "weights": {
+        "value": 6,
+        "momentum": 8,
+        "quality": 27,
+        "volatility": 0,
+        "growth": 47,
+        "liquidity": 6,
+        "supply": 6
+      },
+      "total": 0.3222439602904468,
+      "cagr": 0.07232862173803101,
+      "sharpe": 0.3710405175552472,
+      "mdd": -0.46901564757712294,
+      "winRate": 0.14583333333333334,
+      "alpha": 0.3222439602904468,
+      "months": 48
+    },
+    {
+      "name": "재무중시(안정)",
+      "weights": {
+        "value": 5,
+        "momentum": 15,
+        "quality": 35,
+        "volatility": 15,
+        "growth": 20,
+        "liquidity": 5,
+        "supply": 5
+      },
+      "total": 0.4804637726233836,
+      "cagr": 0.10306078731124835,
+      "sharpe": 0.7343249303637767,
+      "mdd": -0.09413161202441682,
+      "winRate": 0.14583333333333334,
+      "alpha": 0.4804637726233836,
+      "months": 48
+    },
+    {
+      "name": "균형+수급",
+      "weights": {
+        "value": 10,
+        "momentum": 20,
+        "quality": 20,
+        "volatility": 10,
+        "growth": 20,
+        "liquidity": 10,
+        "supply": 10
+      },
+      "total": 0.8158946598467092,
+      "cagr": 0.1608407974545607,
+      "sharpe": 0.7299024185684371,
+      "mdd": -0.18746292015165242,
+      "winRate": 0.16666666666666666,
+      "alpha": 0.8158946598467092,
+      "months": 48
+    },
+    {
+      "name": "가치+퀄리티",
+      "weights": {
+        "value": 25,
+        "momentum": 5,
+        "quality": 35,
+        "volatility": 10,
+        "growth": 15,
+        "liquidity": 5,
+        "supply": 5
+      },
+      "total": 0.23169706434023296,
+      "cagr": 0.053479227421623365,
+      "sharpe": 0.6765089101249423,
+      "mdd": -0.07263920371101801,
+      "winRate": 0.16666666666666666,
+      "alpha": 0.23169706434023296,
+      "months": 48
+    },
+    {
+      "name": "성장+모멘텀",
+      "weights": {
+        "value": 5,
+        "momentum": 25,
+        "quality": 20,
+        "volatility": 5,
+        "growth": 30,
+        "liquidity": 8,
+        "supply": 7
+      },
+      "total": 1.34032612300166,
+      "cagr": 0.2368558715556992,
+      "sharpe": 0.7251554620310062,
+      "mdd": -0.254186354336873,
+      "winRate": 0.16666666666666666,
+      "alpha": 1.34032612300166,
+      "months": 48
+    },
+    {
+      "name": "방어형",
+      "weights": {
+        "value": 15,
+        "momentum": 5,
+        "quality": 35,
+        "volatility": 25,
+        "growth": 15,
+        "liquidity": 5,
+        "supply": 0
+      },
+      "total": 0.06130652260332736,
+      "cagr": 0.014986365508713018,
+      "sharpe": 0.7028091376982822,
+      "mdd": -0.021234118925361017,
+      "winRate": 0.1875,
+      "alpha": 0.06130652260332736,
+      "months": 48
+    },
+    {
+      "name": "Sharpe-균형",
+      "weights": {
+        "value": 10,
+        "momentum": 25,
+        "quality": 25,
+        "volatility": 15,
+        "growth": 15,
+        "liquidity": 5,
+        "supply": 5
+      },
+      "total": 0.6036513899479277,
+      "cagr": 0.1253237668092404,
+      "sharpe": 0.7449197083747159,
+      "mdd": -0.13969246560438187,
+      "winRate": 0.16666666666666666,
+      "alpha": 0.6036513899479277,
+      "months": 48
+    }
+  ],
+  "best": {
+    "name": "성장+모멘텀",
+    "weights": {
+      "value": 5,
+      "momentum": 25,
+      "quality": 20,
+      "volatility": 5,
+      "growth": 30,
+      "liquidity": 8,
+      "supply": 7
+    },
+    "total": 1.34032612300166,
+    "cagr": 0.2368558715556992,
+    "sharpe": 0.7251554620310062,
+    "mdd": -0.254186354336873,
+    "winRate": 0.16666666666666666,
+    "alpha": 1.34032612300166,
+    "months": 48,
+    "composite": 0.5816874234414169
+  }
+}
