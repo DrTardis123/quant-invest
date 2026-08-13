@@ -75,7 +75,7 @@ function app() {
         this.loadHealth(),
         this.loadMeta(),
         this.loadIndices(),
-        this.loadAll(),
+        this.loadTop(),         // 상위 20개만 (6KB) - 1.2MB all.json은 lazy
         this.loadLogs(),
         this.loadOptimizer(),
         this.loadBacktest(),
@@ -208,6 +208,26 @@ function app() {
           grade: row.grade || window.QUANT_GRADE(row.total_score),
         }));
       } catch (e) { this.all = []; }
+    },
+
+    async loadTop() {
+      // 상위 20개만 (6KB) - 빠른 시작, 모바일 5분 → 0.5초
+      try {
+        const r = await window.apiGet('/api/top');
+        if (r && r.__error) return;
+        const rows = Array.isArray(r) ? r : (r.rows || []);
+        this.all = rows.map((row) => ({
+          ...row,
+          grade: row.grade || window.QUANT_GRADE(row.total_score),
+        }));
+        // topN 슬라이스 (20)
+        this.top = this.all.slice(0, this.state.topN).map((r) => ({
+          ...r,
+          total_score: r.recomputed_total || r.total_score,
+          rank: r.recomputed_rank || r.rank,
+          grade: window.QUANT_GRADE(r.recomputed_total || r.total_score),
+        }));
+      } catch (e) { this.all = []; this.top = []; }
     },
 
     async loadLogs() {
