@@ -439,19 +439,22 @@ async function computeFactorsAtDate(date, universe) {
     `, [code, date]);
     if (arr.length < 30) continue;
     const last = arr[arr.length - 1];
+    const lastClose = Number(last.close) || 0;
     const yearIdx = Math.max(0, arr.length - 252);
     const monthIdx = Math.max(0, arr.length - 21);
-    const yearOld = arr[yearIdx].close;
-    const monthOld = arr[monthIdx].close;
-    const ret12 = yearOld > 0 ? (last.close - yearOld) / yearOld : null;
-    const ret1 = monthOld > 0 ? (last.close - monthOld) / monthOld : null;
+    const yearOld = Number(arr[yearIdx].close) || 0;
+    const monthOld = Number(arr[monthIdx].close) || 0;
+    const ret12 = yearOld > 0 ? (lastClose - yearOld) / yearOld : null;
+    const ret1 = monthOld > 0 ? (lastClose - monthOld) / monthOld : null;
     const momentum = (ret12 !== null && ret1 !== null) ? ret12 - ret1 : null;
 
     // 60일 변동성
     const tail = arr.slice(-60);
     const rets = [];
     for (let i = 1; i < tail.length; i++) {
-      if (tail[i - 1].close > 0 && tail[i].close > 0) rets.push(Math.log(tail[i].close / tail[i - 1].close));
+      const c0 = Number(tail[i - 1].close);
+      const c1 = Number(tail[i].close);
+      if (c0 > 0 && c1 > 0) rets.push(Math.log(c1 / c0));
     }
     let vol = null;
     if (rets.length >= 20) {
@@ -462,7 +465,7 @@ async function computeFactorsAtDate(date, universe) {
 
     // 20일 거래대금
     const liqTail = arr.slice(-20);
-    const turnover = liqTail.reduce((a, b) => a + b.volume * b.close, 0) / liqTail.length;
+    const turnover = liqTail.reduce((a, b) => a + (Number(b.volume) || 0) * (Number(b.close) || 0), 0) / liqTail.length;
 
     // 다음 달 가격
     const dateIdx = new Date(date);
@@ -470,7 +473,7 @@ async function computeFactorsAtDate(date, universe) {
     nextMonth.setMonth(nextMonth.getMonth() + 1);
     const nextMonthStr = nextMonth.toISOString().slice(0, 10);
     const next = arr.find((p) => String(p.date).slice(0, 10) > date && String(p.date).slice(0, 10) <= nextMonthStr);
-    const nextClose = next ? next.close : null;
+    const nextClose = next ? (Number(next.close) || null) : null;
 
     // fundamentals (최신)
     const fund = await all(`SELECT per, pbr, roe, debt_ratio, revenue, net_profit FROM fundamentals WHERE code = ? AND period <= ? ORDER BY period DESC LIMIT 1`, [code, date]);

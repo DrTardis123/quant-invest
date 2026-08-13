@@ -1,1 +1,237 @@
-{"ok":false,"error":"데이터 부족 (현재 0일치). 최소 30일 필요. 매일 갱신되면 자동으로 채워집니다.","nDays":0,"nStocks":0,"computedAt":"2026-08-13T17:25:55.212Z"}
+{
+  "asOf": "2026-08-13T18:47:21.771Z",
+  "period": "2025-07-31 ~ 2026-08-13",
+  "nMonths": 13,
+  "kospi": {
+    "total": 0.0325,
+    "months": 13
+  },
+  "best": {
+    "name": "회귀-최적화",
+    "source": "Regression + Random Search",
+    "weights": {
+      "value": 0,
+      "momentum": 20.23,
+      "quality": 8.66,
+      "volatility": 22.19,
+      "growth": 14.06,
+      "liquidity": 20.42,
+      "supply": 14.44
+    },
+    "total": 5.7144,
+    "cagr": 5.7144,
+    "sharpe": 1.2288,
+    "ir": 1.3118,
+    "alpha": 0.2624,
+    "mdd": -0.0539,
+    "winRate": 1,
+    "description": "회귀분석+반복최적화: Sharpe 1.23, KOSPI 대비 알파 26.24%/월"
+  },
+  "regression": {
+    "r2": 0,
+    "beta": [],
+    "nStocks": 2600
+  },
+  "top10": [
+    {
+      "name": "회귀-Refined",
+      "source": "Refined #1",
+      "weights": {
+        "value": 0,
+        "momentum": 20.23,
+        "quality": 8.66,
+        "volatility": 22.19,
+        "growth": 14.06,
+        "liquidity": 20.42,
+        "supply": 14.44
+      },
+      "total": 5.7144,
+      "cagr": 5.7144,
+      "sharpe": 1.2288,
+      "ir": 1.3118,
+      "alpha": 0.2624,
+      "mdd": -0.0539,
+      "months": 13
+    },
+    {
+      "name": "회귀-Refined",
+      "source": "Refined #2",
+      "weights": {
+        "value": 16.66,
+        "momentum": 8.93,
+        "quality": 9.98,
+        "volatility": 20.81,
+        "growth": 9.03,
+        "liquidity": 13.98,
+        "supply": 20.61
+      },
+      "total": 5.6379,
+      "cagr": 5.6379,
+      "sharpe": 1.2453,
+      "ir": 1.331,
+      "alpha": 0.256,
+      "mdd": -0.0625,
+      "months": 13
+    },
+    {
+      "name": "회귀-Refined",
+      "source": "Refined #3",
+      "weights": {
+        "value": 14.41,
+        "momentum": 9.46,
+        "quality": 8.27,
+        "volatility": 21.82,
+        "growth": 9.65,
+        "liquidity": 14.85,
+        "supply": 21.54
+      },
+      "total": 5.5775,
+      "cagr": 5.5775,
+      "sharpe": 1.2415,
+      "ir": 1.3268,
+      "alpha": 0.2553,
+      "mdd": -0.0625,
+      "months": 13
+    },
+    {
+      "name": "회귀-Refined",
+      "source": "Refined #4",
+      "weights": {
+        "value": 16.52,
+        "momentum": 7.29,
+        "quality": 22.29,
+        "volatility": 17.46,
+        "growth": 0,
+        "liquidity": 11.39,
+        "supply": 25.05
+      },
+      "total": 5.5621,
+      "cagr": 5.5621,
+      "sharpe": 1.2405,
+      "ir": 1.3256,
+      "alpha": 0.2551,
+      "mdd": -0.0625,
+      "months": 13
+    },
+    {
+      "name": "회귀-Refined",
+      "source": "Refined #5",
+      "weights": {
+        "value": 20.59,
+        "momentum": 10.24,
+        "quality": 2.69,
+        "volatility": 26.25,
+        "growth": 19.89,
+        "liquidity": 15.8,
+        "supply": 4.55
+      },
+      "total": 5.5567,
+      "cagr": 5.5567,
+      "sharpe": 1.2468,
+      "ir": 1.3334,
+      "alpha": 0.2533,
+      "mdd": -0.0625,
+      "months": 13
+    },
+    {
+      "name": "회귀-Refined",
+      "source": "Refined #6",
+      "weights": {
+        "value": 18.18,
+        "momentum": 7.83,
+        "quality": 15.36,
+        "volatility": 13.83,
+        "growth": 8.24,
+        "liquidity": 10.21,
+        "supply": 26.35
+      },
+      "total": 5.5453,
+      "cagr": 5.5453,
+      "sharpe": 1.2393,
+      "ir": 1.3248,
+      "alpha": 0.2548,
+      "mdd": -0.0666,
+      "months": 13
+    },
+    {
+      "name": "회귀-Refined",
+      "source": "Refined #7",
+      "weights": {
+        "value": 14.96,
+        "momentum": 8.74,
+        "quality": 20.03,
+        "volatility": 19.94,
+        "growth": 4.4,
+        "liquidity": 12.99,
+        "supply": 18.95
+      },
+      "total": 5.532,
+      "cagr": 5.532,
+      "sharpe": 1.239,
+      "ir": 1.3239,
+      "alpha": 0.2548,
+      "mdd": -0.0666,
+      "months": 13
+    },
+    {
+      "name": "회귀-Refined",
+      "source": "Refined #8",
+      "weights": {
+        "value": 14.82,
+        "momentum": 6.65,
+        "quality": 0.95,
+        "volatility": 10.97,
+        "growth": 32.48,
+        "liquidity": 7.52,
+        "supply": 26.6
+      },
+      "total": 5.5127,
+      "cagr": 5.5127,
+      "sharpe": 1.2372,
+      "ir": 1.3226,
+      "alpha": 0.2544,
+      "mdd": -0.0625,
+      "months": 13
+    },
+    {
+      "name": "회귀-Refined",
+      "source": "Refined #9",
+      "weights": {
+        "value": 10.55,
+        "momentum": 9.28,
+        "quality": 14.72,
+        "volatility": 21.73,
+        "growth": 8.28,
+        "liquidity": 14.18,
+        "supply": 21.25
+      },
+      "total": 5.51,
+      "cagr": 5.51,
+      "sharpe": 1.2376,
+      "ir": 1.3223,
+      "alpha": 0.2546,
+      "mdd": -0.0666,
+      "months": 13
+    },
+    {
+      "name": "회귀-Refined",
+      "source": "Refined #10",
+      "weights": {
+        "value": 15.09,
+        "momentum": 9.02,
+        "quality": 12.27,
+        "volatility": 20.91,
+        "growth": 14.03,
+        "liquidity": 13.63,
+        "supply": 15.05
+      },
+      "total": 5.51,
+      "cagr": 5.51,
+      "sharpe": 1.2376,
+      "ir": 1.3223,
+      "alpha": 0.2546,
+      "mdd": -0.0666,
+      "months": 13
+    }
+  ]
+}
