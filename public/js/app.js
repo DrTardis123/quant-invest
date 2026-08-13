@@ -161,12 +161,25 @@ function app() {
       try {
         const r = await window.apiGet('/api/health');
         if (r && r.__error) return;
-        this.state.lastPriceDate = r.lastPriceDate || '—';
-        this.state.lastScoreDate = r.lastScoreDate || '—';
+        this.state.lastPriceDate = this._fmtDate(r.lastPriceDate);
+        this.state.lastScoreDate = this._fmtDate(r.lastScoreDate);
         this.state.stockCount = r.stockCount || 0;
         this.state.lastUpdate = r.lastUpdate ? '최근 갱신: ' + r.lastUpdate : '';
         this.hosted = !!r.hosted;
       } catch (e) { /* ignore */ }
+    },
+
+    _fmtDate(d) {
+      // DuckDB DATE: {days:N} 또는 ISO string
+      if (!d) return '—';
+      if (typeof d === 'string') return d.slice(0, 10);
+      if (d && typeof d === 'object' && d.days !== undefined) {
+        return new Date(Date.UTC(1970, 0, 1) + d.days * 86400000).toISOString().slice(0, 10);
+      }
+      if (d && typeof d === 'object' && d.micros !== undefined) {
+        return new Date(Math.floor(d.micros / 1000)).toISOString().slice(0, 10);
+      }
+      return String(d);
     },
 
     async loadMeta() {

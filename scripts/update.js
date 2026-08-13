@@ -219,7 +219,7 @@ async function refreshSectorsForAll({ limit = 100 } = {}) {
     FROM stocks s
     WHERE s.market IN ('KOSPI','KOSDAQ')
       AND (s.sector IS NULL OR s.sector = '')
-    ORDER BY s.market_cap DESC NULLS LAST
+    ORDER BY s.market, s.code
     LIMIT ?
   `, [limit]);
 
@@ -289,10 +289,19 @@ async function exportStatic() {
     WHERE fs.date = (SELECT MAX(date) FROM factor_scores)
     ORDER BY fs.rank LIMIT ?`, [TOP_N_SHIPPED]);
   top.forEach((r) => {
-    r.grade = scoring.gradeFor(r.total_score);
     const f = factorMap.get(r.code);
-    if (f) { r.liquidity_score = f.liquidity_score; r.supply_score = f.supply_score; }
+    if (f) {
+      r.liquidity_score = f.liquidity_score;
+      r.supply_score = f.supply_score;
+      // adjusted total_score (status penalty 포함) + status
+      r.total_score = f.total_score;
+      r.status = f.status;
+    }
+    r.grade = scoring.gradeFor(r.total_score);
   });
+  // adjusted 점수 기준 재정렬 + 새 rank
+  top.sort((a, b) => b.total_score - a.total_score);
+  top.forEach((r, i) => (r.rank = i + 1));
   writeJson('top.json', top);
 
   // 전체
@@ -304,9 +313,14 @@ async function exportStatic() {
     WHERE fs.date = (SELECT MAX(date) FROM factor_scores)
     ORDER BY fs.code`);
   allRows.forEach((r) => {
-    r.grade = scoring.gradeFor(r.total_score);
     const f = factorMap.get(r.code);
-    if (f) { r.liquidity_score = f.liquidity_score; r.supply_score = f.supply_score; }
+    if (f) {
+      r.liquidity_score = f.liquidity_score;
+      r.supply_score = f.supply_score;
+      r.total_score = f.total_score;
+      r.status = f.status;
+    }
+    r.grade = scoring.gradeFor(r.total_score);
   });
   writeJson('all.json', allRows);
 
@@ -418,13 +432,24 @@ async function exportStatic() {
 
 (async () => {
   const t0 = Date.now();
+  const exportOnly = process.env.EXPORT_ONLY === '1';
   const isFirst = !fs.existsSync(path.join(ROOT, 'data', 'quant.db'));
-  console.log(`[update] 시작 (모드: ${isFirst ? 'FIRST (전체)' : 'INCREMENTAL'})`);
+  console.log(`[update] 시작 (모드: ${exportOnly ? 'EXPORT_ONLY' : isFirst ? 'FIRST (전체)' : 'INCREMENTAL'})`);
 
   await initSchema();
 
   let stocksN = 0, pricesN = 0, fundN = 0, flowN = 0, sectorN = 0;
   try {
+    if (exportOnly) {
+      // DB는 이미 채워져 있고, 점수 재계산 + JSON export만
+      console.log('[update] EXPORT_ONLY: 점수 재계산 + JSON export...');
+      const { rows } = await calculateAll();
+      console.log(`     → ${rows.length}개 점수`);
+      await exportStatic();
+      await db.close();
+      console.log(`[update] EXPORT_ONLY 완료. ${(Date.now() - t0) / 1000}s`);
+      process.exit(0);
+    }
     if (isFirst) {
       console.log('[update] 1/5 종목 목록...');
       stocksN = await refreshStocks();
