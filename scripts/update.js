@@ -248,10 +248,27 @@ async function refreshSectorsForAll({ limit = 100 } = {}) {
   return updated;
 }
 
+// DuckDB의 {days:N} 또는 {micros:N} 형태 날짜를 ISO string으로 변환
+function duckDateToISO(v) {
+  if (!v) return null;
+  if (typeof v === 'string') return v.slice(0, 10);
+  if (typeof v === 'object') {
+    if (v.days !== undefined) {
+      return new Date(Date.UTC(1970, 0, 1) + v.days * 86400000).toISOString().slice(0, 10);
+    }
+    if (v.micros !== undefined) {
+      return new Date(Math.floor(v.micros / 1000)).toISOString().slice(0, 10);
+    }
+  }
+  return String(v);
+}
+
 async function exportStatic() {
   console.log('[export] 정적 JSON 생성...');
   fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.mkdirSync(STOCK_DIR, { recursive: true });
+
+  const excludeKosdaq = process.env.EXCLUDE_KOSDAQ === '1';
 
   // 메타
   const stats = await db.one(`
@@ -265,64 +282,130 @@ async function exportStatic() {
   `);
   const markets = await db.all(`SELECT DISTINCT market FROM stocks ORDER BY market`);
   const sectors = await db.all(`SELECT DISTINCT sector FROM stocks WHERE sector IS NOT NULL ORDER BY sector`);
-  writeJson('meta.json', { ...stats, markets: markets.map((m) => m.market), sectors: sectors.map((s) => s.sector) });
+  const metaObj = {
+    stock_count: Number(stats.stock_count) || 0,
+    sector_count: Number(stats.sector_count) || 0,
+    score_days: Number(stats.score_days) || 0,
+    last_price_date: duckDateToISO(stats.last_price_date),
+    last_score_date: duckDateToISO(stats.last_score_date),
+    last_update: stats.last_update ? new Date(stats.last_update).toISOString() : null,
+    markets: markets.map((m) => m.market),
+    sectors: sectors.map((s) => s.sector),
+    exclude_kosdaq: excludeKosdaq,
+    as_of: duckDateToISO(stats.last_price_date) || new Date().toISOString().slice(0, 10),
+  };
+  writeJson('meta.json', metaObj);
 
   // 지수 (KOSPI / KOSDAQ / KOSPI200)
   try {
     const idx = await indices.getAllIndices();
+    // 각 지수의 history가 비어 있으면 desktop fallback 다시 시도
+    for (let i = 0; i < idx.length; i++) {
+      if (!idx[i].history || idx[i].history.length < 5) {
+        console.log(`[export] ${idx[i].market} history 빈약, desktop fallback 재시도...`);
+        const desktop = await indices.getIndexDesktopFull(idx[i].market, { historyDays: 90 });
+        if (desktop) idx[i] = desktop;
+      }
+    }
     writeJson('indices.json', idx);
   } catch (e) {
     console.error('[export] 지수 데이터 실패:', e.message);
     writeJson('indices.json', []);
   }
 
-  // 7팩터 점수 (DB에 저장 안 된 유동/수급 포함, 메모리 캐시)
-  const { rows: allFactors } = await calculateAll();
+  // 7팩터 점수 (메모리 캐시)
+  const { rows: allFactors, stats: factorStats } = await calculateAll(undefined, { excludeKosdaq });
   const factorMap = new Map(allFactors.map((r) => [r.code, r]));
 
-  // TOP 20
-  const top = await db.all(`
-    SELECT fs.rank, fs.code, s.name, s.market, s.sector,
-           fs.value_score, fs.momentum_score, fs.quality_score,
-           fs.volatility_score, fs.growth_score, fs.total_score
-    FROM factor_scores fs JOIN stocks s ON s.code = fs.code
-    WHERE fs.date = (SELECT MAX(date) FROM factor_scores)
-    ORDER BY fs.rank LIMIT ?`, [TOP_N_SHIPPED]);
-  top.forEach((r) => {
-    const f = factorMap.get(r.code);
-    if (f) {
-      r.liquidity_score = f.liquidity_score;
-      r.supply_score = f.supply_score;
-      // adjusted total_score (status penalty 포함) + status
-      r.total_score = f.total_score;
-      r.status = f.status;
-    }
-    r.grade = scoring.gradeFor(r.total_score);
+  // ★ 거래정지/거래량0/KOSDAQ 제외 옵션 = 메인 대시보드에서 제외
+  const excludedStatuses = new Set(['halt', 'zero_volume']);
+  if (excludeKosdaq) excludedStatuses.add('excluded_kosdaq');
+  const filteredTop = allFactors
+    .filter((r) => !excludedStatuses.has(r.status) && r.total_score > 0)
+    .sort((a, b) => b.total_score - a.total_score);
+
+  // 메타에 통계 추가
+  metaObj.factor_stats = factorStats;
+  metaObj.excluded_count = factorStats.halt + factorStats.zeroVolume + (excludeKosdaq ? factorStats.kosdaq : 0);
+  fs.writeFileSync(
+    path.join(DATA_DIR, 'meta.json'),
+    JSON.stringify(metaObj, (_k, v) => {
+      if (typeof v === 'bigint') return Number(v);
+      if (v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date)) {
+        const o = {};
+        for (const k of Object.keys(v)) o[k] = v[k] instanceof Date ? v[k].toISOString() : v[k];
+        return o;
+      }
+      return v;
+    })
+  );
+
+  // TOP 20 (거래정지/거래량0/KOSDAQ 제외 후)
+  const top = filteredTop.slice(0, TOP_N_SHIPPED).map((r, i) => {
+    const stock = r.stock || {};
+    return {
+      rank: i + 1,
+      code: r.code,
+      name: stock.name || '',
+      market: r.market,
+      sector: stock.sector || '',
+      industry: stock.industry || '',
+      value_score: r.value_score,
+      momentum_score: r.momentum_score,
+      quality_score: r.quality_score,
+      volatility_score: r.volatility_score,
+      growth_score: r.growth_score,
+      liquidity_score: r.liquidity_score,
+      supply_score: r.supply_score,
+      total_score: r.total_score,
+      status: r.status,
+      grade: scoring.gradeFor(r.total_score),
+    };
   });
-  // adjusted 점수 기준 재정렬 + 새 rank
-  top.sort((a, b) => b.total_score - a.total_score);
-  top.forEach((r, i) => (r.rank = i + 1));
+
+  // 종목명/시장이 factor_scores에는 없으므로 stocks 테이블에서 join
+  if (top.length > 0) {
+    const codes = top.map((r) => r.code);
+    const placeholders = codes.map(() => '?').join(',');
+    const stockRows = await db.all(
+      `SELECT code, name, market, sector, industry FROM stocks WHERE code IN (${placeholders})`,
+      codes
+    );
+    const stockMap = new Map(stockRows.map((s) => [s.code, s]));
+    for (const t of top) {
+      const s = stockMap.get(t.code) || {};
+      t.name = s.name || t.name;
+      t.market = s.market || t.market;
+      t.sector = s.sector || t.sector;
+      t.industry = s.industry || t.industry;
+    }
+  }
   writeJson('top.json', top);
 
-  // 전체
-  const allRows = await db.all(`
-    SELECT fs.rank, fs.code, s.name, s.market, s.sector, s.industry,
-           fs.value_score, fs.momentum_score, fs.quality_score,
-           fs.volatility_score, fs.growth_score, fs.total_score
-    FROM factor_scores fs JOIN stocks s ON s.code = fs.code
-    WHERE fs.date = (SELECT MAX(date) FROM factor_scores)
-    ORDER BY fs.code`);
-  allRows.forEach((r) => {
-    const f = factorMap.get(r.code);
-    if (f) {
-      r.liquidity_score = f.liquidity_score;
-      r.supply_score = f.supply_score;
-      r.total_score = f.total_score;
-      r.status = f.status;
+  // 전체 (all.json) — 거래정지/거래량0만 제외 (KOSDAQ은 메타에 따라)
+  const excludedAll = new Set(['halt', 'zero_volume']);
+  const allRowsRaw = allFactors
+    .filter((r) => !excludedAll.has(r.status) && r.total_score > 0)
+    .sort((a, b) => b.total_score - a.total_score);
+  // 종목명 join
+  if (allRowsRaw.length > 0) {
+    const codes = allRowsRaw.map((r) => r.code);
+    const placeholders = codes.map(() => '?').join(',');
+    const stockRows = await db.all(
+      `SELECT code, name, market, sector, industry FROM stocks WHERE code IN (${placeholders})`,
+      codes
+    );
+    const stockMap = new Map(stockRows.map((s) => [s.code, s]));
+    for (const r of allRowsRaw) {
+      const s = stockMap.get(r.code) || {};
+      r.name = s.name || '';
+      r.market = s.market;
+      r.sector = s.sector || '';
+      r.industry = s.industry || '';
+      r.grade = scoring.gradeFor(r.total_score);
     }
-    r.grade = scoring.gradeFor(r.total_score);
-  });
-  writeJson('all.json', allRows);
+  }
+  writeJson('all.json', allRowsRaw);
 
   // 섹터
   const sectorsData = await scoring.getSectorScores();
@@ -337,11 +420,9 @@ async function exportStatic() {
   const corr = await scoring.getFactorCorrelation();
   writeJson('correlation.json', { keys: corr.keys, matrix: corr.matrix });
 
-  // 분포
-  const dist = await db.all(`
-    WITH latest AS (SELECT MAX(date) AS d FROM factor_scores)
-    SELECT total_score FROM factor_scores, latest WHERE date = latest.d`);
-  writeJson('distribution.json', { scores: dist.map((r) => r.total_score) });
+  // 분포 (제외 종목 빼고)
+  const distScores = allRowsRaw.map((r) => r.total_score);
+  writeJson('distribution.json', { scores: distScores });
 
   // 로그
   const logs = await db.all(`SELECT * FROM update_log ORDER BY id DESC LIMIT 10`);
@@ -367,7 +448,7 @@ async function exportStatic() {
     writeJson('backtest.json', { ok: false, error: e.message });
   }
 
-  // 종목별 상세
+  // 종목별 상세 (top + 일부 거래정지 후보)
   console.log('[export] 종목별 상세 JSON 생성...');
   const technical = require('../src/scoring/technical');
   const stockList = await db.all(`SELECT code FROM stocks WHERE market IN ('KOSPI','KOSDAQ')`);
@@ -433,8 +514,9 @@ async function exportStatic() {
 (async () => {
   const t0 = Date.now();
   const exportOnly = process.env.EXPORT_ONLY === '1';
+  const excludeKosdaq = process.env.EXCLUDE_KOSDAQ === '1';
   const isFirst = !fs.existsSync(path.join(ROOT, 'data', 'quant.db'));
-  console.log(`[update] 시작 (모드: ${exportOnly ? 'EXPORT_ONLY' : isFirst ? 'FIRST (전체)' : 'INCREMENTAL'})`);
+  console.log(`[update] 시작 (모드: ${exportOnly ? 'EXPORT_ONLY' : isFirst ? 'FIRST (전체)' : 'INCREMENTAL'}${excludeKosdaq ? ', KOSDAQ 제외' : ''})`);
 
   await initSchema();
 
@@ -443,7 +525,7 @@ async function exportStatic() {
     if (exportOnly) {
       // DB는 이미 채워져 있고, 점수 재계산 + JSON export만
       console.log('[update] EXPORT_ONLY: 점수 재계산 + JSON export...');
-      const { rows } = await calculateAll();
+      const { rows } = await calculateAll(undefined, { excludeKosdaq });
       console.log(`     → ${rows.length}개 점수`);
       await exportStatic();
       await db.close();
@@ -496,7 +578,7 @@ async function exportStatic() {
     }
 
     console.log('[update] 점수 계산...');
-    const { rows } = await calculateAll();
+    const { rows } = await calculateAll(undefined, { excludeKosdaq });
     const scoreN = await persistScores(rows);
     console.log(`     → ${scoreN}개 점수`);
 

@@ -33,20 +33,27 @@ const WEIGHTS_GRID = [
   console.log('[optimizer] 가중치 최적화 백테스트');
   const t0 = Date.now();
 
-  // 1) 매월 시점의 일봉 + 재무 로드
+  const rebalance = process.env.REBALANCE || 'monthly';  // 'monthly' | 'weekly'
+
+  // 1) 매월/매주 시점의 일봉 + 재무 로드
   const monthly = await loadMonthlySnapshots();
-  if (monthly.length < 6) {
-    console.error('[optimizer] 데이터 부족 (', monthly.length, '월)');
+  let snapshots = monthly;
+  if (rebalance === 'weekly') {
+    // 매주 시점 추가 (월초~월말 사이 4주)
+    snapshots = await expandToWeekly(monthly);
+  }
+  if (snapshots.length < 6) {
+    console.error('[optimizer] 데이터 부족 (', snapshots.length, '월)');
     process.exit(1);
   }
-  console.log(`  → ${monthly.length}개월 시점 (${monthly[0].date} ~ ${monthly[monthly.length - 1].date})`);
+  console.log(`  → ${snapshots.length}개 시점 (${snapshots[0].date} ~ ${snapshots[snapshots.length - 1].date}, rebalance=${rebalance})`);
 
-  // 2) KOSPI 월별 수익률
-  const kospiRet = await getKospiMonthlyReturns(monthly.map((m) => m.date));
-  const kospiTotal = kospiRet.reduce((a, b) => a * (1 + b), 1) - 1;
+  // 2) KOSPI 수익률
+  const kospiRet = await getKospiReturns(snapshots.map((m) => m.date));
+  const kospiTotal = kospiRet.length > 0 ? kospiRet.reduce((a, b) => a * (1 + b), 1) - 1 : 0;
   const kospiMonths = kospiRet.length;
   const kospiCAGR = kospiMonths >= 1 ? Math.pow(1 + kospiTotal, 12 / kospiMonths) - 1 : 0;
-  console.log(`  → KOSPI: ${(kospiTotal * 100).toFixed(1)}% (CAGR ${(kospiCAGR * 100).toFixed(1)}%, ${kospiMonths}월)`);
+  console.log(`  → KOSPI: ${(kospiTotal * 100).toFixed(1)}% (CAGR ${(kospiCAGR * 100).toFixed(1)}%, ${kospiMonths}구간)`);
 
   // 3) 가중치별 시뮬레이션
   console.log('\n  가중치명          | Total   | CAGR    | Sharpe  | MDD     | Win%   | vs KOSPI');
@@ -54,7 +61,7 @@ const WEIGHTS_GRID = [
 
   const results = [];
   for (const grid of WEIGHTS_GRID) {
-    const r = runBacktest(monthly, grid.weights, kospiRet);
+    const r = runBacktest(snapshots, grid.weights, kospiRet);
     results.push({ ...grid, ...r });
     const sign = r.alpha >= 0 ? '+' : '';
     console.log(
@@ -267,25 +274,64 @@ function calcSnapshot(date, pricesByCode, fundByCode) {
 // KOSPI 벤치마크
 // ====================
 
-async function getKospiMonthlyReturns(monthEnds) {
+async function getKospiReturns(dates) {
+  // KOSPI 일봉 fetch → 각 시점 사이의 수익률
   try {
-    const arr = await getIndexHistory('KOSPI', { days: 800 });
-    if (!arr || arr.length === 0) return monthEnds.map(() => 0);
+    const arr = await getIndexHistory('KOSPI', { days: Math.max(800, dates.length * 7 + 100) });
+    if (!arr || arr.length === 0) return dates.slice(1).map(() => 0);
     const kospiByDate = new Map(arr.map((k) => [String(k.date).slice(0, 10), k.close]));
     const ret = [];
-    for (let i = 1; i < monthEnds.length; i++) {
-      const prev = monthEnds[i - 1];
-      const curr = monthEnds[i];
-      const p1 = kospiByDate.get(prev);
-      const p2 = kospiByDate.get(curr);
-      if (p1 && p2) ret.push((p2 - p1) / p1);
+    for (let i = 1; i < dates.length; i++) {
+      const prev = dates[i - 1];
+      const curr = dates[i];
+      // 가장 가까운 날짜로 매칭
+      const findNearest = (target) => {
+        let best = null;
+        let bestDiff = Infinity;
+        for (const [d, c] of kospiByDate) {
+          const diff = Math.abs(new Date(d) - new Date(target));
+          if (diff < bestDiff) { bestDiff = diff; best = c; }
+        }
+        return best;
+      };
+      const p1 = kospiByDate.get(prev) || findNearest(prev);
+      const p2 = kospiByDate.get(curr) || findNearest(curr);
+      if (p1 && p2 && p1 > 0) ret.push((p2 - p1) / p1);
       else ret.push(0);
     }
     return ret;
   } catch (e) {
     console.error('[optimizer] KOSPI fetch 실패:', e.message);
-    return monthEnds.map(() => 0);
+    return dates.slice(1).map(() => 0);
   }
+}
+
+async function getKospiMonthlyReturns(monthEnds) {
+  return getKospiReturns(monthEnds);
+}
+
+async function expandToWeekly(monthly) {
+  // monthly 시점 사이를 4주 단위로 세분화 (ref의 next_close 재사용)
+  const expanded = [...monthly];
+  for (let i = 0; i < monthly.length - 1; i++) {
+    const d1 = new Date(monthly[i].date);
+    const d2 = new Date(monthly[i + 1].date);
+    const diffDays = (d2 - d1) / 86400000;
+    if (diffDays > 35) continue;
+    for (let w = 1; w < Math.floor(diffDays / 7); w++) {
+      const d = new Date(d1.getTime() + w * 7 * 86400000);
+      const dateStr = d.toISOString().slice(0, 10);
+      if (!expanded.find((s) => s.date === dateStr)) {
+        // ref의 stocks를 date에 복사, next_close도 ref 그대로
+        expanded.push({
+          date: dateStr,
+          stocks: monthly[i].stocks.map((s) => ({ ...s })),
+        });
+      }
+    }
+  }
+  expanded.sort((a, b) => (a.date < b.date ? -1 : 1));
+  return expanded;
 }
 
 // ====================

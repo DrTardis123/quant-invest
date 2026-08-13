@@ -10,6 +10,7 @@ function app() {
     // ----- 상태 -----
     tab: 'top',
     hosted: false,
+    marketFilter: 'KOSPI',  // 기본 KOSPI만 (KOSDAQ은 별도 페이지)
     state: {
       dataSource: '',
       kisEnabled: false,
@@ -22,13 +23,13 @@ function app() {
     },
     strategyKey: 'balanced',
     strategies: [],
-    currentWeights: { value: 35, momentum: 20, quality: 20, volatility: 15, growth: 10 },
+    currentWeights: { value: 10, momentum: 25, quality: 25, volatility: 15, growth: 15, liquidity: 5, supply: 5 },
 
     indices: [],
     all: [],
     top: [],
     logs: [],
-    meta: { markets: [], sectors: [] },
+    meta: { markets: [], sectors: [], last_price_date: '', last_score_date: '', factor_stats: null },
     filter: { q: '', market: '', sector: '', grade: '' },
     stockDetail: null,
     detailTab: 'overview',
@@ -44,11 +45,16 @@ function app() {
     _charts: {},
     _modal: null,
     _refreshTimer: null,
+    _tabDraws: { chart: false, backtest: false, corr: false, heatmap: false, sector: false },
 
     // ----- 초기화 -----
     async init() {
       this._modal = new bootstrap.Modal(document.getElementById('stockModal'));
 
+      // 모달 완전히 열린 후 차트 그리기 (transition 대기)
+      document.getElementById('stockModal').addEventListener('shown.bs.modal', () => {
+        this.$nextTick(() => this._drawStockCharts());
+      });
       // 모달 닫힐 때 모든 chart destroy (메모리 leak 방지)
       document.getElementById('stockModal').addEventListener('hidden.bs.modal', () => {
         this._destroyModalCharts();
@@ -71,6 +77,24 @@ function app() {
         });
       });
 
+      // URL에서 market 파라미터 읽기
+      const urlParams = new URLSearchParams(window.location.search);
+      const m = urlParams.get('market');
+      if (m === 'KOSPI' || m === 'KOSDAQ') this.marketFilter = m;
+
+      // tab 변경 시 차트 다시 그리기 (display:none 문제 해결)
+      this.$watch('tab', (t) => {
+        if (!t) return;
+        this.$nextTick(() => {
+          if (t === 'chart') { this.drawCharts(); this._tabDraws.chart = true; }
+          else if (t === 'backtest') { this.loadBacktest(); this._tabDraws.backtest = true; }
+          else if (t === 'corr') { this.loadCorrelation(); }
+          else if (t === 'heatmap') { this.loadHeatmap(); }
+          else if (t === 'sector') { this.loadSectors(); }
+          else if (t === 'top') { this._drawTopCharts(); }
+        });
+      });
+
       await Promise.all([
         this.loadHealth(),
         this.loadMeta(),
@@ -83,7 +107,23 @@ function app() {
       this._recomputeAndSet();
       this.$nextTick(() => this._drawAllSparklines());
       // 자동 새로고침 OFF (수동 새로고침 버튼으로만) — CPU/메모리 보호
-      // this._refreshTimer = setInterval(() => this._silentRefresh(), 300_000);
+    },
+
+    // ===== factor 통계 =====
+    factorStatsTotal() {
+      const s = this.meta?.factor_stats;
+      if (!s) return '—';
+      return (s.halt || 0) + (s.zeroVolume || 0) + (s.caution || 0) + (s.lowLiquidity || 0);
+    },
+    factorStatsBreakdown() {
+      const s = this.meta?.factor_stats;
+      if (!s) return '';
+      const parts = [];
+      if (s.halt) parts.push(`🚫${s.halt}`);
+      if (s.zeroVolume) parts.push(`0vol ${s.zeroVolume}`);
+      if (s.caution) parts.push(`⚠️${s.caution}`);
+      if (s.lowLiquidity) parts.push(`💧${s.lowLiquidity}`);
+      return parts.length > 0 ? parts.join(' / ') : '정상';
     },
 
     _destroyModalCharts() {
@@ -140,7 +180,11 @@ function app() {
 
     _recomputeAndSet() {
       if (!this.all || this.all.length === 0) return;
-      const reranked = window.recomputeWithWeights(this.all, this.currentWeights);
+      // marketFilter로 한 번 더 필터 (메타에서 이미 제외했지만 안전망)
+      const filtered = this.marketFilter === 'KOSPI'
+        ? this.all.filter((r) => r.market === 'KOSPI' && r.total_score > 0)
+        : this.all;
+      const reranked = window.recomputeWithWeights(filtered, this.currentWeights);
       this.top = reranked.slice(0, this.state.topN).map((r) => ({
         ...r,
         total_score: r.recomputed_total,
@@ -186,7 +230,21 @@ function app() {
       try {
         const r = await window.apiGet('/api/meta');
         if (!r || r.__error) return;
-        this.meta = { markets: r.markets || [], sectors: r.sectors || [] };
+        this.meta = {
+          markets: r.markets || [],
+          sectors: r.sectors || [],
+          stock_count: r.stock_count || 0,
+          last_price_date: r.last_price_date || '',
+          last_score_date: r.last_score_date || '',
+          last_update: r.last_update || '',
+          factor_stats: r.factor_stats || null,
+          as_of: r.as_of || '',
+          exclude_kosdaq: r.exclude_kosdaq || false,
+        };
+        // URL ?market= 없으면 meta의 exclude_kosdaq로 결정
+        if (!new URLSearchParams(window.location.search).get('market')) {
+          this.marketFilter = r.exclude_kosdaq ? 'KOSPI' : 'KOSPI';
+        }
       } catch (e) { /* ignore */ }
     },
 
@@ -289,6 +347,11 @@ function app() {
       }
     },
 
+    forceDrawBacktest() {
+      // 백테스트 탭 버튼 클릭 시 (탭이 비활성 → 활성 시점에 호출)
+      this.$nextTick(() => this._drawBacktestCharts());
+    },
+
     applyOptimizerWeights() {
       if (!this.optimizer.best) return;
       this.applyWeightsFromOptimizer(this.optimizer.best.weights);
@@ -388,7 +451,7 @@ function app() {
 
     // ----- 분포 -----
     async drawCharts() {
-      await this.loadAll();
+      if (!this.all || this.all.length === 0) await this.loadAll();
       this._recomputeAndSet();
       try {
         const r = await window.apiGet('/api/distribution');
@@ -399,6 +462,10 @@ function app() {
     _drawDist(scores) {
       const ctx = document.getElementById('distChart');
       if (!ctx) return;
+      // canvas가 보이는 상태인지 확인 (display:none이면 height 0)
+      const w = ctx.clientWidth || 400;
+      const h = ctx.clientHeight || 220;
+      if (w === 0) { console.warn('distChart width=0, skip'); return; }
       const bins = new Array(10).fill(0);
       for (const s of scores) { const i = Math.min(9, Math.max(0, Math.floor(s / 10))); bins[i]++; }
       const labels = bins.map((_, i) => `${i*10}-${i*10+10}`);
@@ -408,7 +475,7 @@ function app() {
     },
     _drawFactorStack() {
       const ctx = document.getElementById('factorChart');
-      if (!ctx) return;
+      if (!ctx || !this.top || this.top.length === 0) return;
       const labels = this.top.map((r) => r.name.length > 6 ? r.name.slice(0, 6) + '…' : r.name);
       const datasets = [
         { label: '가치', data: this.top.map((r) => r.value_score), backgroundColor: '#0d6efd' },
@@ -416,6 +483,8 @@ function app() {
         { label: '퀄리티', data: this.top.map((r) => r.quality_score), backgroundColor: '#fd7e14' },
         { label: '저변동', data: this.top.map((r) => r.volatility_score), backgroundColor: '#6f42c1' },
         { label: '성장', data: this.top.map((r) => r.growth_score), backgroundColor: '#dc3545' },
+        { label: '유동', data: this.top.map((r) => r.liquidity_score), backgroundColor: '#20c997' },
+        { label: '수급', data: this.top.map((r) => r.supply_score), backgroundColor: '#0dcaf0' },
       ];
       if (this._charts.factor) this._charts.factor.destroy();
       this._charts.factor = new Chart(ctx, { type: 'bar', data: { labels, datasets }, options: { indexAxis: 'y', plugins: { legend: { position: 'bottom' } }, scales: { x: { max: 100, stacked: true }, y: { stacked: true } } } });
@@ -536,7 +605,7 @@ function app() {
         this.stockDetail = r;
         this.detailTab = 'overview';
         this._modal.show();
-        this.$nextTick(() => this._drawStockCharts());
+        // 차트는 'shown.bs.modal' 이벤트에서 그려짐 (transition 후 보장)
       } catch (e) { console.error(e); }
     },
 
@@ -601,9 +670,12 @@ function app() {
       const tech = this.stockDetail?.technical?.signals || {};
       const flow = this.stockDetail?.investor_flow || [];
 
-      // 거래 정지/유동성 (DB에 status 필드 있으면)
-      if (s.status === 'halt') return '🚫 거래정지 — 매매 불가. 즉시 제외.';
-      if (s.status === 'caution') return '⚠️ 거래주의 — 유동성 부족. 회피 권장.';
+      // ★ 거래 정지/유동성 0 → 최우선 (어떤 점수보다도 중요)
+      if (s.status === 'halt') return '🚫 [거래정지] 매매 불가. 즉시 제외 대상. 어플에서 안 보이거나 가격 동일·거래량 0 — 절대 매수 금지.';
+      if (s.status === 'zero_volume') return '⛔ [거래량 0] 최근 20일 평균 거래대금 0원. 사실상 거래정지. 매매 불가.';
+      if (s.status === 'caution') return '⚠️ [거래주의] 최근 5일 거래량, 60일 평균의 5% 미만. 유동성 극히 부족. 회피 권장.';
+      if (s.status === 'low_liquidity') return '💧 [소형주] 최근 20일 평균 거래대금 1억 미만. 슬리피지·조작 위험. 소액만.';
+      if (s.status === 'excluded_kosdaq') return '📊 [KOSDAQ 제외] 메인 대시보드에서는 제외. ?market=KOSDAQ 으로 확인 가능.';
 
       // 기술적 신호 강조
       const isUpTrend = (tech.ma_trend || '').includes('상승');
@@ -630,7 +702,7 @@ function app() {
         if (top[0] === '퀄리티') return '💎 ROE·ROA 우수. 재무 건전 우량주.';
         if (top[0] === '성장') return '🚀 매출·이익 고성장. 모멘텀 강세 동반 시 매수 적기.';
         if (top[0] === '모멘텀') return '📈 12개월 모멘텀 최상위. 추세 추종.';
-        if (top[0] === '가치') return '💰 저PER·저PBR. 전통 가치주 — 그러나 2020년대 약세 지속 주의.';
+        if (top[0] === '가치') return '💰 저PER·저PBR. 전통 가치주.';
       }
 
       // 기술적 매수/매도 신호
@@ -640,8 +712,8 @@ function app() {
       // 수급
       if (flow.length >= 5) {
         const f5 = flow.slice(0, 5).reduce((sum, r) => sum + (Number(r.foreign_net) || 0), 0);
-        if (f5 > 0 && s.total_score >= 50) return '🌍 외국인 5일 연속 순매수. 수급 호전.';
-        if (f5 < 0 && s.total_score < 50) return '🌍 외국인 5일 연속 순매도. 수급 부진.';
+        if (f5 > 0 && s.total_score >= 50) return '🌍 외국인 5일 순매수. 수급 호전.';
+        if (f5 < 0 && s.total_score < 50) return '🌍 외국인 5일 순매도. 수급 부진.';
       }
 
       // 일반
@@ -654,6 +726,7 @@ function app() {
 
     // ===== 차트 그리기 =====
     _drawStockCharts() {
+      // modal 첫 화면(overview)에 있는 차트만 그리기
       this._drawPriceChart();
       this._drawVolumeChart();
       this._drawRadarChart();
@@ -885,6 +958,47 @@ function app() {
         console.error(e);
         this.state.updating = false;
       }
+    },
+
+    // CSV 다운로드 (전 종목 점수) — 다른 퀀트 대시보드와 차별화
+    downloadCsv() {
+      if (!this.all || this.all.length === 0) return;
+      const rows = [['순위', '코드', '종목명', '시장', '섹터', '등급', '가치', '모멘텀', '퀄리티', '저변동', '성장', '유동', '수급', '총점', '상태']];
+      // 정렬: total_score desc
+      const sorted = [...this.all].sort((a, b) => (b.total_score || 0) - (a.total_score || 0));
+      for (const r of sorted) {
+        rows.push([
+          r.rank || '',
+          r.code,
+          r.name || '',
+          r.market || '',
+          r.sector || '',
+          r.grade?.letter || '',
+          r.value_score?.toFixed(2) || '',
+          r.momentum_score?.toFixed(2) || '',
+          r.quality_score?.toFixed(2) || '',
+          r.volatility_score?.toFixed(2) || '',
+          r.growth_score?.toFixed(2) || '',
+          r.liquidity_score?.toFixed(2) || '',
+          r.supply_score?.toFixed(2) || '',
+          r.total_score?.toFixed(2) || '',
+          r.status || '',
+        ]);
+      }
+      const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+      // BOM 추가 (엑셀 한글 깨짐 방지)
+      const bom = '\uFEFF';
+      const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const today = new Date().toISOString().slice(0, 10);
+      const mkt = this.marketFilter || 'ALL';
+      link.href = url;
+      link.download = `quant_${mkt}_${today}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     },
   };
 }

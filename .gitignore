@@ -13,6 +13,19 @@ logs/server.log
 *.bak
 *.tmp
 
-# public/data/ 안의 JSON 은 전부 커밋 (대시보드가 필요로 함)
-# 단 repo 가 너무 커지면 git lfs 도입 고려:
-#   git lfs track "public/data/stock/*.json"
+# public/data/stock/ 3,921 files (~588MB) — too large for git.
+# Vercel serverless api/stock/[code].js fetches from GitHub raw URL,
+# so these files don't need to be in git. If repo size becomes small again,
+# consider git lfs: git lfs track "public/data/stock/*.json"
+public/data/stock/
+
+# Test scripts (untracked dev files)
+test-*.js
+scripts/quick-export.js
+scripts/export-only.js
+scripts/fetch-long-history.js
+scripts/fetch-kospi200-5y.js
+push-now.sh
+
+# Local data derivatives
+data/indices-5y.json

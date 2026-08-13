@@ -199,42 +199,112 @@ function calcLowVol(prices) {
 // ---------- 거래정지/거래주의 감지 ----------
 
 async function fetchTradingStatus() {
-  // 최근 5일 종가 동일 + 거래량 0 → 거래정지
-  // 최근 5일 평균 거래량이 전체 평균의 5% 미만 → 거래주의 (유동성 부족)
+  // 거래정지/거래주의 감지:
+  //   - halt: 최근 5일 종가 변동 없거나 거래량 0
+  //   - caution: 최근 5일 평균 거래량 < 60일 평균의 5%
+  //   - zero_volume: 최근 20일 평균 거래대금 0 (거래정지 의심)
+  //   - low_liquidity: 최근 20일 평균 거래대금 < 1억 (소형주)
   return all(`
     WITH recent AS (
       SELECT code, date, close, volume,
              ROW_NUMBER() OVER (PARTITION BY code ORDER BY date DESC) AS rn,
-             AVG(volume) OVER (PARTITION BY code) AS avg_vol_all
+             AVG(volume) OVER (PARTITION BY code ORDER BY date ROWS BETWEEN 60 PRECEDING AND CURRENT ROW) AS avg_vol_60d
       FROM daily_prices
     )
     SELECT code,
-           COUNT(*) FILTER (WHERE rn <= 5) AS recent_days,
            MAX(close) FILTER (WHERE rn <= 5) AS max_close,
            MIN(close) FILTER (WHERE rn <= 5) AS min_close,
            SUM(volume) FILTER (WHERE rn <= 5) AS vol5,
-           AVG(avg_vol_all) AS avg_vol_all
+           AVG(volume) FILTER (WHERE rn <= 5) AS avg_vol5,
+           AVG(avg_vol_60d) AS avg_vol_60d,
+           AVG(volume * close) FILTER (WHERE rn <= 20) AS turnover_20d
     FROM recent
     GROUP BY code
   `);
 }
 
-function applyStatusPenalty(rows, statusMap) {
-  // 거래정지: -80점 (사실상 0점)
-  // 거래주의:  -30점 (유동성 부족)
-  // 코스닥:    -3점 (작은 페널티, 무시할 수준)
-  for (const r of rows) {
-    const st = statusMap.get(r.code);
-    if (!st) continue;
-    if (st.max_close === st.min_close && Number(st.vol5) === 0) {
-      r.total_score = Math.max(0, r.total_score - 80);
-      r.status = 'halt';
-    } else if (st.vol5 !== null && st.avg_vol_all > 0 && Number(st.vol5) < st.avg_vol_all * 0.05) {
-      r.total_score = Math.max(0, r.total_score - 30);
-      r.status = 'caution';
-    } else {
-      r.status = 'normal';
+// 거래정지/거래주의 분류
+// 반환: { halt: Set, caution: Set, zeroVolume: Set, lowLiquidity: Set }
+function classifyStatus(statusRows) {
+  const halt = new Set();
+  const caution = new Set();
+  const zeroVolume = new Set();
+  const lowLiquidity = new Set();
+  for (const s of statusRows) {
+    const maxC = s.max_close;
+    const minC = s.min_close;
+    const vol5 = Number(s.vol5) || 0;
+    const avgVol5 = Number(s.avg_vol5) || 0;
+    const avgVol60 = Number(s.avg_vol_60d) || 0;
+    const turnover = Number(s.turnover_20d) || 0;
+
+    // 거래량 0: 최근 20일 평균 거래대금 0 → 완전 제외
+    if (turnover === 0) {
+      zeroVolume.add(s.code);
+      continue;
     }
+    // 거래정지: 최근 5일 종가 변동 0 + 거래량 0
+    if (vol5 === 0 || (maxC === minC && avgVol5 === 0)) {
+      halt.add(s.code);
+      continue;
+    }
+    // 거래주의: 최근 5일 평균 거래량이 60일 평균의 5% 미만
+    if (avgVol60 > 0 && avgVol5 < avgVol60 * 0.05) {
+      caution.add(s.code);
+      continue;
+    }
+    // 소형주: 최근 20일 평균 거래대금 1억 미만
+    if (turnover < 100_000_000) {
+      lowLiquidity.add(s.code);
+    }
+  }
+  return { halt, caution, zeroVolume, lowLiquidity };
+}
+
+function applyStatusPenalty(rows, statusMap, options = {}) {
+  // 거래정지/거래량 0: 완전 제외 (0점 처리, top.json에서 빠짐)
+  // 거래주의: -50점 (실질적으로 B 등급 이하로 강제)
+  // 소형주: -5점 (작은 페널티, 참고용)
+  // 코스닥: -5점 (서버 부하 줄이기 위한 약한 페널티)
+  // excludeKosdaq=true: 코스닥을 아예 제외
+  const { halt, caution, zeroVolume, lowLiquidity } = statusMap;
+  const excludeKosdaq = !!options.excludeKosdaq;
+  for (const r of rows) {
+    let penalized = false;
+
+    if (zeroVolume && zeroVolume.has(r.code)) {
+      // 거래량 0 → 완전 0점 (top.json에서 제외)
+      r.total_score = 0;
+      r.status = 'zero_volume';
+      penalized = true;
+    } else if (halt && halt.has(r.code)) {
+      // 거래정지 → 완전 0점
+      r.total_score = 0;
+      r.status = 'halt';
+      penalized = true;
+    } else if (caution && caution.has(r.code)) {
+      // 거래주의 → -50점 (B+ 이하로 강제)
+      r.total_score = Math.max(0, r.total_score - 50);
+      r.status = 'caution';
+      penalized = true;
+    } else if (lowLiquidity && lowLiquidity.has(r.code)) {
+      // 소형주 → -5점
+      r.total_score = Math.max(0, r.total_score - 5);
+      r.status = 'low_liquidity';
+      penalized = true;
+    } else if (excludeKosdaq && r.market === 'KOSDAQ') {
+      // KOSDAQ 완전 제외 (메인 대시보드)
+      r.total_score = 0;
+      r.status = 'excluded_kosdaq';
+      penalized = true;
+    } else if (r.market === 'KOSDAQ') {
+      // KOSDAQ 약한 페널티 (별도 페이지에서 볼 때)
+      r.total_score = Math.max(0, r.total_score - 5);
+      r.status = r.status || 'kosdaq';
+      penalized = true;
+    }
+
+    if (!penalized) r.status = r.status || 'normal';
   }
 }
 
@@ -257,10 +327,21 @@ async function fetchLiquidity() {
 
 function calcLiquidity(liquidity) {
   // 거래대금 백분위 (높을수록 좋음, 유동성)
+  // 거래량 0 = 점수 0 (제외)
   const rows = liquidity
     .filter((r) => r.turnover_20d > 0)
     .map((r) => ({ code: r.code, raw: Number(r.turnover_20d) }));
   return percentileScore(rows, true);
+}
+
+// 거래량 0 종목 마킹 (UI에서 거래정지와 별도 표시)
+function markZeroVolume(stocks, liquidity) {
+  const map = new Map(liquidity.map((r) => [r.code, Number(r.turnover_20d) || 0]));
+  for (const s of stocks) {
+    if (!map.has(s.code) || map.get(s.code) === 0) {
+      s.zero_volume = true;
+    }
+  }
 }
 
 // ---------- 수급 (외인/기관) ----------
@@ -296,7 +377,7 @@ function calcSupply(supply) {
 
 // ---------- 메인 ----------
 
-async function calculateAll(weights = null) {
+async function calculateAll(weights = null, options = {}) {
   const [fundamentals, prices, prevFundamentals, statusRows, liquidity, supply] = await Promise.all([
     fetchLatestFundamentals(),
     fetchPricesForFactors(),
@@ -318,6 +399,9 @@ async function calculateAll(weights = null) {
   const liq = calcLiquidity(liquidity);
   const sup = calcSupply(supply);
 
+  // status 분류: 거래정지/거래주의/거래량0/소형주
+  const statusMap = classifyStatus(statusRows);
+
   const W = weights || cfg.factors.weights;
   const wv = W.value || 0;
   const wm = W.momentum || 0;
@@ -338,10 +422,7 @@ async function calculateAll(weights = null) {
   const asOf = dateRow[0]?.d || null;
   if (!asOf) return { codes: [...codes], rows: [], asOf: null };
 
-  // 거래정지/거래주의 맵
-  const statusMap = new Map(statusRows.map((s) => [s.code, s]));
-
-  // market 정보 (코스닥 페널티용)
+  // market 정보
   const marketMap = new Map(fundamentals.map((f) => [f.code, f.market]));
 
   const rows = [];
@@ -354,11 +435,6 @@ async function calculateAll(weights = null) {
     const liqs = liq.get(code) ?? 50;
     const sups = sup.get(code) ?? 50;
     let total = (vs * wv + ms * wm + qs * wq + lvs * wlv + gs * wg + liqs * wliq + sups * wsup) / totalWeight;
-
-    // 코스닥 작은 페널티 (-3점, 무시 가능한 수준)
-    if (marketMap.get(code) === 'KOSDAQ') {
-      total -= 3;
-    }
 
     rows.push({
       code,
@@ -375,13 +451,26 @@ async function calculateAll(weights = null) {
     });
   }
 
-  // 거래정지/거래주의 패널티 적용
-  applyStatusPenalty(rows, statusMap);
+  // 거래정지/거래주의/거래량0/KOSDAQ 페널티 적용
+  applyStatusPenalty(rows, statusMap, options);
 
   rows.sort((a, b) => b.total_score - a.total_score);
   rows.forEach((r, i) => (r.rank = i + 1));
 
-  return { codes: [...codes], rows, asOf };
+  return {
+    codes: [...codes],
+    rows,
+    asOf,
+    stats: {
+      total: rows.length,
+      normal: rows.filter((r) => r.status === 'normal').length,
+      halt: rows.filter((r) => r.status === 'halt').length,
+      caution: rows.filter((r) => r.status === 'caution').length,
+      zeroVolume: rows.filter((r) => r.status === 'zero_volume').length,
+      lowLiquidity: rows.filter((r) => r.status === 'low_liquidity').length,
+      kosdaq: rows.filter((r) => r.status === 'kosdaq' || r.status === 'excluded_kosdaq').length,
+    },
+  };
 }
 
 function round2(v) {
