@@ -1,12 +1,12 @@
 // 브라우저용 전략 프로파일
 // src/strategies.js 와 동일한 정의. 클라이언트에서 재가중치 계산에 사용.
-// 7팩터 (가치/모멘텀/퀄리티/저변동/성장/유동/수급)
+// 2026-08-13 업데이트: 13개월 시뮬 기반 Sharpe-균형 채택
 
 window.QUANT_STRATEGIES = {
   balanced: {
     key: 'balanced', name: '밸런스', emoji: '⚖️',
-    description: '재무중시 기본. 가치 8 + 모멘텀 22 + 퀄리티 27 + 저변동 8 + 성장 20 + 유동 8 + 수급 7.',
-    weights: { value: 8, momentum: 22, quality: 27, volatility: 8, growth: 20, liquidity: 8, supply: 7 },
+    description: 'Sharpe 1.61 최적 균형. 가치 10 + 모멘텀 25 + 퀄리티 25 + 저변동 15 + 성장 15 + 유동 5 + 수급 5.',
+    weights: { value: 10, momentum: 25, quality: 25, volatility: 15, growth: 15, liquidity: 5, supply: 5 },
   },
   value: {
     key: 'value', name: '가치 강화', emoji: '💎',

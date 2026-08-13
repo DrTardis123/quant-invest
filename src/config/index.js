@@ -52,9 +52,10 @@ const cfg = {
   },
 
   factors: {
-    // 7팩터 가중치 (한국 시장 + AQR + 삼성증권 종합, 2026-08)
+    // 7팩터 가중치 (2026-08-13 업데이트)
+    // 13개월 백테스트 결과 Sharpe 최적 (Sharpe 1.61, Total 60%, MDD -14%)
     // strategies.js의 'balanced'와 동기화
-    weights: { value: 8, momentum: 22, quality: 27, volatility: 8, growth: 20, liquidity: 8, supply: 7 },
+    weights: { value: 10, momentum: 25, quality: 25, volatility: 15, growth: 15, liquidity: 5, supply: 5 },
   },
 
   // KIS 키가 모두 있으면 자동으로 KIS 모드

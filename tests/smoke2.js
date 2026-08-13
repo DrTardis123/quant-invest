@@ -8,10 +8,10 @@
     console.log('✓', msg);
   };
 
-  // 1) strategies 모듈 (7팩터)
+  // 1) strategies 모듈 (7팩터, 2026-08-13 시뮬 기반)
   const strategies = require('../src/strategies');
   ok(strategies.list().length === 5, '전략 5개');
-  ok(strategies.get('balanced').weights.value === 8, '밸런스 가치 8');
+  ok(strategies.get('balanced').weights.value === 10, '밸런스 가치 10');
   ok(strategies.get('value').weights.value === 35, '가치 전략 가치 35');
   ok(strategies.get('momentum').weights.momentum === 40, '모멘텀 전략 40');
   // 7팩터 합 = 100
