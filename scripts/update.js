@@ -619,7 +619,10 @@ async function exportStatic() {
              fs.value_score, fs.momentum_score, fs.quality_score,
              fs.volatility_score, fs.growth_score, fs.liquidity_score, fs.supply_score,
              (SELECT close FROM daily_prices WHERE code = s.code ORDER BY date DESC LIMIT 1) AS close_now,
-             (SELECT AVG(volume * close) FROM daily_prices WHERE code = s.code ORDER BY date DESC LIMIT 20) AS turnover_20d
+             (SELECT AVG(turnover) FROM (
+                SELECT volume * close AS turnover FROM daily_prices
+                WHERE code = s.code ORDER BY date DESC LIMIT 20
+             )) AS turnover_20d
       FROM factor_scores fs
       JOIN stocks s ON s.code = fs.code
       WHERE fs.date = (SELECT MAX(date) FROM factor_scores)
@@ -991,15 +994,20 @@ async function exportStatic() {
   // 가중치 최적화 (장기 historical 기반) - 12+ 가중치 × 13개월 시뮬
   try {
     console.log('[export] 가중치 최적화 (12+ 조합 × 13개월)...');
-    // 별도 스크립트 실행 (시간 절약)
+    // DuckDB 락 충돌 회피: calc-strategies는 DB 잠금 필요 → 이미 optimizer.json이 있으면 스킵
     const { execSync } = require('child_process');
-    try {
-      execSync('node scripts/calc-strategies.js', { stdio: 'inherit', cwd: ROOT });
-    } catch (e) {
-      console.error('[export] calc-strategies 실패:', e.message);
-      // fallback
-      const opt = await exportOptimizer();
-      writeJson('optimizer.json', opt);
+    // read-only 모드거나, optimizer.json이 이미 있으면 기존 결과 사용
+    const existingOpt = path.join(DATA_DIR, 'optimizer.json');
+    if (process.env.DUCKDB_READ_ONLY === '1' || (fs.existsSync(existingOpt) && fs.statSync(existingOpt).size > 1000)) {
+      console.log('[export] 기존 optimizer.json 사용 (DuckDB 락 회피)');
+    } else {
+      try {
+        execSync('node scripts/calc-strategies.js', { stdio: 'inherit', cwd: ROOT });
+      } catch (e) {
+        console.error('[export] calc-strategies 실패:', e.message);
+        const opt = await exportOptimizer();
+        writeJson('optimizer.json', opt);
+      }
     }
   } catch (e) {
     console.error('[export] optimizer 실패:', e.message);
@@ -1076,7 +1084,12 @@ async function exportStatic() {
   const isFirst = !fs.existsSync(path.join(ROOT, 'data', 'quant.db'));
   console.log(`[update] 시작 (모드: ${exportOnly ? 'EXPORT_ONLY' : isFirst ? 'FIRST (전체)' : 'INCREMENTAL'}${excludeKosdaq ? ', KOSDAQ 제외' : ''})`);
 
-  await initSchema();
+  // initSchema: read_only 모드에서는 스킵 (CREATE 불가)
+  if (process.env.DUCKDB_READ_ONLY === '1') {
+    console.log('[update] read_only 모드: initSchema 스킵');
+  } else {
+    await initSchema();
+  }
 
   let stocksN = 0, pricesN = 0, fundN = 0, flowN = 0, sectorN = 0;
   try {

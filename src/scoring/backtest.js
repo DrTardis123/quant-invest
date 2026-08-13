@@ -310,12 +310,15 @@ async function backtestFromDailyPrices({ strategy = null, topN = TOP_N, months =
     const d1 = String(monthly[i].date);
     const d2 = String(monthly[i + 1].date);
     const nextByCode = new Map();
-    for (const s of monthly[i + 1].stocks) nextByCode.set(s.code, s.last_close);
+    for (const s of monthly[i + 1].stocks) nextByCode.set(s.code, Number(s.last_close) || 0);
     const scored = monthly[i].stocks
       .filter((s) => nextByCode.has(s.code))
       .map((s) => {
-        const score = factorKeys.reduce((a, k) => a + (s[k.key] || 0) * k.w, 0) / totalW;
-        return { code: s.code, score, ret: (nextByCode.get(s.code) / s.last_close) - 1 };
+        const lastClose = Number(s.last_close) || 0;
+        const nextClose = Number(nextByCode.get(s.code)) || 0;
+        const ret = lastClose > 0 ? (nextClose / lastClose) - 1 : 0;
+        const score = factorKeys.reduce((a, k) => a + (Number(s[k.key]) || 0) * k.w, 0) / totalW;
+        return { code: s.code, score, ret };
       });
     if (scored.length === 0) { monthlyReturns.push({ from: d1, to: d2, strategy: 0, kospi: 0, count: 0 }); continue; }
     scored.sort((a, b) => b.score - a.score);
