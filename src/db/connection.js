@@ -7,12 +7,26 @@ const cfg = require('../config');
 
 let _instance = null;
 let _conn = null;
+let _readOnly = false;
 
 async function getInstance() {
   if (_instance) return _instance;
   const dbDir = path.dirname(cfg.data.dbPath);
   if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
-  _instance = await DuckDBInstance.create(cfg.data.dbPath);
+  // read_only 모드 지원 (환경변수 DUCKDB_READ_ONLY=1)
+  const ro = process.env.DUCKDB_READ_ONLY === '1';
+  _readOnly = ro;
+  try {
+    _instance = await DuckDBInstance.create(cfg.data.dbPath, ro ? { access_mode: 'READ_ONLY' } : {});
+  } catch (e) {
+    if (ro) {
+      console.error('[db] read_only 실패, 일반 모드 재시도:', e.message);
+      _readOnly = false;
+      _instance = await DuckDBInstance.create(cfg.data.dbPath);
+    } else {
+      throw e;
+    }
+  }
   return _instance;
 }
 

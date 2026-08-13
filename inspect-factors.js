@@ -1,0 +1,24 @@
+'use strict';
+process.env.DUCKDB_READ_ONLY = '1';
+const { all } = require('./src/db/connection');
+(async () => {
+  const c = await all('SELECT COUNT(*) AS c FROM fundamentals');
+  console.log('fundamentals count:', c);
+  const f = await all('SELECT code, per, pbr, psr, roe, roa, debt_ratio, revenue, period FROM fundamentals LIMIT 5');
+  console.log('fundamentals sample:', f);
+  const p = await all('SELECT COUNT(*) AS c FROM daily_prices');
+  console.log('daily_prices count:', p);
+  const s = await all('SELECT COUNT(*) AS c FROM investor_flow');
+  console.log('investor_flow count:', s);
+  const m = await all('SELECT MAX(date) AS d FROM daily_prices');
+  console.log('max date:', m);
+  const v = await all("SELECT code, name, market, sector, industry FROM stocks WHERE market='KOSPI' LIMIT 5");
+  console.log('stocks sample:', v);
+  const sectors = await all('SELECT DISTINCT sector FROM stocks WHERE sector IS NOT NULL AND sector <> \'\'');
+  console.log('sector distinct count:', sectors.length);
+  console.log('first sectors:', sectors.slice(0, 10));
+  const fundPeriods = await all('SELECT period, COUNT(*) c FROM fundamentals GROUP BY period ORDER BY period DESC LIMIT 10');
+  console.log('fundamentals periods:', fundPeriods);
+  const nullCount = await all("SELECT COUNT(*) AS c FROM fundamentals WHERE per IS NULL OR pbr IS NULL OR roe IS NULL");
+  console.log('nulls in fundamentals:', nullCount);
+})();

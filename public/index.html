@@ -228,7 +228,7 @@
                           <input type="checkbox" class="btn-check" :id="'cmp-' + r.code" @change="toggleCompare(r, $event.target.checked)">
                           <label class="btn btn-outline-secondary" :for="'cmp-' + r.code" title="비교 선택">⚖️</label>
                           <a class="btn btn-outline-secondary" :href="'https://finance.naver.com/item/main.naver?code=' + r.code" target="_blank" rel="noopener" title="네이버 증권">N</a>
-                          <a class="btn btn-outline-secondary" :href="'https://finance.daum.net/quotes/A' + r.code + "'" target="_blank" rel="noopener" title="다음 증권">D</a>
+                          <a class="btn btn-outline-secondary" :href="'https://finance.daum.net/quotes/A' + r.code" target="_blank" rel="noopener" title="다음 증권">D</a>
                           <button class="btn btn-outline-primary" @click="openStock(r.code)">상세</button>
                         </div>
                       </td>
@@ -245,6 +245,11 @@
         <div class="card mb-3">
           <div class="card-body">
             <h6>등급 분포 (Top <span x-text="top.length"></span>)</h6>
+            <div class="d-flex justify-content-around small text-muted mb-1">
+              <span>평균 <strong class="text-primary" x-text="top.length ? (top.reduce((a,b)=>a+(b.total_score||0),0)/top.length).toFixed(1) + '점' : '—'"></strong></span>
+              <span>중앙값 <strong class="text-primary" x-text="top.length ? (() => { const s = top.map(r=>r.total_score||0).sort((a,b)=>a-b); const m = Math.floor(s.length/2); return s.length % 2 ? s[m].toFixed(1) : ((s[m-1]+s[m])/2).toFixed(1); })() + '점' : '—'"></strong></span>
+              <span>최고 <strong class="text-danger" x-text="top.length ? Math.max(...top.map(r=>r.total_score||0)).toFixed(1) + '점' : '—'"></strong></span>
+            </div>
             <canvas id="gradeChart" height="180"></canvas>
           </div>
         </div>
@@ -263,6 +268,7 @@
               <li>KOSDAQ 종목은 메인에서 <span class="text-info">제외</span> (별도 페이지)</li>
               <li>5팩터 + 2팩터 (유동/수급) = <strong>7팩터 종합</strong></li>
               <li>백테스트 Sharpe 가중치 적용 (10/25/25/15/15/5/5)</li>
+              <li>ETF/레버리지/인버스/SPAC/우선주 자동 제외</li>
             </ul>
           </div>
         </div>
@@ -309,7 +315,8 @@
                   <td x-text="fmt(r.growth_score)"></td>
                   <td @click.stop>
                     <div class="btn-group btn-group-sm">
-                      <a class="btn btn-outline-secondary" :href="'https://finance.naver.com/item/main.naver?code=' + r.code" target="_blank">N</a>
+                      <a class="btn btn-outline-secondary" :href="'https://finance.naver.com/item/main.naver?code=' + r.code" target="_blank" rel="noopener" title="네이버 증권">N</a>
+                      <a class="btn btn-outline-secondary" :href="'https://finance.daum.net/quotes/A' + r.code" target="_blank" rel="noopener" title="다음 증권">D</a>
                       <button class="btn btn-outline-primary" @click="openStock(r.code)">상세</button>
                     </div>
                   </td>
@@ -969,7 +976,10 @@
               <tr><td><kbd>M</kbd></td><td>🚀 급등/급락으로 이동</td></tr>
               <tr><td><kbd>H</kbd></td><td>📈 신고/신저로 이동</td></tr>
               <tr><td><kbd>B</kbd></td><td>⏪ 백테스트로 이동</td></tr>
-              <tr><td><kbd>D</kbd></td><td>🌙 다크모드 토글</td></tr>
+              <tr><td><kbd>C</kbd></td><td>⚖️ 비교 모달 열기 (2~5개 종목)</td></tr>
+              <tr><td><kbd>N</kbd></td><td>🟢 네이버증권 (현재 보고 있는 종목)</td></tr>
+              <tr><td><kbd>D</kbd></td><td>🟡 다음증권 (현재 보고 있는 종목)</td></tr>
+              <tr><td><kbd>S</kbd></td><td>🌙 다크모드 토글</td></tr>
               <tr><td><kbd>?</kbd></td><td>이 도움말</td></tr>
               <tr><td><kbd>ESC</kbd></td><td>모달 닫기</td></tr>
             </tbody>
@@ -1055,6 +1065,11 @@
                   :class="'grade-' + stockDetail?.score?.grade?.color"
                   x-text="stockDetail?.score?.grade?.letter"></span>
           </h5>
+          <div class="ms-auto d-flex gap-1 me-2">
+            <a class="btn btn-sm btn-outline-success" :href="'https://finance.naver.com/item/main.naver?code=' + (stockDetail?.stock?.code || '')" target="_blank" rel="noopener" title="네이버증권 (단축키 N)">🟢 N</a>
+            <a class="btn btn-sm btn-outline-warning" :href="'https://finance.daum.net/quotes/A' + (stockDetail?.stock?.code || '')" target="_blank" rel="noopener" title="다음증권 (단축키 D)">🟡 D</a>
+            <button class="btn btn-sm btn-outline-secondary" @click="showShortcuts()" title="단축키 (?)">⌨️</button>
+          </div>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body" x-show="stockDetail">
@@ -1071,6 +1086,20 @@
               <strong class="me-2">📊 퀀트 한줄평:</strong>
               <span x-text="oneLiner"></span>
             </div>
+          </div>
+
+          <!-- 시장 애널리스트 전망 -->
+          <div class="alert alert-warning border-0 py-2 mb-3" x-show="stockDetail?.analyst" role="alert" style="background:linear-gradient(135deg,#fff3cd,#ffeaa7)">
+            <div class="d-flex align-items-start flex-wrap gap-2 mb-2">
+              <strong class="me-1">📈 시장 애널리스트 전망:</strong>
+              <span class="badge" :class="analystRatingClass(stockDetail?.analyst?.rating)" x-text="stockDetail?.analyst?.rating"></span>
+              <span class="ms-1" x-show="stockDetail?.analyst?.targetPrice">
+                목표주가 <strong x-text="(stockDetail?.analyst?.targetPrice || 0).toLocaleString() + '원'"></strong>
+                <span :class="(stockDetail?.analyst?.upsidePct || 0) >= 0 ? 'text-danger fw-bold' : 'text-primary fw-bold'" x-text="'(' + (stockDetail?.analyst?.upsidePct >= 0 ? '+' : '') + (stockDetail?.analyst?.upsidePct || 0).toFixed(1) + '%)'"></span>
+              </span>
+            </div>
+            <div class="small" x-text="stockDetail?.analyst?.oneLine || stockDetail?.analyst?.comment" style="font-weight:600; margin-bottom:4px;"></div>
+            <div class="small text-muted" x-text="stockDetail?.analyst?.comment" style="line-height:1.5;"></div>
           </div>
           <ul class="nav nav-pills nav-fill mb-3 flex-wrap">
             <li class="nav-item"><a class="nav-link" :class="{active: detailTab==='overview'}" href="#" @click.prevent="detailTab='overview'">개요</a></li>
@@ -1105,22 +1134,47 @@
             </div>
           </div>
           <div x-show="detailTab==='valuation'">
-            <table class="table table-sm">
-              <thead><tr><th>기간</th><th>PER</th><th>PBR</th><th>PSR</th><th>EPS</th><th>BPS</th><th>배당률</th></tr></thead>
+            <!-- 밸류에이션 요약 -->
+            <div class="row g-2 mb-3">
+              <template x-for="k in ['per','pbr','psr','eps','bps','dividend_yield']" :key="k">
+                <div class="col-4 col-md-2">
+                  <div class="text-muted small" x-text="valuationLabel(k)"></div>
+                  <div class="fs-5 fw-bold" :class="valuationClass(k, latestFundamental(k))" x-text="fmtFund(latestFundamental(k))"></div>
+                </div>
+              </template>
+            </div>
+            <h6>📊 분기별 실적 추이</h6>
+            <table class="table table-sm table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th>기간</th><th>PER</th><th>PBR</th><th>PSR</th>
+                  <th>EPS</th><th>BPS</th><th>배당률</th>
+                </tr>
+              </thead>
               <tbody>
                 <template x-for="f in (stockDetail?.fundamentals || [])" :key="f.period">
                   <tr>
-                    <td x-text="f.period"></td>
+                    <td><strong x-text="f.period"></strong></td>
                     <td x-text="fmt(f.per)"></td>
                     <td x-text="fmt(f.pbr)"></td>
                     <td x-text="fmt(f.psr)"></td>
                     <td x-text="fmt(f.eps)"></td>
                     <td x-text="fmt(f.bps)"></td>
-                    <td x-text="fmt(f.dividend_yield)"></td>
+                    <td x-text="fmt(f.dividend_yield) + '%'"></td>
                   </tr>
                 </template>
+                <tr x-show="!stockDetail?.fundamentals || stockDetail.fundamentals.length === 0">
+                  <td colspan="7" class="text-center text-muted py-3">재무 데이터 없음 (PER/PBR/PSR/배당률 등은 Naver Finance 크롤링 필요)</td>
+                </tr>
               </tbody>
             </table>
+            <div class="alert alert-info mt-3 small">
+              <strong>💡 해석 가이드</strong><br>
+              • <strong>PER</strong> 낮을수록 저평가 (10 이하 = 매력적, 20 이상 = 고평가)<br>
+              • <strong>PBR</strong> 1.0 이하 = 자산가치 대비 저평가, 2.0 이상 = 프리미엄<br>
+              • <strong>PSR</strong> 매출 대비 시가총액, 적자 기업도 비교 가능<br>
+              • <strong>배당률</strong> 3%+ 안정적, 5%+ 고배당, 0% 무배당
+            </div>
           </div>
           <div x-show="detailTab==='momentum'">
             <div class="row g-2">
@@ -1143,38 +1197,84 @@
             </div>
           </div>
           <div x-show="detailTab==='quality'">
-            <table class="table table-sm">
-              <thead><tr><th>기간</th><th>ROE</th><th>ROA</th><th>부채비율</th><th>매출</th><th>영업이익</th><th>당기순이익</th></tr></thead>
+            <!-- 퀄리티 요약 -->
+            <div class="row g-2 mb-3">
+              <template x-for="k in ['roe','roa','debt_ratio','operating_margin','net_margin']" :key="k">
+                <div class="col-4 col-md-2" x-show="latestFundamental(k) !== null">
+                  <div class="text-muted small" x-text="qualityLabel(k)"></div>
+                  <div class="fs-5 fw-bold" :class="qualityClass(k, latestFundamental(k))" x-text="fmtFund(latestFundamental(k)) + (k.includes('ratio') || k.includes('margin') ? '%' : '')"></div>
+                </div>
+              </template>
+            </div>
+            <h6>📊 분기별 재무 추이</h6>
+            <table class="table table-sm table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th>기간</th><th>ROE</th><th>ROA</th><th>부채비율</th>
+                  <th>매출 (억원)</th><th>영업이익 (억원)</th><th>당기순이익 (억원)</th>
+                </tr>
+              </thead>
               <tbody>
                 <template x-for="f in (stockDetail?.fundamentals || [])" :key="f.period">
                   <tr>
-                    <td x-text="f.period"></td>
-                    <td x-text="fmt(f.roe)"></td>
-                    <td x-text="fmt(f.roa)"></td>
-                    <td x-text="fmt(f.debt_ratio)"></td>
-                    <td x-text="(f.revenue || 0).toLocaleString()"></td>
-                    <td x-text="(f.operating_profit || 0).toLocaleString()"></td>
-                    <td x-text="(f.net_profit || 0).toLocaleString()"></td>
+                    <td><strong x-text="f.period"></strong></td>
+                    <td :class="f.roe >= 15 ? 'text-danger fw-bold' : (f.roe < 5 ? 'text-primary' : '')" x-text="fmt(f.roe) + '%'"></td>
+                    <td :class="f.roa >= 8 ? 'text-danger fw-bold' : (f.roa < 3 ? 'text-primary' : '')" x-text="fmt(f.roa) + '%'"></td>
+                    <td :class="f.debt_ratio > 200 ? 'text-primary fw-bold' : (f.debt_ratio < 100 ? 'text-danger' : '')" x-text="fmt(f.debt_ratio) + '%'"></td>
+                    <td x-text="(f.revenue / 1e8 || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })"></td>
+                    <td x-text="(f.operating_profit / 1e8 || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })"></td>
+                    <td x-text="(f.net_profit / 1e8 || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })"></td>
                   </tr>
                 </template>
+                <tr x-show="!stockDetail?.fundamentals || stockDetail.fundamentals.length === 0">
+                  <td colspan="7" class="text-center text-muted py-3">재무 데이터 없음</td>
+                </tr>
               </tbody>
             </table>
+            <div class="alert alert-info mt-3 small">
+              <strong>💡 퀄리티 가이드</strong><br>
+              • <strong>ROE</strong> 15%+ 우량, 5% 이하 → 수익성 약함<br>
+              • <strong>ROA</strong> 8%+ 우수, 0% 이하 → 적자<br>
+              • <strong>부채비율</strong> 100% 이하 안정, 200%+ 위험<br>
+              • <strong>영업이익률</strong> 10%+ 수익성 좋음, 5% 이하 박한
+            </div>
           </div>
           <div x-show="detailTab==='growth'">
-            <h6>YoY 성장률</h6>
-            <table class="table table-sm">
-              <thead><tr><th>기간</th><th>매출 YoY</th><th>순이익 YoY</th><th>EPS YoY</th></tr></thead>
+            <h6>🚀 YoY 성장률 (직전 4분기 vs 1년 전 4분기)</h6>
+            <table class="table table-sm table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th>기간</th><th>매출 YoY</th><th>순이익 YoY</th><th>EPS YoY</th>
+                  <th>판단</th>
+                </tr>
+              </thead>
               <tbody>
                 <template x-for="(g, i) in growthRows" :key="i">
                   <tr>
-                    <td x-text="g.period"></td>
-                    <td :class="g.revenue_yoy >= 0 ? 'text-danger' : 'text-primary'" x-text="formatPct(g.revenue_yoy)"></td>
-                    <td :class="g.profit_yoy >= 0 ? 'text-danger' : 'text-primary'" x-text="formatPct(g.profit_yoy)"></td>
-                    <td :class="g.eps_yoy >= 0 ? 'text-danger' : 'text-primary'" x-text="formatPct(g.eps_yoy)"></td>
+                    <td><strong x-text="g.period"></strong></td>
+                    <td :class="g.revenue_yoy >= 0.1 ? 'text-danger fw-bold' : (g.revenue_yoy < -0.1 ? 'text-primary' : '')" x-text="formatPct(g.revenue_yoy)"></td>
+                    <td :class="g.profit_yoy >= 0.1 ? 'text-danger fw-bold' : (g.profit_yoy < -0.1 ? 'text-primary' : '')" x-text="formatPct(g.profit_yoy)"></td>
+                    <td :class="g.eps_yoy >= 0.1 ? 'text-danger fw-bold' : (g.eps_yoy < -0.1 ? 'text-primary' : '')" x-text="formatPct(g.eps_yoy)"></td>
+                    <td>
+                      <span class="badge bg-success" x-show="g.revenue_yoy > 0.05 && g.profit_yoy > 0.05">🚀 고성장</span>
+                      <span class="badge bg-warning text-dark" x-show="g.revenue_yoy > 0 && g.profit_yoy < 0">⚠️ 적자확대</span>
+                      <span class="badge bg-danger" x-show="g.revenue_yoy < 0 && g.profit_yoy < 0">📉 매출·이익 동시하락</span>
+                      <span class="badge bg-secondary" x-show="!(g.revenue_yoy > 0.05 && g.profit_yoy > 0.05) && !(g.revenue_yoy > 0 && g.profit_yoy < 0) && !(g.revenue_yoy < 0 && g.profit_yoy < 0)">보통</span>
+                    </td>
                   </tr>
                 </template>
+                <tr x-show="growthRows.length === 0">
+                  <td colspan="5" class="text-center text-muted py-3">성장률 계산 불가 (재무 데이터 부족)</td>
+                </tr>
               </tbody>
             </table>
+            <div class="alert alert-info mt-3 small">
+              <strong>💡 성장 가이드</strong><br>
+              • <strong>고성장</strong>: 매출 + 순이익 모두 5%+ 성장 (훌륭)<br>
+              • <strong>적자 확대</strong>: 매출 늘지만 순이익 마이너스 (투자 단계)<br>
+              • <strong>매출·이익 동시하락</strong>: 사업 위축 국면 (회피)<br>
+              • YoY는 직전 4분기 vs 1년 전 4분기 비교
+            </div>
           </div>
           <div x-show="detailTab==='supply'">
             <div class="row g-2 mb-3">
@@ -1259,7 +1359,7 @@
               <div class="col-md-6">
                 <h6>🎯 적용 가중치 (밸런스)</h6>
                 <canvas id="weightChart" height="160"></canvas>
-                <div class="small text-muted mt-1">5개 팩터의 가중 합산 점수</div>
+                <div class="small text-muted mt-1">7개 팩터의 가중 합산 점수 (0~100)</div>
               </div>
               <div class="col-md-6">
                 <h6>📊 이 종목의 팩터 기여도</h6>
@@ -1319,14 +1419,35 @@
             </div>
           </div>
           <div x-show="detailTab==='charts'">
-            <h6>최근 1년 종가</h6>
-            <canvas id="priceChart" height="140"></canvas>
-            <h6 class="mt-3">거래량</h6>
-            <canvas id="volumeChart" height="100"></canvas>
+            <div class="row">
+              <div class="col-md-8">
+                <h6>📈 최근 1년 종가 추이</h6>
+                <canvas id="priceChart" height="180"></canvas>
+              </div>
+              <div class="col-md-4">
+                <h6>📊 거래량 추이</h6>
+                <canvas id="volumeChart" height="180"></canvas>
+              </div>
+            </div>
+            <h6 class="mt-3">📉 가격 분포 (60일/120일 평균선)</h6>
+            <div class="alert alert-secondary small">
+              <strong>💡 차트 활용</strong><br>
+              • 5일선 > 20일선 > 60일선 정배열 = 강한 상승 추세<br>
+              • 20일선 지지 테스트 후 반등 = 매수 신호<br>
+              • 거래량 증가 + 양봉 = 매수세 유입<br>
+              • 거래량 감소 + 음봉 = 매도 압력
+            </div>
           </div>
           <div x-show="detailTab==='radar'">
-            <h6>팩터 분포 (100점 만점)</h6>
-            <canvas id="radarChart" height="280"></canvas>
+            <h6>📊 7팩터 레이더 (100점 만점)</h6>
+            <canvas id="radarChart" height="300"></canvas>
+            <div class="alert alert-secondary small mt-3">
+              <strong>💡 레이더 해석</strong><br>
+              • 정삼각형에 가까울수록 균형 잡힌 종목<br>
+              • 한쪽으로 쏠리면 해당 팩터 강점 (또는 약점)<br>
+              • 가치는 낮고 모멘텀이 높으면 = 추세 추종형<br>
+              • 가치는 높고 모멘텀이 낮으면 = 역발상 가치주
+            </div>
           </div>
         </div>
       </div>

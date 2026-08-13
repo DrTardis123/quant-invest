@@ -74,7 +74,29 @@ function app() {
       });
 
       this.strategies = Object.values(window.QUANT_STRATEGIES || {});
-      this.currentWeights = window.QUANT_STRATEGIES[this.strategyKey].weights;
+      // 자동 최적화된 best 가중치를 우선 채택 (사용자 수동 변경 없을 때)
+      try {
+        const opt = await window.apiGet('/api/optimizer');
+        if (opt && opt.ok !== false && opt.best && opt.best.weights) {
+          // auto-best 전략을 strategies 앞에 추가
+          this.strategies = [
+            {
+              key: 'auto-best',
+              name: '🎯 자동 최적 (Sharpe ' + (opt.best.sharpe || 0).toFixed(2) + ')',
+              emoji: '🎯',
+              description: '13개월 historical 시뮬 자동 최적. Total ' + ((opt.best.total || 0) * 100).toFixed(0) + '% / MDD ' + ((opt.best.mdd || 0) * 100).toFixed(1) + '%',
+              weights: opt.best.weights,
+            },
+            ...this.strategies,
+          ];
+          this.strategyKey = 'auto-best';
+          this.currentWeights = opt.best.weights;
+        } else {
+          this.currentWeights = window.QUANT_STRATEGIES[this.strategyKey].weights;
+        }
+      } catch (e) {
+        this.currentWeights = window.QUANT_STRATEGIES[this.strategyKey].weights;
+      }
 
       // localStorage에서 관심종목 + 다크모드 + 가중치 복원
       this.watchlist = JSON.parse(localStorage.getItem('quant_watchlist') || '[]');
@@ -135,15 +157,29 @@ function app() {
       // 키보드 단축키
       document.addEventListener('keydown', (e) => {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+        if (e.ctrlKey || e.altKey || e.metaKey) return;
         if (e.key === 't' || e.key === 'T') { e.preventDefault(); this.setTab('top'); }
         else if (e.key === 'h' || e.key === 'H') { e.preventDefault(); this.setTab('highlow'); }
         else if (e.key === 'b' || e.key === 'B') { e.preventDefault(); this.setTab('backtest'); }
         else if (e.key === 'm' || e.key === 'M') { e.preventDefault(); this.setTab('movers'); }
         else if (e.key === 'w' || e.key === 'W') { e.preventDefault(); this.setTab('watchlist'); }
-        else if (e.key === 'd' || e.key === 'D') { e.preventDefault(); this.toggleDark(); }
         else if (e.key === '?') { e.preventDefault(); this.showShortcuts(); }
-        else if (e.key === 'Escape') {
+        else if (e.key === 'c' || e.key === 'C') { e.preventDefault(); this.openCompare(); }
+        else if (e.key === 'n' || e.key === 'N') {
+          e.preventDefault();
+          const code = this.stockDetail?.stock?.code || this.selectedCode;
+          if (code) this.openNaver(code);
+        } else if (e.key === 'd' || e.key === 'D') {
+          // 다음증권: 현재 보고 있는 종목 또는 TOP 1
+          e.preventDefault();
+          const code = this.stockDetail?.stock?.code || this.selectedCode || this.top?.[0]?.code;
+          if (code) this.openDaum(code);
+        } else if (e.key === 's' || e.key === 'S') {
+          e.preventDefault();
+          this.toggleDark();
+        } else if (e.key === 'Escape') {
           if (this._modal && document.getElementById('stockModal').classList.contains('show')) this._modal.hide();
+          if (this._compareModal && document.getElementById('compareModal').classList.contains('show')) this._compareModal.hide();
         }
       });
 
@@ -206,21 +242,32 @@ function app() {
     },
 
     setTab(t) {
+      const oldTab = this.tab;
       this.tab = t;
       this.$nextTick(() => {
-        if (t === 'heatmap') this.loadHeatmap();
-        else if (t === 'sector') this.loadSectors();
-        else if (t === 'chart') this.drawCharts();
-        else if (t === 'corr') this.loadCorrelation();
-        else if (t === 'optimizer') this.loadOptimizer();
-        else if (t === 'backtest') this.loadBacktest();
-        else if (t === 'top') this._drawTopCharts();
+        if (t === 'heatmap') { this.loadHeatmap(); this.$nextTick(() => this._drawHeatmap()); }
+        else if (t === 'sector') { this.loadSectors(); }
+        else if (t === 'chart') { this.drawCharts(); }
+        else if (t === 'corr') { this.loadCorrelation(); this.$nextTick(() => this._drawCorrelation()); }
+        else if (t === 'optimizer') { this.loadOptimizer(); this.$nextTick(() => this._drawOptimizer()); }
+        else if (t === 'backtest') { this.loadBacktest(); this.$nextTick(() => this._drawBacktestCharts()); }
+        else if (t === 'top') { this._drawTopCharts(); }
+        else if (t === 'movers') { this.loadMovers(); }
+        else if (t === 'highlow') { this.loadHighLow(); }
+        else if (t === 'supply') { this.loadSupplySignals(); }
+        else if (t === 'watchlist') { this._drawTopCharts(); }
       });
     },
 
+    _drawCorrelation() {
+      // 상관 행렬은 HTML로 직접 그려져 있어 별도 작업 없음
+    },
+    _drawOptimizer() {},
+    _drawHeatmap() {},
+
     onStrategyChange() {
       const s = this.strategies.find((x) => x.key === this.strategyKey);
-      if (s) this.currentWeights = s.weights;
+      if (s) this.currentWeights = { ...s.weights };
       this._recomputeAndSet();
     },
 
@@ -469,11 +516,73 @@ function app() {
 
     // ----- 유틸 -----
     fmt(v) { if (v === null || v === undefined) return '—'; if (typeof v === 'number') return v.toFixed(2); return v; },
+    fmtFund(v) { if (v === null || v === undefined || v === '' || !Number.isFinite(Number(v))) return '—'; return Number(v).toFixed(2); },
     formatPct(v) { if (v === null || v === undefined || !Number.isFinite(v)) return '—'; const sign = v >= 0 ? '+' : ''; return sign + (v * 100).toFixed(2) + '%'; },
     formatIdx(v) { if (v === null || v === undefined) return '—'; return Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
     formatCap(v) { if (!v) return '—'; const eok = v / 1e8; if (eok >= 10000) return (eok / 10000).toFixed(1) + '조'; return eok.toFixed(0) + '억'; },
+    // 수급/거래량 단위 변환 (주 → 만주 / 원 → 억)
+    formatVolume(shares) {
+      if (shares === null || shares === undefined || !Number.isFinite(shares)) return '—';
+      const n = Number(shares);
+      if (Math.abs(n) >= 100000000) return (n / 100000000).toFixed(1) + '억주';
+      if (Math.abs(n) >= 10000) return (n / 10000).toFixed(1) + '만주';
+      return n.toLocaleString() + '주';
+    },
+    formatWon(won) {
+      if (won === null || won === undefined || !Number.isFinite(won)) return '—';
+      const n = Number(won);
+      if (Math.abs(n) >= 1e12) return (n / 1e12).toFixed(1) + '조';
+      if (Math.abs(n) >= 1e8) return (n / 1e8).toFixed(0) + '억';
+      return n.toLocaleString() + '원';
+    },
     weightLabel(k) { return ({ value: '가치', momentum: '모멘텀', quality: '퀄리티', volatility: '저변동', growth: '성장', liquidity: '유동', supply: '수급' })[k] || k; },
     factorLabel(k) { return ({ value_score: '가치', momentum_score: '모멘텀', quality_score: '퀄리티', volatility_score: '저변동', growth_score: '성장', liquidity_score: '유동', supply_score: '수급', total_score: '총점', value: '가치', momentum: '모멘텀', quality: '퀄리티', volatility: '저변동', growth: '성장', liquidity: '유동', supply: '수급' })[k] || k; },
+    // 밸류에이션 라벨/색상
+    valuationLabel(k) { return ({ per: 'PER', pbr: 'PBR', psr: 'PSR', eps: 'EPS', bps: 'BPS', dividend_yield: '배당률(%)' })[k] || k; },
+    valuationClass(k, v) {
+      if (v === null || v === undefined) return '';
+      if (k === 'per') return v < 10 ? 'text-danger' : (v > 25 ? 'text-primary' : '');
+      if (k === 'pbr') return v < 1 ? 'text-danger' : (v > 2 ? 'text-primary' : '');
+      if (k === 'dividend_yield') return v >= 3 ? 'text-danger' : '';
+      return '';
+    },
+    // 퀄리티 라벨/색상
+    qualityLabel(k) { return ({ roe: 'ROE(%)', roa: 'ROA(%)', debt_ratio: '부채비율(%)', operating_margin: '영업이익률(%)', net_margin: '순이익률(%)' })[k] || k; },
+    qualityClass(k, v) {
+      if (v === null || v === undefined) return '';
+      if (k === 'roe') return v >= 15 ? 'text-danger fw-bold' : (v < 5 ? 'text-primary' : '');
+      if (k === 'roa') return v >= 8 ? 'text-danger fw-bold' : (v < 3 ? 'text-primary' : '');
+      if (k === 'debt_ratio') return v > 200 ? 'text-primary fw-bold' : (v < 100 ? 'text-danger' : '');
+      if (k === 'operating_margin') return v >= 10 ? 'text-danger fw-bold' : (v < 5 ? 'text-primary' : '');
+      if (k === 'net_margin') return v >= 7 ? 'text-danger fw-bold' : (v < 3 ? 'text-primary' : '');
+      return '';
+    },
+    // 가장 최근 fundamentals
+    latestFundamental(k) {
+      const f = this.stockDetail?.fundamentals || [];
+      if (f.length === 0) return null;
+      const cur = f[0];
+      const v = Number(cur[k]);
+      if (!Number.isFinite(v)) return null;
+      if (k === 'operating_margin' && cur.operating_profit && cur.revenue) {
+        return (Number(cur.operating_profit) / Number(cur.revenue)) * 100;
+      }
+      if (k === 'net_margin' && cur.net_profit && cur.revenue) {
+        return (Number(cur.net_profit) / Number(cur.revenue)) * 100;
+      }
+      return v;
+    },
+    // 애널리스트 등급 색상
+    analystRatingClass(rating) {
+      if (!rating) return 'bg-secondary';
+      if (rating === 'Strong Buy') return 'bg-danger';
+      if (rating === 'Buy') return 'bg-warning text-dark';
+      if (rating === 'Accumulate') return 'bg-info';
+      if (rating === 'Hold') return 'bg-secondary';
+      if (rating === 'Reduce') return 'bg-warning text-dark';
+      if (rating === 'Sell') return 'bg-dark';
+      return 'bg-secondary';
+    },
     scoreClass(v) { if (v === null || v === undefined) return ''; if (v >= 60) return 'text-success'; if (v <= 30) return 'text-danger'; return 'text-warning'; },
     scoreColor(v) { if (v === null || v === undefined || !Number.isFinite(v)) return '#adb5bd'; if (v >= 80) return '#198754'; if (v >= 70) return '#20c997'; if (v >= 60) return '#0dcaf0'; if (v >= 50) return '#0d6efd'; if (v >= 40) return '#fd7e14'; if (v >= 30) return '#dc3545'; return '#842029'; },
     corrColor(v) { const x = Math.max(-1, Math.min(1, v)); if (x >= 0) { const r = 255, g = Math.round(255 - x * 200), b = Math.round(255 - x * 220); return `rgb(${r},${g},${b})`; } else { const r = Math.round(255 + x * 200), g = Math.round(255 + x * 200), b = 255; return `rgb(${r},${g},${b})`; } },
@@ -515,8 +624,13 @@ function app() {
       if (!this.all || this.all.length === 0) await this.loadAll();
       this._recomputeAndSet();
       try {
-        const r = await window.apiGet('/api/distribution');
-        if (r && !r.__error) this._drawDist(r.scores || []);
+        let r = null;
+        try { r = await fetch('/data/distribution.json?_=' + Date.now()).then((x) => x.ok ? x.json() : null); } catch (_) { r = null; }
+        const scores = (r && r.scores && r.scores.length > 0)
+          ? r.scores
+          : this.all.filter((x) => x.total_score > 0).map((x) => x.total_score);
+        this.distribution = r;
+        this._drawDist(scores);
         this._drawFactorStack();
       } catch (e) { /* ignore */ }
     },
@@ -725,62 +839,127 @@ function app() {
     },
 
     get oneLiner() {
-      // 퀀트투자 관점 한줄평 (status + score + signals 종합)
+      // 퀀트투자 관점 한줄평 (status + 7팩터 + 재무 + 모멘텀 종합, 자세히)
       const s = this.stockDetail?.score;
       if (!s) return '—';
       const tech = this.stockDetail?.technical?.signals || {};
       const flow = this.stockDetail?.investor_flow || [];
-
-      // ★ 거래 정지/유동성 0 → 최우선 (어떤 점수보다도 중요)
-      if (s.status === 'halt') return '🚫 [거래정지] 매매 불가. 즉시 제외 대상. 어플에서 안 보이거나 가격 동일·거래량 0 — 절대 매수 금지.';
-      if (s.status === 'zero_volume') return '⛔ [거래량 0] 최근 20일 평균 거래대금 0원. 사실상 거래정지. 매매 불가.';
-      if (s.status === 'caution') return '⚠️ [거래주의] 최근 5일 거래량, 60일 평균의 5% 미만. 유동성 극히 부족. 회피 권장.';
-      if (s.status === 'low_liquidity') return '💧 [소형주] 최근 20일 평균 거래대금 1억 미만. 슬리피지·조작 위험. 소액만.';
-      if (s.status === 'excluded_kosdaq') return '📊 [KOSDAQ 제외] 메인 대시보드에서는 제외. ?market=KOSDAQ 으로 확인 가능.';
-
-      // 기술적 신호 강조
+      const f = this.stockDetail?.fundamentals || [];
       const isUpTrend = (tech.ma_trend || '').includes('상승');
       const isDownTrend = (tech.ma_trend || '').includes('하락');
       const isOverbought = tech.rsi_zone === '과매수';
       const isOversold = tech.rsi_zone === '과매도';
 
-      // 점수 최상위
-      if (s.total_score >= 80) {
-        if (isUpTrend && !isOverbought) return '🏆 종합 최상위 + 상승추세. 핵심 보유 후보.';
-        if (isOverbought) return '🏆 점수 최상위이나 단기 과열 — 분할 진입 고려.';
-        return '🏆 종합 최상위. 핵심 보유 후보.';
+      // ★ 거래정지/유동성 0 → 최우선
+      if (s.status === 'halt') return '🚫 [거래정지] 매매 불가. 즉시 제외 대상. 가격 동일·거래량 0 — 절대 매수 금지. 메인 대시보드 0점 처리.';
+      if (s.status === 'zero_volume') return '⛔ [거래량 0] 최근 20일 평균 거래대금 0원. 사실상 거래정지. 매매 불가. 0점 처리.';
+      if (s.status === 'caution') return '⚠️ [거래주의] 최근 5일 거래량 60일 평균의 5% 미만. 유동성 부족. 회피 권장.';
+      if (s.status === 'low_liquidity') return '💧 [소형주] 20일 평균 거래대금 1억 미만. 슬리피지·호가 스프레드 리스크.';
+      if (s.status === 'excluded_kosdaq') return '📊 [KOSDAQ] 메인 대시보드 제외. ?market=KOSDAQ 으로 확인 가능.';
+
+      // === 상세 한줄평 (5~7 segments) ===
+      const parts = [];
+
+      // 1) 종합 점수
+      const ts = Number(s.total_score) || 0;
+      const grade = s.grade?.letter || '';
+      let summary = '';
+      if (ts >= 80) summary = `🏆 종합 최상위 (${ts.toFixed(1)}점, ${grade}등급). 7팩터 가중합산 상위권.`;
+      else if (ts >= 70) summary = `✅ 종합 우수 (${ts.toFixed(1)}점, ${grade}등급). 7팩터 안정적.`;
+      else if (ts >= 60) summary = `👍 종합 양호 (${ts.toFixed(1)}점, ${grade}등급). 평균 이상.`;
+      else if (ts >= 45) summary = `⚖️ 종합 중립 (${ts.toFixed(1)}점). 일부 팩터 강세·일부 약세.`;
+      else if (ts >= 30) summary = `⚠️ 종합 약세 (${ts.toFixed(1)}점).`;
+      else summary = `🚨 종합 매우 약세 (${ts.toFixed(1)}점).`;
+      parts.push(summary);
+
+      // 2) 재무/가치/성장
+      const latest = f[0] || {};
+      const per = Number(latest.per) || 0;
+      const pbr = Number(latest.pbr) || 0;
+      const dvr = Number(latest.dividend_yield) || 0;
+      const roe = Number(latest.roe) || 0;
+      const debt = Number(latest.debt_ratio) || 0;
+      const revenueYoy = f.length >= 5 ? ((Number(latest.revenue) - Number(f[4].revenue)) / Number(f[4].revenue)) * 100 : 0;
+      const eps = Number(latest.eps) || 0;
+      const fundParts = [];
+      if (per > 0 && per < 15) fundParts.push(`PER ${per.toFixed(1)}배로 저평가`);
+      else if (per > 30) fundParts.push(`PER ${per.toFixed(1)}배로 고평가`);
+      else if (per > 0) fundParts.push(`PER ${per.toFixed(1)}배 (적정)`);
+      if (pbr > 0 && pbr < 1.5) fundParts.push(`PBR ${pbr.toFixed(2)}배 저PBR`);
+      else if (pbr > 3) fundParts.push(`PBR ${pbr.toFixed(2)}배 고PBR`);
+      else if (pbr > 0) fundParts.push(`PBR ${pbr.toFixed(2)}배`);
+      if (roe > 15) fundParts.push(`ROE ${roe.toFixed(1)}% 우량`);
+      else if (roe > 8) fundParts.push(`ROE ${roe.toFixed(1)}% 양호`);
+      else if (roe > 0) fundParts.push(`ROE ${roe.toFixed(1)}% 보통`);
+      if (debt > 0 && debt < 100) fundParts.push(`부채비율 ${debt.toFixed(0)}% 안정`);
+      else if (debt > 200) fundParts.push(`부채비율 ${debt.toFixed(0)}% 위험`);
+      if (dvr > 3) fundParts.push(`배당수익률 ${dvr.toFixed(1)}% 고배당`);
+      if (f.length >= 5 && Math.abs(revenueYoy) > 0.1) {
+        if (revenueYoy > 10) fundParts.push(`매출 YoY +${revenueYoy.toFixed(1)}% 고성장`);
+        else if (revenueYoy < -5) fundParts.push(`매출 YoY ${revenueYoy.toFixed(1)}% 역성장`);
+      }
+      if (fundParts.length > 0) {
+        parts.push(`재무: ${fundParts.join(', ')}.`);
+      } else if (f.length > 0) {
+        parts.push('재무: 데이터 일부만 있음 (정기 갱신 대기).');
+      } else {
+        parts.push('재무: 데이터 미수집. 분기보고서·KIS API 활용 권장.');
       }
 
-      // 영역별 강한 점수
-      const scores = {
-        퀄리티: s.quality_score || 0,
-        성장: s.growth_score || 0,
-        모멘텀: s.momentum_score || 0,
-        가치: s.value_score || 0,
-      };
-      const top = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
-      if (top[1] >= 80) {
-        if (top[0] === '퀄리티') return '💎 ROE·ROA 우수. 재무 건전 우량주.';
-        if (top[0] === '성장') return '🚀 매출·이익 고성장. 모멘텀 강세 동반 시 매수 적기.';
-        if (top[0] === '모멘텀') return '📈 12개월 모멘텀 최상위. 추세 추종.';
-        if (top[0] === '가치') return '💰 저PER·저PBR. 전통 가치주.';
-      }
+      // 3) 기술적 추세
+      if (isUpTrend && !isOverbought) parts.push('기술: 이동평균 상승 정배열 + 과매수 아님 → 추세 추종 매수 구간.');
+      else if (isUpTrend && isOverbought) parts.push('기술: 상승 추세이나 단기 과매수 영역 — 분할 진입 또는 단기 조정 대기.');
+      else if (isDownTrend && isOversold) parts.push('기술: 하락 추세 + 단기 과매도 — 반등 가능성 있지만 추세 전환 확인 필요.');
+      else if (isDownTrend) parts.push('기술: 하락 추세 지속. 지지선·거래량 확인 후 접근 권장.');
+      else if (isOversold) parts.push('기술: 단기 과매도 — 반등 시그널 탐지 필요.');
+      else if (isOverbought) parts.push('기술: 단기 과매수 — 분할 매수 또는 관망.');
+      else parts.push('기술: 박스권 횡보. 방향성 확인 필요.');
 
-      // 기술적 매수/매도 신호
-      if (isOversold && isUpTrend) return '🟢 과매도 + 상승추세 — 분할 매수 구간.';
-      if (isOverbought && isDownTrend) return '🔴 과매수 + 하락추세 — 차익 실현 또는 회피.';
-
-      // 수급
+      // 4) 수급
+      let foreign5d = 0, inst5d = 0;
       if (flow.length >= 5) {
-        const f5 = flow.slice(0, 5).reduce((sum, r) => sum + (Number(r.foreign_net) || 0), 0);
-        if (f5 > 0 && s.total_score >= 50) return '🌍 외국인 5일 순매수. 수급 호전.';
-        if (f5 < 0 && s.total_score < 50) return '🌍 외국인 5일 순매도. 수급 부진.';
+        foreign5d = flow.slice(0, 5).reduce((s, r) => s + (Number(r.foreign_net) || 0), 0);
+        inst5d = flow.slice(0, 5).reduce((s, r) => s + (Number(r.institution_net) || 0), 0);
+      }
+      if (foreign5d > 0 && inst5d > 0) {
+        parts.push(`수급: 외인+기관 동시 순매수 (외인 5일 ${formatVolume(foreign5d)}, 기관 5일 ${formatVolume(inst5d)}). 스마트머니 매집세.`);
+      } else if (foreign5d < 0 && inst5d < 0) {
+        parts.push(`수급: 외인+기관 동시 순매도 (각 5일 ${formatVolume(foreign5d)}, ${formatVolume(inst5d)}). 분산세.`);
+      } else if (foreign5d > 0) {
+        parts.push(`수급: 외국인 5일 ${formatVolume(foreign5d)} 순매수 우세, 기관은 ${formatVolume(inst5d)}.`);
+      } else if (foreign5d < 0) {
+        parts.push(`수급: 외국인 5일 ${formatVolume(foreign5d)} 순매도, 기관 ${formatVolume(inst5d)}.`);
       }
 
-      // 일반
-      if (s.total_score >= 60) return '✅ 종합 우량. 분산 후보.';
-      if (s.total_score >= 40) return '⚖️ 중립. 관망.';
-      return '⚠️ 종합 약세. 신중 접근 권장.';
+      // 5) 강한 팩터 한 줄 요약
+      const factorPairs = [
+        ['value', '가치', '저PER·저PBR 가치 우세'],
+        ['momentum', '모멘텀', '12개월 모멘텀 강세'],
+        ['quality', '퀄리티', 'ROE·ROA 우수 우량주'],
+        ['volatility', '저변동', '변동성 낮음 (안정)'],
+        ['growth', '성장', '매출·이익 고성장'],
+        ['liquidity', '유동', '거래대금 충분 (유동성 양호)'],
+        ['supply', '수급', '외인·기관 매수세 강함'],
+      ];
+      const factors = factorPairs.map(([k, , desc]) => ({ k, score: Number(s[`${k}_score`]) || 0, desc }));
+      factors.sort((a, b) => b.score - a.score);
+      const top2 = factors.filter((f) => f.score >= 70).slice(0, 2);
+      if (top2.length > 0) {
+        parts.push(`강점: ${top2.map((f) => f.desc).join(', ')}.`);
+      } else {
+        const weak = factors.filter((f) => f.score < 40);
+        if (weak.length > 0) parts.push(`약점: ${weak.slice(0, 2).map((f) => f.k).join(', ')} 점수 낮음.`);
+      }
+
+      // 6) 결론
+      let conclusion = '';
+      if (ts >= 70 && isUpTrend) conclusion = '결론: 매수 후보. 분할 매수 + 손절 기준 설정 권장.';
+      else if (ts >= 70 && isDownTrend) conclusion = '결론: 펀더멘털 우량하나 기술 약세 — 기술 신호 회복 시 매수.';
+      else if (ts >= 60) conclusion = '결론: 중립. 추가 모니터링.';
+      else if (ts < 40) conclusion = '결론: 회피. 매수 부적합.';
+      if (conclusion) parts.push(conclusion);
+
+      return parts.join(' · ');
     },
 
     get optimizerData() { return this.optimizer; },
@@ -1061,6 +1240,18 @@ function app() {
 
     // ===== 다크모드 =====
     toggleDark() { this.darkMode = !this.darkMode; },
+
+    // ===== 네이버증권/다음증권 새 창 =====
+    openNaver(code) {
+      if (!code) return;
+      window.open(`https://finance.naver.com/item/main.naver?code=${code}`, '_blank');
+    },
+    openDaum(code) {
+      if (!code) return;
+      // 다음증권 (Daum 증권, 2024 리브랜딩 후에도 finance.daum.net 도메인 사용)
+      // 모바일은 m.finance.daum.net, 데스크탑은 finance.daum.net
+      window.open(`https://finance.daum.net/quotes/A${code}`, '_blank');
+    },
 
     // ===== 단축키 도움말 =====
     showShortcuts() {

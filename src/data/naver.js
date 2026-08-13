@@ -270,17 +270,42 @@ async function getDailyPrices(code, { fromDate = null, toDate = null, maxPages =
 }
 
 // === 재무 ===
+// item/finance.naver 엔드포인트는 2024~2025 사이에 404 반환 (폐기됨).
+// 대신 main.naver 페이지에 노출되는 PER/PBR/EPS/BPS/배당수익률을 정규식으로 파싱.
+// ROE/ROA/부채비율/매출액은 main.naver에 없음 → null (점수 산출은 PER/PBR/배당만 사용).
 async function getFinance(code) {
-  // 주의: item/finance.naver 엔드포인트는 2024~2025 사이에 404 반환 (폐기됨)
-  // main.naver 페이지는 JS 렌더링으로 PER/PBR 추출 어려움
-  // 현재 가능한 무료 소스 없음 → null 반환 (DB에 빈 row 들어감, 점수는 다른 팩터로 계산)
-  // TODO: KRX data.krx.co.kr, DART API, KIS API (인증 필요) 등으로 대체 검토
-  return {
-    per: null, pbr: null, psr: null,
-    eps: null, bps: null, roe: null, roa: null,
-    revenue: null, operating_profit: null, net_profit: null,
-    debt_ratio: null, dividend_yield: null,
-  };
+  try {
+    const url = `${BASE}/item/main.naver?code=${code}`;
+    const html = await get(url);
+    // 패턴: <em id="_per">12.34</em>배
+    const grab = (id) => {
+      const re = new RegExp(`<em[^>]*id=["']_${id}["'][^>]*>([\\s\\S]*?)</em>`, 'i');
+      const m = re.exec(html);
+      if (!m) return null;
+      const txt = cleanText(m[1]);
+      const n = toNum(txt);
+      return n == null ? null : n;
+    };
+    const per = grab('per');
+    const pbr = grab('pbr');
+    const eps = grab('eps');
+    const bps = grab('bps');
+    const dvr = grab('dvr'); // 배당수익률
+    return {
+      per, pbr, psr: null, eps, bps,
+      roe: null, roa: null,
+      revenue: null, operating_profit: null, net_profit: null,
+      debt_ratio: null,
+      dividend_yield: dvr,
+    };
+  } catch (e) {
+    return {
+      per: null, pbr: null, psr: null, eps: null, bps: null,
+      roe: null, roa: null,
+      revenue: null, operating_profit: null, net_profit: null,
+      debt_ratio: null, dividend_yield: null,
+    };
+  }
 }
 
 // === 외인/기관 매매동향 ===

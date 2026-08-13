@@ -52,14 +52,27 @@ async function fetchPrevYearFundamentals() {
 
 // ---------- 정규화 유틸 ----------
 
+// 백분위 점수 (0~100, 만점 방지 + 절대 만점 안 됨)
+// - raw 값을 정렬 후 순위 기반 점수
+// - 1위는 ~99, 꼴찌는 ~1
+// - 동점은 같은 점수
+// - min=5, max=95로 capping → 절대 만점 안 됨, 절대 0도 안 됨
+// - 1등 cap = 95 (다른 1등과 동점이면 94)
+// - 같은 raw 값은 같은 점수
 function percentileScore(values, higherIsBetter = true) {
-  // values: [{code, raw}] 또는 array of {raw}
-  // null은 제외, 0-100 백분위로 변환
   const valid = values.filter((v) => v.raw !== null && v.raw !== undefined && Number.isFinite(v.raw));
   if (valid.length === 0) return new Map();
   const sorted = [...valid].sort((a, b) => higherIsBetter ? b.raw - a.raw : a.raw - b.raw);
+  const n = sorted.length;
   const rankMap = new Map();
-  sorted.forEach((v, i) => rankMap.set(v.code, ((sorted.length - i) / sorted.length) * 100));
+  sorted.forEach((v, i) => {
+    // i=0 (1등) → ~99, i=n-1 (꼴찌) → ~1
+    let score = ((n - i) / n) * 100;  // 0~100 (1등=99.x)
+    score = Math.max(1, Math.min(99, score));  // 안전 cap
+    // 1등 cap = 95 (만점 방지)
+    if (i === 0) score = Math.min(score, 95);
+    rankMap.set(v.code, score);
+  });
   // 원래 입력에 없는/유효하지 않은 code는 50(중립)
   const out = new Map();
   for (const v of values) {
@@ -377,6 +390,29 @@ function calcSupply(supply) {
 
 // ---------- 메인 ----------
 
+// ETF/레버리지/인버스/SPAC/스팩/우선주 제외 패턴
+function isExcludedProduct(name) {
+  if (!name) return false;
+  const n = String(name).trim();
+  const nCompact = n.replace(/\s/g, '');
+  // 1) ETF 브랜드 (브로드)
+  if (/(KODEX|TIGER|KBSTAR|ARIRANG|KINDEX|SOL|MiraeAsset|한투|미래에셋|삼성|KB|신한|한국투자|BNK|히어로즈|TRUE|ACE|RISE|WOORI|KIWOOM|HANARO|하나|대신|교보|KYG|MASEC|Smart|마이티|KActive|타임폴리오|비트코인|이더리움|트래시|파인더|퀀트|PLUS|레버리지|인버스|선물|ETN|합성|액티브|2X|3X|레버|인버|WON|원\s*미국|파워|마이티|SOLACTIVE|인덱스펀드|인덱스\s*펀드|채권\s*ETF|원유\s*ETF|금\s*ETF|원자재|글로벌\s*X|GlobalX)/.test(n)) return true;
+  // 2) 액티브 ETF/ETN (WON 미국S&P500, 파워 고배당저변동성, KB K-미래, 한투 ... 등)
+  if (/WON|파워|액티브|Active|TIMEFOLIO|마이티|Mighty|파워|다올|일임|인덱스펀드|원\s*지수|원\s*인덱스|채권|원유|금\s*선물|합성\s*인덱스/.test(n)) return true;
+  // 3) 레버리지/인버스/2X/3X (브로드)
+  if (/(레버리지|인버스|2X|3X|2x|3x|Lever|Inverse|2\s*배|3\s*배)/.test(n)) return true;
+  // 4) 스팩/기업인수목적
+  if (/(스팩|기업인수목적|제\d+호|호\s*스팩)/.test(n)) return true;
+  // 5) 우선주: '삼성전자우', 'NH투자증권우', 'S-Oil우', 'GS우', '한국금융지주우' 등
+  //    - 끝 글자가 '우' 이면서 그 직전이 한국어/영문/숫자/하이픈
+  if (/[가-힣A-Za-z0-9\-\.]우$/.test(nCompact)) return true;
+  // 6) ETN
+  if (/ETN$/.test(nCompact) || /\(H\)$/.test(nCompact)) return true;
+  // 7) 1X, 인버스, 인버스X 등 추가 안전망
+  if (/1X|1x|인버스X|인버스2X|인버스3X|레버리지2X|레버리지3X/.test(n)) return true;
+  return false;
+}
+
 async function calculateAll(weights = null, options = {}) {
   const [fundamentals, prices, prevFundamentals, statusRows, liquidity, supply] = await Promise.all([
     fetchLatestFundamentals(),
@@ -391,16 +427,24 @@ async function calculateAll(weights = null, options = {}) {
     return { codes: [], rows: [], asOf: null };
   }
 
-  const v = calcValue(fundamentals);
-  const m = calcMomentum(prices);
-  const q = calcQuality(fundamentals);
-  const lv = calcLowVol(prices);
-  const g = calcGrowth(fundamentals, prevFundamentals);
-  const liq = calcLiquidity(liquidity);
-  const sup = calcSupply(supply);
+  // ETF/레버리지/인버스/SPAC 등 제외
+  const filteredFunda = fundamentals.filter((f) => !isExcludedProduct(f.name));
+  const filteredCodeSet = new Set(filteredFunda.map((f) => f.code));
+  const filteredPrices = prices.filter((p) => filteredCodeSet.has(p.code));
+  const filteredLiq = liquidity.filter((l) => filteredCodeSet.has(l.code));
+  const filteredSupply = supply.filter((s) => filteredCodeSet.has(s.code));
+  const filteredStatus = statusRows.filter((s) => filteredCodeSet.has(s.code));
 
-  // status 분류: 거래정지/거래주의/거래량0/소형주
-  const statusMap = classifyStatus(statusRows);
+  const v = calcValue(filteredFunda);
+  const m = calcMomentum(filteredPrices);
+  const q = calcQuality(filteredFunda);
+  const lv = calcLowVol(filteredPrices);
+  const g = calcGrowth(filteredFunda, prevFundamentals);
+  const liq = calcLiquidity(filteredLiq);
+  const sup = calcSupply(filteredSupply);
+
+  // status 분류
+  const statusMap = classifyStatus(filteredStatus);
 
   const W = weights || cfg.factors.weights;
   const wv = W.value || 0;
@@ -422,8 +466,9 @@ async function calculateAll(weights = null, options = {}) {
   const asOf = dateRow[0]?.d || null;
   if (!asOf) return { codes: [...codes], rows: [], asOf: null };
 
-  // market 정보
-  const marketMap = new Map(fundamentals.map((f) => [f.code, f.market]));
+  // market + name 매핑
+  const marketMap = new Map(filteredFunda.map((f) => [f.code, f.market]));
+  const nameMap = new Map(filteredFunda.map((f) => [f.code, f.name]));
 
   const rows = [];
   for (const code of codes) {
@@ -434,7 +479,10 @@ async function calculateAll(weights = null, options = {}) {
     const gs = g.get(code) ?? 50;
     const liqs = liq.get(code) ?? 50;
     const sups = sup.get(code) ?? 50;
+    // 가중 평균 (각 팩터 0~95, 만점 방지)
     let total = (vs * wv + ms * wm + qs * wq + lvs * wlv + gs * wg + liqs * wliq + sups * wsup) / totalWeight;
+    // 100점 만점: 비율 유지, 0~100 스케일
+    // (이미 가중 평균이 0~95 범위)
 
     rows.push({
       code,
@@ -448,6 +496,7 @@ async function calculateAll(weights = null, options = {}) {
       supply_score: round2(sups),
       total_score: round2(total),
       market: marketMap.get(code) || null,
+      name: nameMap.get(code) || null,
     });
   }
 
@@ -519,4 +568,4 @@ async function persistScores(rows) {
   return n;
 }
 
-module.exports = { calculateAll, persistScores };
+module.exports = { calculateAll, persistScores, isExcludedProduct, classifyStatus, applyStatusPenalty, percentileScore };
