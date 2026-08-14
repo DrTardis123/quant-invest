@@ -2,23 +2,22 @@
 
 // 5가지 전략 프로파일 (7팩터)
 // 가중치 합 = 100
-// 2026-08-14 업데이트: OOS 회귀분석 (1개월 out-of-sample) 기반 가치 가중치 채택
-// - 가치(50/10/15/5/10/5/5) Sharpe 3.10, Total +56.92% (KOSPI -19.62% / 1개월)
-// - 인샤풀 13개월 회귀 대비 과최적화 위험 ↓
-// - 균형(balanced)도 가치 비중 강화 (10→20)
+// 2026-08-14 업데이트: 단일 팩터 OOS 3개월 + 듀얼 팩터 OOS 기반
+// - liquidity 단일 Sharpe 1.47, value+liquidity 50:50 OOS test Sharpe 1.93 (+21.99% / KOSPI -19.62%)
+// - 균형(balanced)을 value+liquidity+momentum 중심으로 재구성
 const STRATEGIES = {
   balanced: {
     key: 'balanced',
     name: '밸런스',
     emoji: '⚖️',
-    description: 'OOS 가치+균형. 가치 20 + 모멘텀 20 + 퀄리티 25 + 저변동 10 + 성장 15 + 유동 5 + 수급 5.',
-    weights: { value: 20, momentum: 20, quality: 25, volatility: 10, growth: 15, liquidity: 5, supply: 5 },
+    description: 'OOS 3개월 test Sharpe 1.93 기반. 가치 25 + 유동 25 + 모멘텀 20 + 퀄리티 10 + 성장 10 + 저변동 5 + 수급 5.',
+    weights: { value: 25, momentum: 20, quality: 10, volatility: 5, growth: 10, liquidity: 25, supply: 5 },
   },
   value: {
     key: 'value',
     name: '가치 강화',
     emoji: '💎',
-    description: 'OOS 1개월 Sharpe 3.10 / +56.92%. 가치 50 + 퀄리티 15 + 성장 10 + 모멘텀 10.',
+    description: 'OOS 가치 best 1개월 Sharpe 3.10. 가치 50 + 퀄리티 15 + 성장 10 + 모멘텀 10.',
     weights: { value: 50, momentum: 10, quality: 15, volatility: 5, growth: 10, liquidity: 5, supply: 5 },
   },
   growth: {

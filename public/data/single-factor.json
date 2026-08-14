@@ -1,0 +1,335 @@
+{
+  "asOf": "2026-08-14T13:46:59.321Z",
+  "period": "2025-07 ~ 2026-08",
+  "nMonths": 14,
+  "single": [
+    {
+      "factor": "liquidity",
+      "sharpe": 1.4732,
+      "total": 3.325,
+      "alpha": 0.1515,
+      "mdd": -0.0762
+    },
+    {
+      "factor": "volatility",
+      "sharpe": 1.4069,
+      "total": 0.9739,
+      "alpha": 0.0566,
+      "mdd": -0.1371
+    },
+    {
+      "factor": "momentum",
+      "sharpe": 1.2687,
+      "total": 4.0622,
+      "alpha": 0.1963,
+      "mdd": -0.0686
+    },
+    {
+      "factor": "value",
+      "sharpe": 1.1019,
+      "total": 0.4456,
+      "alpha": 0.0268,
+      "mdd": -0.1945
+    },
+    {
+      "factor": "quality",
+      "sharpe": 1.1019,
+      "total": 0.4456,
+      "alpha": 0.0268,
+      "mdd": -0.1945
+    },
+    {
+      "factor": "growth",
+      "sharpe": 1.1019,
+      "total": 0.4456,
+      "alpha": 0.0268,
+      "mdd": -0.1945
+    },
+    {
+      "factor": "supply",
+      "sharpe": 1.1019,
+      "total": 0.4456,
+      "alpha": 0.0268,
+      "mdd": -0.1945
+    }
+  ],
+  "dual": [
+    {
+      "a": "value",
+      "b": "liquidity",
+      "wA": 0.5,
+      "sharpe": 1.4732,
+      "total": 3.325,
+      "alpha": 0.1515,
+      "mdd": -0.0762
+    },
+    {
+      "a": "value",
+      "b": "liquidity",
+      "wA": 0.7,
+      "sharpe": 1.4732,
+      "total": 3.325,
+      "alpha": 0.1515,
+      "mdd": -0.0762
+    },
+    {
+      "a": "quality",
+      "b": "liquidity",
+      "wA": 0.5,
+      "sharpe": 1.4732,
+      "total": 3.325,
+      "alpha": 0.1515,
+      "mdd": -0.0762
+    },
+    {
+      "a": "quality",
+      "b": "liquidity",
+      "wA": 0.7,
+      "sharpe": 1.4732,
+      "total": 3.325,
+      "alpha": 0.1515,
+      "mdd": -0.0762
+    },
+    {
+      "a": "growth",
+      "b": "liquidity",
+      "wA": 0.5,
+      "sharpe": 1.4732,
+      "total": 3.325,
+      "alpha": 0.1515,
+      "mdd": -0.0762
+    },
+    {
+      "a": "growth",
+      "b": "liquidity",
+      "wA": 0.7,
+      "sharpe": 1.4732,
+      "total": 3.325,
+      "alpha": 0.1515,
+      "mdd": -0.0762
+    },
+    {
+      "a": "liquidity",
+      "b": "supply",
+      "wA": 0.5,
+      "sharpe": 1.4732,
+      "total": 3.325,
+      "alpha": 0.1515,
+      "mdd": -0.0762
+    },
+    {
+      "a": "liquidity",
+      "b": "supply",
+      "wA": 0.7,
+      "sharpe": 1.4732,
+      "total": 3.325,
+      "alpha": 0.1515,
+      "mdd": -0.0762
+    },
+    {
+      "a": "value",
+      "b": "volatility",
+      "wA": 0.5,
+      "sharpe": 1.4069,
+      "total": 0.9739,
+      "alpha": 0.0566,
+      "mdd": -0.1371
+    },
+    {
+      "a": "value",
+      "b": "volatility",
+      "wA": 0.7,
+      "sharpe": 1.4069,
+      "total": 0.9739,
+      "alpha": 0.0566,
+      "mdd": -0.1371
+    },
+    {
+      "a": "quality",
+      "b": "volatility",
+      "wA": 0.5,
+      "sharpe": 1.4069,
+      "total": 0.9739,
+      "alpha": 0.0566,
+      "mdd": -0.1371
+    },
+    {
+      "a": "quality",
+      "b": "volatility",
+      "wA": 0.7,
+      "sharpe": 1.4069,
+      "total": 0.9739,
+      "alpha": 0.0566,
+      "mdd": -0.1371
+    },
+    {
+      "a": "volatility",
+      "b": "growth",
+      "wA": 0.5,
+      "sharpe": 1.4069,
+      "total": 0.9739,
+      "alpha": 0.0566,
+      "mdd": -0.1371
+    },
+    {
+      "a": "volatility",
+      "b": "growth",
+      "wA": 0.7,
+      "sharpe": 1.4069,
+      "total": 0.9739,
+      "alpha": 0.0566,
+      "mdd": -0.1371
+    },
+    {
+      "a": "volatility",
+      "b": "supply",
+      "wA": 0.5,
+      "sharpe": 1.4069,
+      "total": 0.9739,
+      "alpha": 0.0566,
+      "mdd": -0.1371
+    },
+    {
+      "a": "volatility",
+      "b": "supply",
+      "wA": 0.7,
+      "sharpe": 1.4069,
+      "total": 0.9739,
+      "alpha": 0.0566,
+      "mdd": -0.1371
+    },
+    {
+      "a": "momentum",
+      "b": "volatility",
+      "wA": 0.7,
+      "sharpe": 1.3087,
+      "total": 3.9278,
+      "alpha": 0.1851,
+      "mdd": -0.0936
+    },
+    {
+      "a": "value",
+      "b": "momentum",
+      "wA": 0.5,
+      "sharpe": 1.2687,
+      "total": 4.0622,
+      "alpha": 0.1963,
+      "mdd": -0.0686
+    },
+    {
+      "a": "value",
+      "b": "momentum",
+      "wA": 0.7,
+      "sharpe": 1.2687,
+      "total": 4.0622,
+      "alpha": 0.1963,
+      "mdd": -0.0686
+    },
+    {
+      "a": "momentum",
+      "b": "quality",
+      "wA": 0.5,
+      "sharpe": 1.2687,
+      "total": 4.0622,
+      "alpha": 0.1963,
+      "mdd": -0.0686
+    },
+    {
+      "a": "momentum",
+      "b": "quality",
+      "wA": 0.7,
+      "sharpe": 1.2687,
+      "total": 4.0622,
+      "alpha": 0.1963,
+      "mdd": -0.0686
+    },
+    {
+      "a": "momentum",
+      "b": "growth",
+      "wA": 0.5,
+      "sharpe": 1.2687,
+      "total": 4.0622,
+      "alpha": 0.1963,
+      "mdd": -0.0686
+    },
+    {
+      "a": "momentum",
+      "b": "growth",
+      "wA": 0.7,
+      "sharpe": 1.2687,
+      "total": 4.0622,
+      "alpha": 0.1963,
+      "mdd": -0.0686
+    },
+    {
+      "a": "momentum",
+      "b": "supply",
+      "wA": 0.5,
+      "sharpe": 1.2687,
+      "total": 4.0622,
+      "alpha": 0.1963,
+      "mdd": -0.0686
+    },
+    {
+      "a": "momentum",
+      "b": "supply",
+      "wA": 0.7,
+      "sharpe": 1.2687,
+      "total": 4.0622,
+      "alpha": 0.1963,
+      "mdd": -0.0686
+    },
+    {
+      "a": "momentum",
+      "b": "volatility",
+      "wA": 0.5,
+      "sharpe": 1.2515,
+      "total": 4.4075,
+      "alpha": 0.2107,
+      "mdd": -0.0749
+    },
+    {
+      "a": "momentum",
+      "b": "liquidity",
+      "wA": 0.5,
+      "sharpe": 1.1462,
+      "total": 3.1073,
+      "alpha": 0.1797,
+      "mdd": -0.0673
+    },
+    {
+      "a": "volatility",
+      "b": "liquidity",
+      "wA": 0.5,
+      "sharpe": 1.1458,
+      "total": 4.1578,
+      "alpha": 0.2281,
+      "mdd": -0.0888
+    },
+    {
+      "a": "value",
+      "b": "quality",
+      "wA": 0.5,
+      "sharpe": 1.1019,
+      "total": 0.4456,
+      "alpha": 0.0268,
+      "mdd": -0.1945
+    },
+    {
+      "a": "value",
+      "b": "quality",
+      "wA": 0.7,
+      "sharpe": 1.1019,
+      "total": 0.4456,
+      "alpha": 0.0268,
+      "mdd": -0.1945
+    }
+  ],
+  "oosBest": {
+    "a": "value",
+    "b": "liquidity",
+    "wA": 0.5,
+    "testSharpe": 1.93,
+    "testTotal": 0.2199
+  }
+}

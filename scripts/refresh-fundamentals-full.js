@@ -9,7 +9,12 @@ const { isExcludedProduct } = require('../src/factors');
 async function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
 async function main() {
+  const limit = Number(process.argv[2]) || 3921;
+  const offset = Number(process.argv[3]) || 0;
+  const market = process.argv[4] || 'ALL'; // 'KOSPI' | 'KOSDAQ' | 'ALL'
   // 1. sector + PER/PBR 둘 다 NULL 또는 오래된 종목
+  let where = `s.market IN ('KOSPI','KOSDAQ')`;
+  if (market !== 'ALL') where = `s.market = '${market}'`;
   const rows = await db.all(`
     SELECT s.code, s.name, s.market,
            (SELECT MAX(updated_at) FROM fundamentals WHERE code = s.code) AS fund_updated,
@@ -17,10 +22,11 @@ async function main() {
            (SELECT MAX(pbr) FROM fundamentals WHERE code = s.code) AS pbr,
            (SELECT MAX(dividend_yield) FROM fundamentals WHERE code = s.code) AS dvr
     FROM stocks s
-    WHERE s.market IN ('KOSPI','KOSDAQ')
+    WHERE ${where}
     ORDER BY s.market, s.code
-  `);
-  console.log(`[refresh-full] 대상: ${rows.length}개`);
+    LIMIT ? OFFSET ?
+  `, [limit, offset]);
+  console.log(`[refresh-full] 대상: ${rows.length}개 (limit=${limit} offset=${offset} market=${market})`);
 
   let sUpd = 0, fUpd = 0, sFail = 0, fFail = 0, skip = 0;
   const t0 = Date.now();

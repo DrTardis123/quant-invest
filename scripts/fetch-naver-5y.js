@@ -15,15 +15,16 @@ async function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 async function main() {
   const limit = Number(process.argv[2]) || 100;
   const years = Number(process.argv[3]) || 2;
+  const offset = Number(process.argv[4]) || 0;
   // Naver 일봉 페이지는 30페이지(300일) cap → 1.2년치만 fetch 가능
   const maxPages = Math.min(30, Math.ceil(years * 252 / 10));
-  console.log(`[naver-5y] KOSPI ${limit}개, ${years}년치 (최대 ${maxPages}페이지/종목, 30페이지 cap)`);
+  console.log(`[naver-5y] KOSPI ${limit}개 (offset ${offset}), ${years}년치 (최대 ${maxPages}페이지/종목, 30페이지 cap)`);
 
   const rows = await all(`
     SELECT s.code, s.name FROM stocks s
     WHERE s.market = 'KOSPI' AND s.name NOT LIKE '%우%'
-    ORDER BY s.code LIMIT ?
-  `, [limit]);
+    ORDER BY s.code LIMIT ? OFFSET ?
+  `, [limit, offset]);
   const filtered = rows.filter((r) => !isExcludedProduct(r.name));
   console.log(`[naver-5y] 대상: ${filtered.length}개 (ETF/우선주/액티브 제외)`);
 
