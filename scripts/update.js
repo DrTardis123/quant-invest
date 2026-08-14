@@ -711,30 +711,31 @@ async function exportStatic() {
     writeJson('correlation.json', { keys: [], matrix: {} });
   }
 
-  // === 신규: 급등/급락 TOP 10 (±30% cap, 레버리지/ETF/인버스/SPAC 제외) ===
+  // === 신규: 급등/급락 TOP 10 (±29.99% cap, 레버리지/ETF/인버스/SPAC 제외) ===
   try {
     const movers = await db.all(`
       WITH latest AS (
-        SELECT code, MAX(date) AS d, MAX(close) AS close_now
+        SELECT code, MAX(date) AS d, AVG(close) AS close_now
         FROM daily_prices
         GROUP BY code
       ),
       prev AS (
-        SELECT code, close AS close_prev
-        FROM daily_prices dp
-        WHERE (code, date) IN (
-          SELECT code, MAX(date) FROM daily_prices WHERE date < (SELECT MAX(date) FROM daily_prices) GROUP BY code
-        )
+        SELECT l.code,
+               (SELECT close FROM daily_prices WHERE code = l.code AND date < l.d ORDER BY date DESC LIMIT 1) AS close_prev,
+               l.d AS latest_d
+        FROM latest l
       )
       SELECT s.code, s.name, s.market, s.sector,
              fs.total_score,
-             ((l.close_now - p.close_prev) / p.close_prev * 100) AS change_pct
+             ((p.latest_d, p.close_prev, l.close_now, s.name) IS NOT NULL) AS _ok,
+             CASE WHEN p.close_prev > 0 THEN ((l.close_now - p.close_prev) / p.close_prev * 100) ELSE NULL END AS change_pct
       FROM latest l
       JOIN prev p ON p.code = l.code
       JOIN stocks s ON s.code = l.code
       LEFT JOIN factor_scores fs ON fs.code = l.code AND fs.date = (SELECT MAX(date) FROM factor_scores)
       WHERE s.market = 'KOSPI' AND p.close_prev > 0
-        AND ((l.close_now - p.close_prev) / p.close_prev * 100) BETWEEN -30 AND 30
+        AND p.close_prev != l.close_now
+        AND ((l.close_now - p.close_prev) / p.close_prev * 100) BETWEEN -29.99 AND 29.99
         AND (
           s.name NOT LIKE '%KODEX%' AND s.name NOT LIKE '%TIGER%' AND s.name NOT LIKE '%KBSTAR%'
           AND s.name NOT LIKE '%ARIRANG%' AND s.name NOT LIKE '%KINDEX%' AND s.name NOT LIKE '%SOL %'
@@ -745,32 +746,33 @@ async function exportStatic() {
           AND s.name NOT LIKE '%레버리지%' AND s.name NOT LIKE '%인버스%' AND s.name NOT LIKE '%선물%'
           AND s.name NOT LIKE '%ETN%' AND s.name NOT LIKE '%액티브%' AND s.name NOT LIKE '%합성%'
           AND s.name NOT LIKE '%스팩%' AND s.name NOT LIKE '%기업인수목적%'
+          AND s.name NOT LIKE '%WON%' AND s.name NOT LIKE '%파워%' AND s.name NOT LIKE '%액티브%'
         )
       ORDER BY change_pct DESC
       LIMIT 10
     `);
     const losersRows = await db.all(`
       WITH latest AS (
-        SELECT code, MAX(date) AS d, MAX(close) AS close_now
+        SELECT code, MAX(date) AS d, AVG(close) AS close_now
         FROM daily_prices
         GROUP BY code
       ),
       prev AS (
-        SELECT code, close AS close_prev
-        FROM daily_prices dp
-        WHERE (code, date) IN (
-          SELECT code, MAX(date) FROM daily_prices WHERE date < (SELECT MAX(date) FROM daily_prices) GROUP BY code
-        )
+        SELECT l.code,
+               (SELECT close FROM daily_prices WHERE code = l.code AND date < l.d ORDER BY date DESC LIMIT 1) AS close_prev,
+               l.d AS latest_d
+        FROM latest l
       )
       SELECT s.code, s.name, s.market, s.sector,
              fs.total_score,
-             ((l.close_now - p.close_prev) / p.close_prev * 100) AS change_pct
+             CASE WHEN p.close_prev > 0 THEN ((l.close_now - p.close_prev) / p.close_prev * 100) ELSE NULL END AS change_pct
       FROM latest l
       JOIN prev p ON p.code = l.code
       JOIN stocks s ON s.code = l.code
       LEFT JOIN factor_scores fs ON fs.code = l.code AND fs.date = (SELECT MAX(date) FROM factor_scores)
       WHERE s.market = 'KOSPI' AND p.close_prev > 0
-        AND ((l.close_now - p.close_prev) / p.close_prev * 100) BETWEEN -30 AND 30
+        AND p.close_prev != l.close_now
+        AND ((l.close_now - p.close_prev) / p.close_prev * 100) BETWEEN -29.99 AND 29.99
         AND (
           s.name NOT LIKE '%KODEX%' AND s.name NOT LIKE '%TIGER%' AND s.name NOT LIKE '%KBSTAR%'
           AND s.name NOT LIKE '%ARIRANG%' AND s.name NOT LIKE '%KINDEX%' AND s.name NOT LIKE '%SOL %'
@@ -781,6 +783,7 @@ async function exportStatic() {
           AND s.name NOT LIKE '%레버리지%' AND s.name NOT LIKE '%인버스%' AND s.name NOT LIKE '%선물%'
           AND s.name NOT LIKE '%ETN%' AND s.name NOT LIKE '%액티브%' AND s.name NOT LIKE '%합성%'
           AND s.name NOT LIKE '%스팩%' AND s.name NOT LIKE '%기업인수목적%'
+          AND s.name NOT LIKE '%WON%' AND s.name NOT LIKE '%파워%' AND s.name NOT LIKE '%액티브%'
         )
       ORDER BY change_pct ASC
       LIMIT 10
@@ -806,13 +809,11 @@ async function exportStatic() {
   // 진짜 신고가 = 현재가가 52주 전 최고가(0.99배 이하)보다 높거나 같은 경우만
   // 진짜 신저가 = 현재가가 52주 전 최저가(1.01배 이상)보다 낮거나 같은 경우만
   try {
-    const isExcluded = (n) => {
-      if (!n) return true;
-      return /(KODEX|TIGER|KBSTAR|ARIRANG|KINDEX|SOL |ACE |RISE |WOORI |KIWOOM |PLUS |한투 |신한 |미래에셋|삼성 |KB |TRUE |히어로즈|레버리지|인버스|선물|ETN|액티브|합성|스팩|기업인수목적)/.test(String(n));
-    };
+    const { isExcludedProduct } = require('../src/factors');
+    const isExcluded = (n) => isExcludedProduct(n);
     const highLow = await db.all(`
       WITH last52w AS (
-        SELECT code, MAX(high) AS week52_high, MIN(low) AS week52_low, COUNT(*) AS days
+        SELECT code, MAX(close) AS week52_high, MIN(close) AS week52_low, COUNT(*) AS days
         FROM daily_prices
         WHERE date >= (SELECT MAX(date) FROM daily_prices) - INTERVAL '52 weeks'
         GROUP BY code
@@ -865,6 +866,8 @@ async function exportStatic() {
 
   // === 신규: 수급 이상 신호 (외인+기관 동시 순매수/매도) ===
   try {
+    const { isExcludedProduct } = require('../src/factors');
+    const isExcluded = (n) => isExcludedProduct(n);
     const supplyRows = await db.all(`
       WITH ranked AS (
         SELECT code, date, foreign_net, institution_net,
@@ -882,11 +885,11 @@ async function exportStatic() {
       GROUP BY s.code, s.name, s.market, s.sector, fs.total_score
     `);
     const buy = supplyRows
-      .filter((r) => r.foreign_5d > 0 && r.inst_5d > 0)
+      .filter((r) => r.foreign_5d > 0 && r.inst_5d > 0 && !isExcluded(r.name))
       .sort((a, b) => (Number(b.foreign_5d) + Number(b.inst_5d)) - (Number(a.foreign_5d) + Number(a.inst_5d)))
       .slice(0, 15);
     const sell = supplyRows
-      .filter((r) => r.foreign_5d < 0 && r.inst_5d < 0)
+      .filter((r) => r.foreign_5d < 0 && r.inst_5d < 0 && !isExcluded(r.name))
       .sort((a, b) => (Number(a.foreign_5d) + Number(a.inst_5d)) - (Number(b.foreign_5d) + Number(b.inst_5d)))
       .slice(0, 15);
     writeJson('supply-signals.json', {
