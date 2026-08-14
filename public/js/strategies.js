@@ -1,7 +1,8 @@
 // 브라우저용 전략 프로파일
 // src/strategies.js 와 동일한 정의. 클라이언트에서 재가중치 계산에 사용.
-// 2026-08-14 업데이트: 단일 팩터 OOS 3개월 + 듀얼 팩터 OOS 기반
-// - liquidity 단일 Sharpe 1.47, value+liquidity 50:50 OOS test Sharpe 1.93 (+21.99% / KOSPI -19.62%)
+// 2026-08-15 업데이트: 2차 회귀분석 + 5-Fold CV + Risk Parity 기반
+// - 가치(50) 가중치가 종합 점수 (Sharpe + Alpha - MDD×5) 최고
+// - OOS K-fold best 4팩터 균등 추가
 
 window.QUANT_STRATEGIES = {
   balanced: {
@@ -11,7 +12,7 @@ window.QUANT_STRATEGIES = {
   },
   value: {
     key: 'value', name: '가치 강화', emoji: '💎',
-    description: 'OOS 가치 best 1개월 Sharpe 3.10. 가치 50 + 퀄리티 15 + 성장 10 + 모멘텀 10.',
+    description: '2차 회귀 종합 1위. 가치 50 + 퀄리티 15 + 성장 10 + 모멘텀 10. 인샤풀 Sharpe 1.24, MDD -8.6%.',
     weights: { value: 50, momentum: 10, quality: 15, volatility: 5, growth: 10, liquidity: 5, supply: 5 },
   },
   growth: {
@@ -28,6 +29,11 @@ window.QUANT_STRATEGIES = {
     key: 'defensive', name: '방어형', emoji: '🛡️',
     description: '하락장 방어. 퀄리티 35 + 저변동 25 + 성장 15 + 가치 15 + 유동 5.',
     weights: { value: 15, momentum: 5, quality: 35, volatility: 25, growth: 15, liquidity: 5, supply: 0 },
+  },
+  factor4: {
+    key: 'factor4', name: '4팩터 균등', emoji: '🎯',
+    description: 'OOS K-fold best 4팩터 균등. 가치/퀄리티/성장/수급 각 25%.',
+    weights: { value: 25, momentum: 0, quality: 25, volatility: 0, growth: 25, liquidity: 0, supply: 25 },
   },
 };
 

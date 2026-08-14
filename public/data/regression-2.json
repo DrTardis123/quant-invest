@@ -1,0 +1,345 @@
+{
+  "asOf": "2026-08-14T23:35:56.379Z",
+  "period": "2025-07 ~ 2026-08",
+  "nMonths": 14,
+  "ridge": [
+    {
+      "lambda": 500,
+      "weights": {
+        "value": 0,
+        "momentum": 27.83,
+        "quality": 0,
+        "volatility": 42.7,
+        "growth": 0,
+        "liquidity": 29.47,
+        "supply": 0
+      },
+      "sharpe": 1.2735,
+      "total": 4.7883,
+      "mdd": -0.0622
+    },
+    {
+      "lambda": 50,
+      "weights": {
+        "value": 0,
+        "momentum": 26.16,
+        "quality": 0,
+        "volatility": 43.59,
+        "growth": 0,
+        "liquidity": 30.25,
+        "supply": 0
+      },
+      "sharpe": 1.2365,
+      "total": 5.5044,
+      "mdd": -0.0622
+    },
+    {
+      "lambda": 100,
+      "weights": {
+        "value": 0,
+        "momentum": 26.37,
+        "quality": 0,
+        "volatility": 43.48,
+        "growth": 0,
+        "liquidity": 30.15,
+        "supply": 0
+      },
+      "sharpe": 1.2365,
+      "total": 5.5044,
+      "mdd": -0.0622
+    },
+    {
+      "lambda": 0.001,
+      "weights": {
+        "value": 0,
+        "momentum": 25.93,
+        "quality": 0,
+        "volatility": 43.71,
+        "growth": 0,
+        "liquidity": 30.35,
+        "supply": 0
+      },
+      "sharpe": 1.2342,
+      "total": 5.4679,
+      "mdd": -0.0625
+    },
+    {
+      "lambda": 0.01,
+      "weights": {
+        "value": 0,
+        "momentum": 25.93,
+        "quality": 0,
+        "volatility": 43.71,
+        "growth": 0,
+        "liquidity": 30.35,
+        "supply": 0
+      },
+      "sharpe": 1.2342,
+      "total": 5.4679,
+      "mdd": -0.0625
+    },
+    {
+      "lambda": 0.1,
+      "weights": {
+        "value": 0,
+        "momentum": 25.94,
+        "quality": 0,
+        "volatility": 43.71,
+        "growth": 0,
+        "liquidity": 30.35,
+        "supply": 0
+      },
+      "sharpe": 1.2342,
+      "total": 5.4679,
+      "mdd": -0.0625
+    },
+    {
+      "lambda": 1,
+      "weights": {
+        "value": 0,
+        "momentum": 25.94,
+        "quality": 0,
+        "volatility": 43.71,
+        "growth": 0,
+        "liquidity": 30.35,
+        "supply": 0
+      },
+      "sharpe": 1.2342,
+      "total": 5.4679,
+      "mdd": -0.0625
+    },
+    {
+      "lambda": 5,
+      "weights": {
+        "value": 0,
+        "momentum": 25.96,
+        "quality": 0,
+        "volatility": 43.7,
+        "growth": 0,
+        "liquidity": 30.34,
+        "supply": 0
+      },
+      "sharpe": 1.2342,
+      "total": 5.4679,
+      "mdd": -0.0625
+    },
+    {
+      "lambda": 10,
+      "weights": {
+        "value": 0,
+        "momentum": 25.98,
+        "quality": 0,
+        "volatility": 43.69,
+        "growth": 0,
+        "liquidity": 30.33,
+        "supply": 0
+      },
+      "sharpe": 1.2342,
+      "total": 5.4679,
+      "mdd": -0.0625
+    }
+  ],
+  "bestRidge": {
+    "lambda": 500,
+    "weights": {
+      "value": 0,
+      "momentum": 27.83,
+      "quality": 0,
+      "volatility": 42.7,
+      "growth": 0,
+      "liquidity": 29.47,
+      "supply": 0
+    },
+    "sharpe": 1.2735,
+    "total": 4.7883
+  },
+  "kfold": [
+    {
+      "fold": 1,
+      "weights": {
+        "value": 24.865904677946823,
+        "momentum": 0,
+        "quality": 24.86590467794635,
+        "volatility": 0,
+        "growth": 24.865904677946403,
+        "liquidity": 0.5363812882140175,
+        "supply": 24.865904677946403
+      },
+      "trainSharpe": 1.9134,
+      "testSharpe": 0,
+      "testTotal": 0.0523
+    },
+    {
+      "fold": 2,
+      "weights": {
+        "value": 24.996430346709655,
+        "momentum": 0,
+        "quality": 24.996430346710696,
+        "volatility": 0,
+        "growth": 24.9964303467107,
+        "liquidity": 0.014278613158249371,
+        "supply": 24.996430346710696
+      },
+      "trainSharpe": 2.0278,
+      "testSharpe": 0,
+      "testTotal": 0.0506
+    },
+    {
+      "fold": 3,
+      "weights": {
+        "value": 25.000000000000128,
+        "momentum": 0,
+        "quality": 24.999999999999943,
+        "volatility": 0,
+        "growth": 24.999999999999964,
+        "liquidity": 0,
+        "supply": 24.999999999999954
+      },
+      "trainSharpe": 2.5165,
+      "testSharpe": 0,
+      "testTotal": -0.1109
+    },
+    {
+      "fold": 4,
+      "weights": {
+        "value": 25.000000000000387,
+        "momentum": 0,
+        "quality": 24.99999999999989,
+        "volatility": 0,
+        "growth": 24.999999999999854,
+        "liquidity": 0,
+        "supply": 24.999999999999865
+      },
+      "trainSharpe": 1.0021,
+      "testSharpe": 0,
+      "testTotal": 0.269
+    },
+    {
+      "fold": 5,
+      "weights": {
+        "value": 25.00000000000066,
+        "momentum": 0,
+        "quality": 24.999999999999755,
+        "volatility": 0,
+        "growth": 24.999999999999797,
+        "liquidity": 0,
+        "supply": 24.99999999999978
+      },
+      "trainSharpe": 1.6216,
+      "testSharpe": 0,
+      "testTotal": -0.0964
+    }
+  ],
+  "kfoldAvg": {
+    "avgTestSharpe": 0,
+    "avgTestTotal": 0.0329
+  },
+  "expanding": {
+    "avgSharpe": 0,
+    "n": 0
+  },
+  "riskParity": {
+    "weights": {
+      "value": 0,
+      "momentum": 8.26,
+      "quality": 0,
+      "volatility": 79.22,
+      "growth": 0,
+      "liquidity": 12.52,
+      "supply": 0
+    },
+    "sharpe": 1.1712,
+    "total": 1.9301,
+    "mdd": -0.1416
+  },
+  "bootstrap": {
+    "ci05": -0.0331,
+    "ci50": 0.6828,
+    "ci95": 5.193
+  },
+  "candidates": [
+    {
+      "name": "가치(50)",
+      "weights": {
+        "value": 50,
+        "momentum": 10,
+        "quality": 15,
+        "volatility": 5,
+        "growth": 10,
+        "liquidity": 5,
+        "supply": 5
+      },
+      "sharpe": 1.2364,
+      "total": 4.8398,
+      "mdd": -0.0858,
+      "alpha": 0.2336,
+      "score": 24.1653
+    },
+    {
+      "name": "균등(7팩터)",
+      "weights": {
+        "value": 14.3,
+        "momentum": 14.3,
+        "quality": 14.3,
+        "volatility": 14.3,
+        "growth": 14.3,
+        "liquidity": 14.3,
+        "supply": 14.3
+      },
+      "sharpe": 1.2366,
+      "total": 4.8305,
+      "mdd": -0.0928,
+      "alpha": 0.2326,
+      "score": 24.0281
+    },
+    {
+      "name": "Ridge-λ10",
+      "weights": {
+        "value": 0,
+        "momentum": 27.83,
+        "quality": 0,
+        "volatility": 42.7,
+        "growth": 0,
+        "liquidity": 29.47,
+        "supply": 0
+      },
+      "sharpe": 1.2735,
+      "total": 4.7883,
+      "mdd": -0.0622,
+      "alpha": 0.2227,
+      "score": 23.2338
+    },
+    {
+      "name": "Risk Parity",
+      "weights": {
+        "value": 0,
+        "momentum": 8.26,
+        "quality": 0,
+        "volatility": 79.22,
+        "growth": 0,
+        "liquidity": 12.52,
+        "supply": 0
+      },
+      "sharpe": 1.1712,
+      "total": 1.9301,
+      "mdd": -0.1416,
+      "alpha": 0.1186,
+      "score": 12.3255
+    }
+  ],
+  "finalBest": {
+    "name": "가치(50)",
+    "weights": {
+      "value": 50,
+      "momentum": 10,
+      "quality": 15,
+      "volatility": 5,
+      "growth": 10,
+      "liquidity": 5,
+      "supply": 5
+    },
+    "sharpe": 1.2364,
+    "total": 4.8398,
+    "mdd": -0.0858
+  }
+}
