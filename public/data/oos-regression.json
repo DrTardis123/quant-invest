@@ -1,0 +1,633 @@
+{
+  "asOf": "2026-08-14T13:16:39.354Z",
+  "period": "2025-07 ~ 2026-08",
+  "nMonths": 14,
+  "oosResults": [
+    {
+      "oosMonths": 1,
+      "name": "균등(7팩터)",
+      "weights": {
+        "value": 14.3,
+        "momentum": 14.3,
+        "quality": 14.3,
+        "volatility": 14.3,
+        "growth": 14.3,
+        "liquidity": 14.3,
+        "supply": 14.3
+      },
+      "train": {
+        "sharpe": 1.2408,
+        "total": 4.2227,
+        "alpha": 0.245
+      },
+      "test": {
+        "sharpe": -999,
+        "total": 0,
+        "alpha": -999,
+        "mdd": 0
+      }
+    },
+    {
+      "oosMonths": 1,
+      "name": "밸런스(균형)",
+      "weights": {
+        "value": 10,
+        "momentum": 25,
+        "quality": 25,
+        "volatility": 15,
+        "growth": 15,
+        "liquidity": 5,
+        "supply": 5
+      },
+      "train": {
+        "sharpe": 1.2572,
+        "total": 3.2407,
+        "alpha": 0.1923
+      },
+      "test": {
+        "sharpe": -999,
+        "total": 0,
+        "alpha": -999,
+        "mdd": 0
+      }
+    },
+    {
+      "oosMonths": 1,
+      "name": "가치",
+      "weights": {
+        "value": 50,
+        "momentum": 10,
+        "quality": 15,
+        "volatility": 5,
+        "growth": 10,
+        "liquidity": 5,
+        "supply": 5
+      },
+      "train": {
+        "sharpe": 1.2348,
+        "total": 4.1674,
+        "alpha": 0.245
+      },
+      "test": {
+        "sharpe": -999,
+        "total": 0,
+        "alpha": -999,
+        "mdd": 0
+      }
+    },
+    {
+      "oosMonths": 1,
+      "name": "성장",
+      "weights": {
+        "value": 5,
+        "momentum": 20,
+        "quality": 15,
+        "volatility": 10,
+        "growth": 40,
+        "liquidity": 5,
+        "supply": 5
+      },
+      "train": {
+        "sharpe": 1.2527,
+        "total": 3.2232,
+        "alpha": 0.1924
+      },
+      "test": {
+        "sharpe": -999,
+        "total": 0,
+        "alpha": -999,
+        "mdd": 0
+      }
+    },
+    {
+      "oosMonths": 1,
+      "name": "모멘텀",
+      "weights": {
+        "value": 5,
+        "momentum": 50,
+        "quality": 10,
+        "volatility": 5,
+        "growth": 15,
+        "liquidity": 10,
+        "supply": 5
+      },
+      "train": {
+        "sharpe": 1.2252,
+        "total": 3.2708,
+        "alpha": 0.2015
+      },
+      "test": {
+        "sharpe": -999,
+        "total": 0,
+        "alpha": -999,
+        "mdd": 0
+      }
+    },
+    {
+      "oosMonths": 1,
+      "name": "방어",
+      "weights": {
+        "value": 15,
+        "momentum": 5,
+        "quality": 25,
+        "volatility": 30,
+        "growth": 5,
+        "liquidity": 10,
+        "supply": 10
+      },
+      "train": {
+        "sharpe": 1.1416,
+        "total": 3.5429,
+        "alpha": 0.2407
+      },
+      "test": {
+        "sharpe": -999,
+        "total": 0,
+        "alpha": -999,
+        "mdd": 0
+      }
+    },
+    {
+      "oosMonths": 1,
+      "name": "회귀-1차",
+      "weights": {
+        "value": 0,
+        "momentum": 20.23,
+        "quality": 8.66,
+        "volatility": 22.19,
+        "growth": 14.06,
+        "liquidity": 20.42,
+        "supply": 14.44
+      },
+      "train": {
+        "sharpe": 1.2401,
+        "total": 5.0354,
+        "alpha": 0.2776
+      },
+      "test": {
+        "sharpe": -999,
+        "total": 0,
+        "alpha": -999,
+        "mdd": 0
+      }
+    },
+    {
+      "oosMonths": 2,
+      "name": "균등(7팩터)",
+      "weights": {
+        "value": 14.3,
+        "momentum": 14.3,
+        "quality": 14.3,
+        "volatility": 14.3,
+        "growth": 14.3,
+        "liquidity": 14.3,
+        "supply": 14.3
+      },
+      "train": {
+        "sharpe": 1.1211,
+        "total": 2.7,
+        "alpha": 0.2097
+      },
+      "test": {
+        "sharpe": -999,
+        "total": 0,
+        "alpha": -999,
+        "mdd": 0
+      }
+    },
+    {
+      "oosMonths": 2,
+      "name": "밸런스(균형)",
+      "weights": {
+        "value": 10,
+        "momentum": 25,
+        "quality": 25,
+        "volatility": 15,
+        "growth": 15,
+        "liquidity": 5,
+        "supply": 5
+      },
+      "train": {
+        "sharpe": 1.1897,
+        "total": 2.4681,
+        "alpha": 0.1693
+      },
+      "test": {
+        "sharpe": -999,
+        "total": 0,
+        "alpha": -999,
+        "mdd": 0
+      }
+    },
+    {
+      "oosMonths": 2,
+      "name": "가치",
+      "weights": {
+        "value": 50,
+        "momentum": 10,
+        "quality": 15,
+        "volatility": 5,
+        "growth": 10,
+        "liquidity": 5,
+        "supply": 5
+      },
+      "train": {
+        "sharpe": 1.1031,
+        "total": 2.5804,
+        "alpha": 0.2068
+      },
+      "test": {
+        "sharpe": -999,
+        "total": 0,
+        "alpha": -999,
+        "mdd": 0
+      }
+    },
+    {
+      "oosMonths": 2,
+      "name": "성장",
+      "weights": {
+        "value": 5,
+        "momentum": 20,
+        "quality": 15,
+        "volatility": 10,
+        "growth": 40,
+        "liquidity": 5,
+        "supply": 5
+      },
+      "train": {
+        "sharpe": 1.177,
+        "total": 2.4092,
+        "alpha": 0.168
+      },
+      "test": {
+        "sharpe": -999,
+        "total": 0,
+        "alpha": -999,
+        "mdd": 0
+      }
+    },
+    {
+      "oosMonths": 2,
+      "name": "모멘텀",
+      "weights": {
+        "value": 5,
+        "momentum": 50,
+        "quality": 10,
+        "volatility": 5,
+        "growth": 15,
+        "liquidity": 10,
+        "supply": 5
+      },
+      "train": {
+        "sharpe": 1.1302,
+        "total": 2.3058,
+        "alpha": 0.1731
+      },
+      "test": {
+        "sharpe": -999,
+        "total": 0,
+        "alpha": -999,
+        "mdd": 0
+      }
+    },
+    {
+      "oosMonths": 2,
+      "name": "방어",
+      "weights": {
+        "value": 15,
+        "momentum": 5,
+        "quality": 25,
+        "volatility": 30,
+        "growth": 5,
+        "liquidity": 10,
+        "supply": 10
+      },
+      "train": {
+        "sharpe": 1.1003,
+        "total": 2.6998,
+        "alpha": 0.2217
+      },
+      "test": {
+        "sharpe": -999,
+        "total": 0,
+        "alpha": -999,
+        "mdd": 0
+      }
+    },
+    {
+      "oosMonths": 2,
+      "name": "회귀-1차",
+      "weights": {
+        "value": 0,
+        "momentum": 20.23,
+        "quality": 8.66,
+        "volatility": 22.19,
+        "growth": 14.06,
+        "liquidity": 20.42,
+        "supply": 14.44
+      },
+      "train": {
+        "sharpe": 1.1385,
+        "total": 3.2668,
+        "alpha": 0.245
+      },
+      "test": {
+        "sharpe": -999,
+        "total": 0,
+        "alpha": -999,
+        "mdd": 0
+      }
+    },
+    {
+      "oosMonths": 3,
+      "name": "균등(7팩터)",
+      "weights": {
+        "value": 14.3,
+        "momentum": 14.3,
+        "quality": 14.3,
+        "volatility": 14.3,
+        "growth": 14.3,
+        "liquidity": 14.3,
+        "supply": 14.3
+      },
+      "train": {
+        "sharpe": 1.2099,
+        "total": 2.9107,
+        "alpha": 0.236
+      },
+      "test": {
+        "sharpe": 2.8468,
+        "total": 0.4909,
+        "alpha": 0.221,
+        "mdd": -0.0539
+      }
+    },
+    {
+      "oosMonths": 3,
+      "name": "밸런스(균형)",
+      "weights": {
+        "value": 10,
+        "momentum": 25,
+        "quality": 25,
+        "volatility": 15,
+        "growth": 15,
+        "liquidity": 5,
+        "supply": 5
+      },
+      "train": {
+        "sharpe": 1.2574,
+        "total": 2.4798,
+        "alpha": 0.1866
+      },
+      "test": {
+        "sharpe": 4.3361,
+        "total": 0.3757,
+        "alpha": 0.179,
+        "mdd": -0.0033
+      }
+    },
+    {
+      "oosMonths": 3,
+      "name": "가치",
+      "weights": {
+        "value": 50,
+        "momentum": 10,
+        "quality": 15,
+        "volatility": 5,
+        "growth": 10,
+        "liquidity": 5,
+        "supply": 5
+      },
+      "train": {
+        "sharpe": 1.1822,
+        "total": 2.7215,
+        "alpha": 0.2312
+      },
+      "test": {
+        "sharpe": 3.1009,
+        "total": 0.5692,
+        "alpha": 0.2414,
+        "mdd": -0.0379
+      }
+    },
+    {
+      "oosMonths": 3,
+      "name": "성장",
+      "weights": {
+        "value": 5,
+        "momentum": 20,
+        "quality": 15,
+        "volatility": 10,
+        "growth": 40,
+        "liquidity": 5,
+        "supply": 5
+      },
+      "train": {
+        "sharpe": 1.2373,
+        "total": 2.387,
+        "alpha": 0.1842
+      },
+      "test": {
+        "sharpe": 4.5975,
+        "total": 0.4122,
+        "alpha": 0.1889,
+        "mdd": 0
+      }
+    },
+    {
+      "oosMonths": 3,
+      "name": "모멘텀",
+      "weights": {
+        "value": 5,
+        "momentum": 50,
+        "quality": 10,
+        "volatility": 5,
+        "growth": 15,
+        "liquidity": 10,
+        "supply": 5
+      },
+      "train": {
+        "sharpe": 1.2122,
+        "total": 2.4199,
+        "alpha": 0.1937
+      },
+      "test": {
+        "sharpe": 3.3623,
+        "total": 0.4088,
+        "alpha": 0.1918,
+        "mdd": -0.0334
+      }
+    },
+    {
+      "oosMonths": 3,
+      "name": "방어",
+      "weights": {
+        "value": 15,
+        "momentum": 5,
+        "quality": 25,
+        "volatility": 30,
+        "growth": 5,
+        "liquidity": 10,
+        "supply": 10
+      },
+      "train": {
+        "sharpe": 1.2102,
+        "total": 3.1267,
+        "alpha": 0.2542
+      },
+      "test": {
+        "sharpe": 1.7666,
+        "total": 0.1923,
+        "alpha": 0.1321,
+        "mdd": -0.1034
+      }
+    },
+    {
+      "oosMonths": 3,
+      "name": "회귀-1차",
+      "weights": {
+        "value": 0,
+        "momentum": 20.23,
+        "quality": 8.66,
+        "volatility": 22.19,
+        "growth": 14.06,
+        "liquidity": 20.42,
+        "supply": 14.44
+      },
+      "train": {
+        "sharpe": 1.2252,
+        "total": 3.5098,
+        "alpha": 0.2749
+      },
+      "test": {
+        "sharpe": 2.818,
+        "total": 0.4888,
+        "alpha": 0.2207,
+        "mdd": -0.0539
+      }
+    }
+  ],
+  "summary": [
+    {
+      "name": "성장",
+      "weights": {
+        "value": 5,
+        "momentum": 20,
+        "quality": 15,
+        "volatility": 10,
+        "growth": 40,
+        "liquidity": 5,
+        "supply": 5
+      },
+      "avgTestSharpe": -664.4675,
+      "avgTestTotal": 0.1374,
+      "avgTestAlpha": -665.937
+    },
+    {
+      "name": "밸런스(균형)",
+      "weights": {
+        "value": 10,
+        "momentum": 25,
+        "quality": 25,
+        "volatility": 15,
+        "growth": 15,
+        "liquidity": 5,
+        "supply": 5
+      },
+      "avgTestSharpe": -664.5546,
+      "avgTestTotal": 0.1252,
+      "avgTestAlpha": -665.9403
+    },
+    {
+      "name": "모멘텀",
+      "weights": {
+        "value": 5,
+        "momentum": 50,
+        "quality": 10,
+        "volatility": 5,
+        "growth": 15,
+        "liquidity": 10,
+        "supply": 5
+      },
+      "avgTestSharpe": -664.8792,
+      "avgTestTotal": 0.1363,
+      "avgTestAlpha": -665.9361
+    },
+    {
+      "name": "가치",
+      "weights": {
+        "value": 50,
+        "momentum": 10,
+        "quality": 15,
+        "volatility": 5,
+        "growth": 10,
+        "liquidity": 5,
+        "supply": 5
+      },
+      "avgTestSharpe": -664.9664,
+      "avgTestTotal": 0.1897,
+      "avgTestAlpha": -665.9195
+    },
+    {
+      "name": "균등(7팩터)",
+      "weights": {
+        "value": 14.3,
+        "momentum": 14.3,
+        "quality": 14.3,
+        "volatility": 14.3,
+        "growth": 14.3,
+        "liquidity": 14.3,
+        "supply": 14.3
+      },
+      "avgTestSharpe": -665.0511,
+      "avgTestTotal": 0.1636,
+      "avgTestAlpha": -665.9263
+    },
+    {
+      "name": "회귀-1차",
+      "weights": {
+        "value": 0,
+        "momentum": 20.23,
+        "quality": 8.66,
+        "volatility": 22.19,
+        "growth": 14.06,
+        "liquidity": 20.42,
+        "supply": 14.44
+      },
+      "avgTestSharpe": -665.0607,
+      "avgTestTotal": 0.1629,
+      "avgTestAlpha": -665.9264
+    },
+    {
+      "name": "방어",
+      "weights": {
+        "value": 15,
+        "momentum": 5,
+        "quality": 25,
+        "volatility": 30,
+        "growth": 5,
+        "liquidity": 10,
+        "supply": 10
+      },
+      "avgTestSharpe": -665.4111,
+      "avgTestTotal": 0.0641,
+      "avgTestAlpha": -665.956
+    }
+  ],
+  "oosBest": {
+    "name": "성장",
+    "weights": {
+      "value": 5,
+      "momentum": 20,
+      "quality": 15,
+      "volatility": 10,
+      "growth": 40,
+      "liquidity": 5,
+      "supply": 5
+    },
+    "avgTestSharpe": -664.4675,
+    "avgTestTotal": 0.1374,
+    "avgTestAlpha": -665.9370333333333
+  }
+}

@@ -366,7 +366,9 @@ function app() {
 
     async loadAll() {
       try {
-        const r = await window.apiGet('/api/scores?limit=2500');
+        // KOSDAQ 모드: 별도 kosdaq-top.json 사용
+        const endpoint = this.marketFilter === 'KOSDAQ' ? '/api/kosdaq-top' : '/api/scores?limit=2500';
+        const r = await window.apiGet(endpoint);
         if (r && r.__error) return;
         const rows = Array.isArray(r) ? r : (r.rows || []);
         this.all = rows.map((row) => ({

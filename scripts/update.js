@@ -430,6 +430,12 @@ async function exportStatic() {
     .filter((r) => !excludedStatuses.has(r.status) && r.total_score > 0)
     .sort((a, b) => b.total_score - a.total_score);
 
+  // ★ KOSDAQ 별도 데이터 (별도 페이지용, KOSDAQ만 포함)
+  const kosdaqTop = allFactors
+    .filter((r) => r.market === 'KOSDAQ' && r.total_score > 0 && r.status !== 'halt' && r.status !== 'zero_volume')
+    .sort((a, b) => b.total_score - a.total_score)
+    .slice(0, 50);
+
   // 메타에 통계 추가
   metaObj.factor_stats = factorStats;
   metaObj.excluded_count = factorStats.halt + factorStats.zeroVolume + (excludeKosdaq ? factorStats.kosdaq : 0);
@@ -473,6 +479,62 @@ async function exportStatic() {
         grade: scoring.gradeFor(r.total_score),
       };
     });
+
+  // ★ KOSDAQ 별도 TOP 50 (KOSDAQ 페이지용, ETF/우선주/액티브/스팩/레버리지/인버스 제외)
+  const kosdaqJson = kosdaqTop
+    .filter((r) => !isExcludedProduct(r.name))
+    .map((r, i) => {
+      const stock = r.stock || {};
+      return {
+        rank: i + 1,
+        code: r.code,
+        name: stock.name || '',
+        market: r.market,
+        sector: stock.sector || '',
+        industry: stock.industry || '',
+        value_score: r.value_score,
+        momentum_score: r.momentum_score,
+        quality_score: r.quality_score,
+        volatility_score: r.volatility_score,
+        growth_score: r.growth_score,
+        liquidity_score: r.liquidity_score,
+        supply_score: r.supply_score,
+        total_score: r.total_score,
+        status: r.status,
+        grade: scoring.gradeFor(r.total_score),
+      };
+    });
+  writeJson('kosdaq-top.json', kosdaqJson);
+
+  // ★ 팩터별 TOP 20 (모멘텀/가치/퀄리티/저변동/성장)
+  const factorTopJson = (key) => allFactors
+    .filter((r) => !isExcludedProduct(r.name) && r.total_score > 0 && r.status !== 'halt' && r.status !== 'zero_volume')
+    .sort((a, b) => (Number(b[key]) || 0) - (Number(a[key]) || 0))
+    .slice(0, 20)
+    .map((r, i) => {
+      const stock = r.stock || {};
+      return {
+        rank: i + 1,
+        code: r.code,
+        name: stock.name || '',
+        market: r.market,
+        sector: stock.sector || '',
+        value_score: r.value_score,
+        momentum_score: r.momentum_score,
+        quality_score: r.quality_score,
+        volatility_score: r.volatility_score,
+        growth_score: r.growth_score,
+        liquidity_score: r.liquidity_score,
+        supply_score: r.supply_score,
+        total_score: r.total_score,
+        status: r.status,
+        grade: scoring.gradeFor(r.total_score),
+      };
+    });
+  writeJson('mom-top.json', factorTopJson('momentum_score'));
+  writeJson('value-top.json', factorTopJson('value_score'));
+  writeJson('quality-top.json', factorTopJson('quality_score'));
+  writeJson('lowvol-top.json', factorTopJson('volatility_score'));
 
   // 종목 상세 join (name/market_cap/sector + 외인+기관 5일 + 애널리스트 mock)
   if (top.length > 0) {

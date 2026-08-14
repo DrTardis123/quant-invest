@@ -15,6 +15,7 @@
     { "source": "/api/heatmap",     "destination": "/data/heatmap.json" },
     { "source": "/api/correlation", "destination": "/data/correlation.json" },
     { "source": "/api/distribution","destination": "/data/distribution.json" },
+    { "source": "/api/kosdaq-top",  "destination": "/data/kosdaq-top.json" },
     { "source": "/api/log",         "destination": "/data/log.json" },
     { "source": "/api/strategies",  "destination": "/data/strategies-static.json" },
     { "source": "/api/indices",     "destination": "/data/indices.json" },

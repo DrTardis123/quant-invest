@@ -13,15 +13,40 @@ async function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
 async function main() {
   const limit = Number(process.argv[2]) || 200;
-  console.log(`[supply-industry] KOSPI 상위 ${limit}개 fetch`);
+  const codeFile = process.env.CODE_FILE;
+  const fetchOffset = Number(process.env.FETCH_OFFSET) || 0;
+  console.log(`[supply-industry] limit=${limit} offset=${fetchOffset} codeFile=${codeFile || '(none)'}`);
 
-  const rows = await all(`
-    SELECT s.code, s.name FROM stocks s
-    WHERE s.market = 'KOSPI' AND s.name NOT LIKE '%우%'
-    ORDER BY s.code LIMIT ?
-  `, [limit]);
-  const filtered = rows.filter((r) => !isExcludedProduct(r.name));
-  console.log(`[supply-industry] 대상: ${filtered.length}개`);
+  let filtered = [];
+  if (codeFile) {
+    // 외부 코드 파일(JSON 배열) 사용
+    const fs = require('fs');
+    const abs = path.isAbsolute(codeFile) ? codeFile : path.join(ROOT, codeFile);
+    const raw = JSON.parse(fs.readFileSync(abs, 'utf8'));
+    const codes = Array.isArray(raw) ? raw : (raw.codes || []);
+    if (!codes.length) {
+      console.error(`[supply-industry] CODE_FILE 비어있음: ${abs}`);
+      process.exit(1);
+    }
+    // DB에 존재하는 KOSPI 코드만 필터
+    const placeholders = codes.map(() => '?').join(',');
+    const rows = await all(
+      `SELECT s.code, s.name FROM stocks s WHERE s.market = 'KOSPI' AND s.code IN (${placeholders})`,
+      codes
+    );
+    // 입력 순서 유지
+    const byCode = new Map(rows.map((r) => [r.code, r]));
+    filtered = codes.map((c) => byCode.get(c)).filter(Boolean).filter((r) => !isExcludedProduct(r.name));
+    console.log(`[supply-industry] CODE_FILE 로드: 입력 ${codes.length} / DB 매치 ${rows.length} / 우/제외 제외 후 ${filtered.length}`);
+  } else {
+    const rows = await all(`
+      SELECT s.code, s.name FROM stocks s
+      WHERE s.market = 'KOSPI' AND s.name NOT LIKE '%우%'
+      ORDER BY s.code LIMIT ? OFFSET ?
+    `, [limit, fetchOffset]);
+    filtered = rows.filter((r) => !isExcludedProduct(r.name));
+    console.log(`[supply-industry] KOSPI 상위 ${limit}개 fetch (offset=${fetchOffset}) 대상: ${filtered.length}개`);
+  }
 
   let supplyUpd = 0, industryUpd = 0, fail = 0;
   const t0 = Date.now();
