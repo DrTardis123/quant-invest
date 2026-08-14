@@ -52,13 +52,12 @@ async function fetchPrevYearFundamentals() {
 
 // ---------- 정규화 유틸 ----------
 
-// 백분위 점수 (0~100, 만점 방지 + 절대 만점 안 됨)
+// 백분위 점수 (0~95, 절대 만점 안 됨)
 // - raw 값을 정렬 후 순위 기반 점수
-// - 1위는 ~99, 꼴찌는 ~1
+// - 1위는 ~94, 꼴찌는 ~1
 // - 동점은 같은 점수
-// - min=5, max=95로 capping → 절대 만점 안 됨, 절대 0도 안 됨
-// - 1등 cap = 95 (다른 1등과 동점이면 94)
-// - 같은 raw 값은 같은 점수
+// - max=94로 강제 cap → 절대 만점 안 됨 (사용자 요구)
+// - 95점 이상 절대 안 나옴
 function percentileScore(values, higherIsBetter = true) {
   const valid = values.filter((v) => v.raw !== null && v.raw !== undefined && Number.isFinite(v.raw));
   if (valid.length === 0) return new Map();
@@ -66,11 +65,9 @@ function percentileScore(values, higherIsBetter = true) {
   const n = sorted.length;
   const rankMap = new Map();
   sorted.forEach((v, i) => {
-    // i=0 (1등) → ~99, i=n-1 (꼴찌) → ~1
-    let score = ((n - i) / n) * 100;  // 0~100 (1등=99.x)
-    score = Math.max(1, Math.min(99, score));  // 안전 cap
-    // 1등 cap = 95 (만점 방지)
-    if (i === 0) score = Math.min(score, 95);
+    // i=0 (1등) → ~94, i=n-1 (꼴찌) → ~1
+    let score = ((n - i) / n) * 94;  // 0~94 (1등=93.x)
+    score = Math.max(1, Math.min(94, score));  // 절대 95 이상 안 됨
     rankMap.set(v.code, score);
   });
   // 원래 입력에 없는/유효하지 않은 code는 50(중립)
@@ -121,6 +118,8 @@ function calcValue(fundamentals) {
 
 function calcQuality(fundamentals) {
   // ROE(↑), ROA(↑), 부채비율(↓) 가중
+  // DB에 ROE/ROA/debt_ratio가 없으면 (현재 99% null) → PER/PBR 기반 mock으로 추정
+  // mock: PER 낮을수록 + PBR 낮을수록 + 배당수익률 높을수록 = 퀄리티 높음
   const roeVals = fundamentals
     .filter((f) => f.roe !== null && f.roe > -50 && f.roe < 100)
     .map((f) => ({ code: f.code, raw: f.roe }));
@@ -131,11 +130,49 @@ function calcQuality(fundamentals) {
     .filter((f) => f.debt_ratio !== null && f.debt_ratio > 0 && f.debt_ratio < 500)
     .map((f) => ({ code: f.code, raw: f.debt_ratio }));
 
-  return avgMaps([
-    percentileScore(roeVals, true),
-    percentileScore(roaVals, true),
-    percentileScore(debtVals, false),
-  ]);
+  const roeMap = percentileScore(roeVals, true);
+  const roaMap = percentileScore(roaVals, true);
+  const debtMap = percentileScore(debtVals, false);
+
+  // mock quality: PER < 10 = 80점, PER 10~20 = 60, PER 20~30 = 50, PER > 30 = 30
+  //            PBR < 1 = 80, PBR 1~2 = 60, PBR 2~3 = 50, PBR > 3 = 30
+  //            배당수익률 > 5% = 보너스
+  const mockQualityRows = [];
+  for (const f of fundamentals) {
+    if (roeMap.has(f.code)) continue; // 실제 데이터 있으면 mock 안 함
+    const per = Number(f.per) || null;
+    const pbr = Number(f.pbr) || null;
+    const dvr = Number(f.dividend_yield) || null;
+    if (per === null && pbr === null) continue;
+    let score = 50;
+    if (per !== null) {
+      if (per > 0 && per < 8) score += 30;
+      else if (per < 15) score += 20;
+      else if (per < 25) score += 5;
+      else if (per > 50) score -= 20;
+    }
+    if (pbr !== null) {
+      if (pbr > 0 && pbr < 0.5) score += 25;
+      else if (pbr < 1) score += 18;
+      else if (pbr < 1.5) score += 10;
+      else if (pbr < 3) score += 0;
+      else score -= 10;
+    }
+    if (dvr !== null && dvr > 4) score += 8;
+    mockQualityRows.push({ code: f.code, raw: Math.max(5, Math.min(94, score)) });
+  }
+  const mockMap = new Map(mockQualityRows.map((r) => [r.code, r.raw]));
+
+  // 실제 + mock 통합
+  const allCodes = new Set([...roeMap.keys(), ...roaMap.keys(), ...debtMap.keys(), ...mockMap.keys()]);
+  const out = new Map();
+  for (const c of allCodes) {
+    const r1 = roeMap.get(c) ?? mockMap.get(c) ?? 50;
+    const r2 = roaMap.get(c) ?? mockMap.get(c) ?? 50;
+    const r3 = debtMap.get(c) ?? mockMap.get(c) ?? 50;
+    out.set(c, (r1 + r2 + r3) / 3);
+  }
+  return out;
 }
 
 function calcGrowth(fundamentals, prevFundamentals) {
@@ -155,6 +192,32 @@ function calcGrowth(fundamentals, prevFundamentals) {
     if (latestRev && oldRev && oldRev > 0) {
       growthRows.push({ code: f.code, raw: (latestRev - oldRev) / oldRev });
     }
+  }
+  if (growthRows.length === 0) {
+    // DB에 revenue 변화 데이터 없음 → PER/PBR/배당 기반 mock 성장률 추정
+    // mock: PER 낮은데 PBR도 낮으면 성장 가능성 (가성비), 배당 안정 = 점수 중립
+    const mockRows = [];
+    for (const f of fundamentals) {
+      const per = Number(f.per) || null;
+      const pbr = Number(f.pbr) || null;
+      const dvr = Number(f.dividend_yield) || null;
+      if (per === null && pbr === null && dvr === null) continue;
+      let score = 50;
+      // PER < 10 = 저평가 = 잠재적 성장 (단, 적자기업은 제외)
+      if (per !== null && per > 0) {
+        if (per < 8 && pbr !== null && pbr > 0 && pbr < 1) score += 20; // PER·PBR 모두 저평가 = 강한 매력
+        else if (per < 12) score += 12;
+        else if (per < 20) score += 5;
+        else if (per > 40) score -= 15;
+      }
+      // PBR < 1 = 자산가치 대비 저평가 = 성장 잠재력
+      if (pbr !== null && pbr > 0 && pbr < 0.7) score += 12;
+      // 배당 안정 = 점수 중립 (보너스 없음)
+      mockRows.push({ code: f.code, raw: Math.max(5, Math.min(94, score)) });
+    }
+    const out = new Map();
+    for (const r of mockRows) out.set(r.code, r.raw);
+    return out;
   }
   return percentileScore(growthRows, true);
 }

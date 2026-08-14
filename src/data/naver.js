@@ -190,13 +190,20 @@ async function getBasic(code) {
 
 // === 종목 업종/섹터 ===
 async function getStockSector(code) {
-  // 메인 페이지에서 업종 링크 추출
-  // 패턴: <a href="/sise/sise_group_detail.naver?type=upjong&no=278">반도체/반도체장비</a>
+  // 메인 페이지에서 업종(섹터) + industry 추출
+  // 패턴 1: <a href="/sise/sise_group_detail.naver?type=upjong&no=278">반도체/반도체장비</a>
+  // 패턴 2: <a href="/sise/sise_group_detail.naver?type=industry&no=...">산업명</a>
   const url = `${BASE}/item/main.naver?code=${code}`;
   const html = await get(url);
-  const m = html.match(/<a[^>]*href="\/sise\/sise_group_detail\.naver\?type=upjong&no=(\d+)"[^>]*>([^<]+)<\/a>/);
-  if (!m) return { code, sector: null, industry: null };
-  return { code, sector: cleanText(m[2]), industry: null };
+  // 섹터 (업종 분류)
+  const upjong = html.match(/<a[^>]*href="\/sise\/sise_group_detail\.naver\?type=upjong&no=(\d+)"[^>]*>([^<]+)<\/a>/);
+  // 산업 (industry)
+  const industry = html.match(/<a[^>]*href="\/sise\/sise_group_detail\.naver\?type=industry&no=(\d+)"[^>]*>([^<]+)<\/a>/);
+  return {
+    code,
+    sector: upjong ? cleanText(upjong[2]) : null,
+    industry: industry ? cleanText(industry[2]) : null,
+  };
 }
 
 // === 일봉 ===

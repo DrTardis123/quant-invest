@@ -14,9 +14,10 @@ async function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
 async function main() {
   const limit = Number(process.argv[2]) || 100;
-  const years = Number(process.argv[3]) || 5;
-  const maxPages = Math.ceil(years * 252 / 10); // 252 거래일/년, 10일/페이지
-  console.log(`[naver-5y] KOSPI ${limit}개, ${years}년치 (최대 ${maxPages}페이지/종목)`);
+  const years = Number(process.argv[3]) || 2;
+  // Naver 일봉 페이지는 30페이지(300일) cap → 1.2년치만 fetch 가능
+  const maxPages = Math.min(30, Math.ceil(years * 252 / 10));
+  console.log(`[naver-5y] KOSPI ${limit}개, ${years}년치 (최대 ${maxPages}페이지/종목, 30페이지 cap)`);
 
   const rows = await all(`
     SELECT s.code, s.name FROM stocks s
@@ -70,7 +71,7 @@ async function main() {
       const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
       console.log(`[naver-5y] ${i + 1}/${filtered.length} (ok=${ok} fail=${fail} newRows=${totalRows} elapsed=${elapsed}s)`);
     }
-    await sleep(50);
+    await sleep(200);
   }
   console.log(`[naver-5y] 완료. ok=${ok} fail=${fail} newRows=${totalRows} elapsed=${((Date.now() - t0) / 1000).toFixed(1)}s`);
   await require('../src/db/connection').close?.();
