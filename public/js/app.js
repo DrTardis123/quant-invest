@@ -1785,5 +1785,30 @@ function app() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     },
+
+    // ★ 10종목 분산 포트폴리오 CSV 다운로드
+    downloadPortfolioCsv() {
+      if (!this.portfolio?.items?.length) return;
+      const rows = [['순위', '코드', '종목명', '시장', '섹터', '등급', '총점', '비중(%)', '현재가', '외인 5일', '기관 5일']];
+      for (const p of this.portfolio.items) {
+        rows.push([
+          p.rank, p.code, p.name || '', p.market || '', p.sector || '',
+          p.grade?.letter || '', (p.total_score || 0).toFixed(2), (p.weight || 0).toFixed(1),
+          (p.close || 0).toLocaleString(), p.foreign_5d || 0, p.inst_5d || 0,
+        ]);
+      }
+      const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const bom = '\uFEFF';
+      const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const today = new Date().toISOString().slice(0, 10);
+      link.href = url;
+      link.download = `quant_portfolio_${today}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    },
   };
 }

@@ -958,6 +958,7 @@
             <span x-show="!portfolioLoading">🔄 새로고침</span>
             <span x-show="portfolioLoading">⏳ 로딩...</span>
           </button>
+          <button class="btn btn-sm btn-outline-success" @click="downloadPortfolioCsv()" x-show="portfolio?.items?.length">📥 CSV 다운로드</button>
         </div>
 
         <div class="alert alert-info" x-show="portfolio">
