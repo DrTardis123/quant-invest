@@ -1,0 +1,96 @@
+{
+  "asOf": "2026-08-15T02:14:42.337Z",
+  "period": "2025-07 ~ 2026-08",
+  "nMonths": 14,
+  "lag1Simulation": {
+    "static": {
+      "sharpe": 1.1109,
+      "total": 3.4383,
+      "mdd": -0.1901,
+      "alpha": null
+    },
+    "rebal": {
+      "sharpe": 1.0651,
+      "total": 5.2666,
+      "mdd": -0.1211,
+      "alpha": null
+    },
+    "sell2": {
+      "sharpe": 1.1982,
+      "total": 1.6089,
+      "mdd": -0.0874,
+      "alpha": null,
+      "trades": 54
+    }
+  },
+  "regime": [
+    {
+      "strategy": "static",
+      "bullAvg": -0.0389,
+      "bearAvg": -0.0542,
+      "sidewaysAvg": 0.2299,
+      "bullN": 1,
+      "bearN": 1,
+      "sidewaysN": 12
+    },
+    {
+      "strategy": "rebal",
+      "bullAvg": -0.0389,
+      "bearAvg": -0.0454,
+      "sidewaysAvg": 0.3356,
+      "bullN": 1,
+      "bearN": 1,
+      "sidewaysN": 12
+    },
+    {
+      "strategy": "sell2",
+      "bullAvg": -0.0389,
+      "bearAvg": -0.0422,
+      "sidewaysAvg": 0.1179,
+      "bullN": 1,
+      "bearN": 1,
+      "sidewaysN": 12
+    }
+  ],
+  "kfold": [
+    {
+      "fold": 1,
+      "trainTotal": 0.05477415259630547,
+      "testTotal": -0.028122784762554143,
+      "testSharpe": -0.44690931768342484,
+      "testKospi": null
+    },
+    {
+      "fold": 2,
+      "trainTotal": 0.04506874757035462,
+      "testTotal": 4.052455332041147,
+      "testSharpe": 2.5823732737942517,
+      "testKospi": null
+    },
+    {
+      "fold": 3,
+      "trainTotal": 3.398402984103247,
+      "testTotal": 0.13209146848539577,
+      "testSharpe": 3.4641016151377544,
+      "testKospi": null
+    }
+  ],
+  "weightStability": "5/5 fold 일관 (4팩터 균등 25%) → ★★★★★",
+  "bootstrap": {
+    "ci05": 0.0105,
+    "ci25": 0.9499,
+    "ci50": 4.9435,
+    "ci75": 18.3151,
+    "ci95": 113.5177
+  },
+  "verdict": {
+    "oosRatio": 26.31,
+    "message": "💀 과적화 심각 (인샤풀 30% 미만, 추정 -30~+30%)"
+  },
+  "limitations": [
+    "1.2년치 (14개월) 데이터 → 표본 부족",
+    "KOSPI ret 4개월치 → regime 분석 부족",
+    "bear only 검증 → bull 검증 불가",
+    "KIS API 8년치 받으면 ±20% 이내로 좁아짐"
+  ]
+}
