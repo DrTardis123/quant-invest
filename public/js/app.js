@@ -104,10 +104,11 @@ function app() {
       }
 
       // localStorage에서 관심종목 + 다크모드 + 가중치 복원
-      this.watchlist = JSON.parse(localStorage.getItem('quant_watchlist') || '[]');
-      const savedWeights = JSON.parse(localStorage.getItem('quant_weights') || 'null');
+      // localStorage 안전 읽기 (손상 시 fallback)
+      try { this.watchlist = JSON.parse(localStorage.getItem('quant_watchlist') || '[]') || []; } catch (e) { console.warn('[init] watchlist 손상, 초기화'); this.watchlist = []; }
+      try { const savedWeights = JSON.parse(localStorage.getItem('quant_weights') || 'null'); if (savedWeights) this.currentWeights = savedWeights; } catch (e) { /* ignore */ }
       if (savedWeights) this.currentWeights = savedWeights;
-      const savedDark = localStorage.getItem('quant_darkmode');
+      const savedDark = (() => { try { return localStorage.getItem('quant_darkmode'); } catch (e) { return null; } })();
       if (savedDark === '1') { this.darkMode = true; document.body.classList.add('dark-mode'); }
 
       // 새 탭으로 전환되면 해당 차트 다시 그리기
@@ -162,12 +163,12 @@ function app() {
       // 다크모드 토글 시 class 적용
       this.$watch('darkMode', (v) => {
         document.body.classList.toggle('dark-mode', v);
-        localStorage.setItem('quant_darkmode', v ? '1' : '0');
+        try { localStorage.setItem('quant_darkmode', v ? '1' : '0'); } catch (e) { /* quota exceeded 등 */ }
       });
 
       // 가중치 변경 시 자동 저장
       this.$watch('currentWeights', (w) => {
-        localStorage.setItem('quant_weights', JSON.stringify(w));
+        try { localStorage.setItem('quant_weights', JSON.stringify(w)); } catch (e) { /* ignore */ }
         this._recomputeAndSet();
       });
 
@@ -1273,7 +1274,7 @@ function app() {
       } else {
         this.watchlist = [...this.watchlist, code];
       }
-      localStorage.setItem('quant_watchlist', JSON.stringify(this.watchlist));
+      try { localStorage.setItem('quant_watchlist', JSON.stringify(this.watchlist)); } catch (e) { /* ignore */ }
     },
     get watchlistRows() {
       const codeSet = new Set(this.watchlist);
