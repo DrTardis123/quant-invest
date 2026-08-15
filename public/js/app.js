@@ -265,6 +265,8 @@ function app() {
       // 이전 fetch 취소 (race condition 방지)
       if (this._currentFetchCtl) { try { this._currentFetchCtl.abort(); } catch (e) {} }
       this._currentFetchCtl = new AbortController();
+      // 이전 차트 destroy (메모리 누수 방지)
+      if (oldTab && oldTab !== t) this._destroyAllCharts();
       // canvas 렌더링 보장을 위해 $nextTick 대신 setTimeout (50ms 후)
       // Alpine.js x-show + $nextTick race condition 회피
       setTimeout(() => {
