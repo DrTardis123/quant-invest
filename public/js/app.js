@@ -130,11 +130,21 @@ function app() {
       const code = urlParams.get('code');
       if (code) setTimeout(() => this.openStock(code), 1500);
 
+      // Chart.js 사전 확인 (CDN 로드 안 됐으면 fallback)
+      if (typeof window.Chart === 'undefined') {
+        console.warn('[init] Chart.js 미로드 — 차트 기능 비활성화');
+      } else {
+        console.log('[init] Chart.js 로드 OK, v' + (window.Chart.version || 'unknown'));
+      }
+
+      // 분석 데이터 미리 fetch (앱 시작 시 캐시)
+      setTimeout(() => { this.loadAnalytics().catch((e) => console.warn('[init] analytics prefetch failed:', e)); }, 2000);
+
       // tab 변경 시 차트 다시 그리기 (display:none 문제 해결)
       this.$watch('tab', (t) => {
         if (!t) return;
         this.$nextTick(() => {
-          if (t === 'chart') { this.drawCharts(); }
+          if (t === 'chart') { try { this.drawCharts(); } catch (e) { console.error('[chart]', e); } }
           else if (t === 'backtest') { this.loadBacktest(); }
           else if (t === 'corr') { this.loadCorrelation(); }
           else if (t === 'heatmap') { this.loadHeatmap(); }
@@ -144,7 +154,7 @@ function app() {
           else if (t === 'highlow') { this.loadHighLow(); }
           else if (t === 'supply') { this.loadSupplySignals(); }
           else if (t === 'portfolio') { this.loadPortfolio(); }
-          else if (t === 'analytics') { this.loadAnalytics(); this.$nextTick(() => this._drawAnalyticsCharts()); }
+          // analytics는 setTab()에서만 처리 (중복 방지)
           else if (t === 'watchlist') { this._tabDraws.watchlist = true; }
         });
       });
@@ -252,19 +262,21 @@ function app() {
       const oldTab = this.tab;
       this.tab = t;
       this.$nextTick(() => {
-        if (t === 'heatmap') { this.loadHeatmap(); this.$nextTick(() => this._drawHeatmap()); }
-        else if (t === 'sector') { this.loadSectors(); }
-        else if (t === 'chart') { this.drawCharts(); }
-        else if (t === 'corr') { this.loadCorrelation(); this.$nextTick(() => this._drawCorrelation()); }
-        else if (t === 'optimizer') { this.loadOptimizer(); this.$nextTick(() => this._drawOptimizer()); }
-        else if (t === 'backtest') { this.loadBacktest(); this.$nextTick(() => this._drawBacktestCharts()); }
-        else if (t === 'portfolio') { this.loadPortfolio(); }
-        else if (t === 'analytics') { this.loadAnalytics(); this.$nextTick(() => this._drawAnalyticsCharts()); }
-        else if (t === 'top') { this._drawTopCharts(); }
-        else if (t === 'movers') { this.loadMovers(); }
-        else if (t === 'highlow') { this.loadHighLow(); }
-        else if (t === 'supply') { this.loadSupplySignals(); }
-        else if (t === 'watchlist') { this._drawTopCharts(); }
+        try {
+          if (t === 'heatmap') { this.loadHeatmap(); this.$nextTick(() => this._drawHeatmap()); }
+          else if (t === 'sector') { this.loadSectors(); }
+          else if (t === 'chart') { this.drawCharts(); }
+          else if (t === 'corr') { this.loadCorrelation(); this.$nextTick(() => this._drawCorrelation()); }
+          else if (t === 'optimizer') { this.loadOptimizer(); this.$nextTick(() => this._drawOptimizer()); }
+          else if (t === 'backtest') { this.loadBacktest(); this.$nextTick(() => this._drawBacktestCharts()); }
+          else if (t === 'portfolio') { this.loadPortfolio(); }
+          else if (t === 'analytics') { this.loadAnalytics(); this.$nextTick(() => this._drawAnalyticsCharts()); }
+          else if (t === 'top') { this._drawTopCharts(); }
+          else if (t === 'movers') { this.loadMovers(); }
+          else if (t === 'highlow') { this.loadHighLow(); }
+          else if (t === 'supply') { this.loadSupplySignals(); }
+          else if (t === 'watchlist') { this._drawTopCharts(); }
+        } catch (e) { console.error('[setTab]', t, e); }
       });
     },
 
@@ -1360,15 +1372,18 @@ function app() {
       this.portfolioLoading = false;
     },
 
-    async loadAnalytics() {
+    async loadAnalytics(force = false) {
+      // 캐시: 한 번 성공하면 재호출 안 함 (수동 새로고침은 force=true)
+      if (this.analytics && !force) return this.analytics;
       this.analyticsLoading = true;
       try {
         console.log('[analytics] fetching /api/overfit-audit...');
         const r = await window.apiGet('/api/overfit-audit');
         console.log('[analytics] response:', r ? 'OK' : 'empty', r?.__error || '');
-        if (r && !r.__error) this.analytics = r;
+        if (r && !r.__error) { this.analytics = r; this.analyticsLoadedAt = Date.now(); }
       } catch (e) { console.error('[analytics] fetch error:', e); }
       this.analyticsLoading = false;
+      return this.analytics;
     },
 
     _destroyAnalyticsCharts() {

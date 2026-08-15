@@ -1037,7 +1037,7 @@
         <div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
           <h5 class="mb-0">🔍 분석 진단 (회귀 + 포트폴리오 + 과적화)</h5>
           <span class="text-muted small">단축키 A. 1.2년치 (14개월) 데이터 기반. KIS API 8년치 받으면 ±20% 이내로 좁아짐.</span>
-          <button class="btn btn-sm btn-outline-info ms-auto" @click="loadAnalytics()" :disabled="analyticsLoading">
+          <button class="btn btn-sm btn-outline-info ms-auto" @click="loadAnalytics(true)" :disabled="analyticsLoading">
             <span x-show="!analyticsLoading">🔄 새로고침</span>
             <span x-show="analyticsLoading">⏳ 로딩...</span>
           </button>
