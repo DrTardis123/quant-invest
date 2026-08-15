@@ -54,10 +54,14 @@ function app() {
     analyticsLoading: false,
     _analyticsCharts: {},
     briefing: '',
+    realtime: null,  // 실시간 시세 (TOP 20)
+    realtimeLastFetch: 0,
+    _realtimeTimer: null,
 
     // 옵티마이저 + 백테스트
     optimizer: { ok: false, error: '로딩 중...' },
     backtest: { ok: false, error: '로딩 중...' },
+    dynamicPortfolio: null,  // 동적 리밸런싱 (13개월 top 10 byStock 이력)
 
     _charts: {},
     _modal: null,
@@ -140,6 +144,8 @@ function app() {
 
       // 분석 데이터 미리 fetch (앱 시작 시 캐시)
       setTimeout(() => { this.loadAnalytics().catch((e) => console.warn('[init] analytics prefetch failed:', e)); }, 2000);
+      // 동적 포트폴리오 미리 fetch (stock detail에서 사용)
+      setTimeout(() => { this.loadDynamicPortfolio().catch((e) => console.warn('[init] dynamic-portfolio prefetch failed:', e)); }, 2500);
 
       // tab 변경 시 차트 다시 그리기 (display:none 문제 해결)
       this.$watch('tab', (t) => {
@@ -213,6 +219,9 @@ function app() {
       this._recomputeAndSet();
       this.$nextTick(() => this._drawAllSparklines());
       this._generateBriefing();
+      // 실시간 시세 폴링 (60초마다, TOP 페이지 활성 시)
+      this.loadRealtime();
+      this._startRealtimePolling();
       // 자동 새로고침 OFF (수동 새로고침 버튼으로만) — CPU/메모리 보호
     },
 
@@ -552,6 +561,69 @@ function app() {
       }
     },
 
+    // ===== 실시간 시세 =====
+    async loadRealtime() {
+      try {
+        const r = await window.apiGet('/api/realtime');
+        if (r && !r.__error && r.quotes) {
+          this.realtime = r;
+          this.realtimeLastFetch = Date.now();
+          this._applyRealtimeToTop();
+        }
+      } catch (e) { console.warn('[realtime]', e.message); }
+    },
+    _startRealtimePolling() {
+      // 60초마다 TOP 페이지 활성 시 폴링 (장 마감 시 서버 응답 없을 수 있음)
+      if (this._realtimeTimer) clearInterval(this._realtimeTimer);
+      this._realtimeTimer = setInterval(() => {
+        // 페이지가 보이지 않으면 폴링 스킵 (배터리/네트워크 보호)
+        if (document.hidden) return;
+        this.loadRealtime();
+      }, 60000);
+    },
+    _applyRealtimeToTop() {
+      // this.top 배열의 close/change/change_pct 를 realtime 값으로 덮어쓰기
+      if (!this.realtime || !this.realtime.quotes || !this.top || this.top.length === 0) return;
+      const map = new Map(this.realtime.quotes.map((q) => [q.code, q]));
+      let updated = 0;
+      for (const t of this.top) {
+        const q = map.get(t.code);
+        if (q && q.close != null) {
+          const newClose = Number(q.close);
+          const newChange = Number(q.change) || 0;
+          const newPct = Number(q.change_pct) || 0;
+          if (t.close !== newClose) updated++;
+          t.close = newClose;
+          t.change = newChange;
+          t.change_pct = newPct;
+        }
+      }
+      if (updated > 0) console.log(`[realtime] ${updated}개 종목 가격 갱신 (${this.realtime.fetchedAt})`);
+    },
+    realtimeFor(code) {
+      if (!this.realtime || !this.realtime.quotes) return null;
+      return this.realtime.quotes.find((q) => q.code === code) || null;
+    },
+    realtimeAgeMin() {
+      if (!this.realtime || !this.realtime.fetchedAt) return null;
+      return Math.round((Date.now() - new Date(this.realtime.fetchedAt).getTime()) / 60000);
+    },
+    realtimeStatus() {
+      // 'live' = 5분 이내, 'stale' = 30분 이내, 'old' = 그 이상
+      const age = this.realtimeAgeMin();
+      if (age === null) return 'none';
+      if (age <= 5) return 'live';
+      if (age <= 30) return 'stale';
+      return 'old';
+    },
+    realtimeColor() {
+      const s = this.realtimeStatus();
+      if (s === 'live') return '#198754';   // 초록
+      if (s === 'stale') return '#fd7e14';  // 주황
+      if (s === 'old') return '#6c757d';    // 회색
+      return '#dc3545';                      // 빨강 (없음/에러)
+    },
+
     forceDrawBacktest() {
       // 백테스트 탭 버튼 클릭 시 (탭이 비활성 → 활성 시점에 호출)
       this.$nextTick(() => this._drawBacktestCharts());
@@ -731,6 +803,13 @@ function app() {
         this.distribution = r;
         this._drawDist(scores);
         this._drawFactorStack();
+        // 추가 4개 차트 (canvas 렌더 보장 위해 $nextTick 사용)
+        this.$nextTick(() => {
+          try { this._drawGradeDonut(); } catch (e) { console.error('[gradeDonut]', e); }
+          try { this._drawMarket(); } catch (e) { console.error('[market]', e); }
+          try { this._drawSector(); } catch (e) { console.error('[sector]', e); }
+          try { this._drawFactorRadar(); } catch (e) { console.error('[factorRadar]', e); }
+        });
       } catch (e) { /* ignore */ }
     },
     _drawDist(scores) {
@@ -762,6 +841,102 @@ function app() {
       ];
       if (this._charts.factor) this._charts.factor.destroy();
       this._charts.factor = new Chart(ctx, { type: 'bar', data: { labels, datasets }, options: { indexAxis: 'y', plugins: { legend: { position: 'bottom' } }, scales: { x: { max: 100, stacked: true }, y: { stacked: true } } } });
+    },
+
+    // ----- 분포 페이지 4개 추가 차트 -----
+    _drawGradeDonut() {
+      const ctx = document.getElementById('gradeDonutChart');
+      if (!ctx || !this.distribution || !this.distribution.gradeCounts) return;
+      if (ctx.clientWidth === 0) { console.warn('gradeDonutChart width=0, skip'); return; }
+      const gc = this.distribution.gradeCounts;
+      const order = ['A+', 'A', 'B+', 'B', 'C', 'D', 'F'];
+      const colors = { 'A+': '#198754', 'A': '#198754', 'B+': '#0d6efd', 'B': '#6c757d', 'C': '#fd7e14', 'D': '#dc3545', 'F': '#842029' };
+      const data = order.map((g) => gc[g] || 0);
+      const total = data.reduce((a, b) => a + b, 0);
+      if (total === 0) return;
+      if (this._charts.gradeDonut) this._charts.gradeDonut.destroy();
+      this._charts.gradeDonut = new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels: order, datasets: [{ data, backgroundColor: order.map((g) => colors[g]), borderWidth: 2, borderColor: '#fff' }] },
+        options: { plugins: { legend: { position: 'right', labels: { font: { size: 11 } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.parsed}개 (${(ctx.parsed / total * 100).toFixed(1)}%)` } } }, maintainAspectRatio: false, cutout: '50%' },
+      });
+    },
+    _drawMarket() {
+      const ctx = document.getElementById('marketChart');
+      if (!ctx || !this.distribution || !this.distribution.marketBreakdown || this.distribution.marketBreakdown.length === 0) return;
+      if (ctx.clientWidth === 0) { console.warn('marketChart width=0, skip'); return; }
+      const mb = this.distribution.marketBreakdown;
+      const labels = mb.map((m) => m.market);
+      const colors = { KOSPI: '#0d6efd', KOSDAQ: '#fd7e14' };
+      if (this._charts.market) this._charts.market.destroy();
+      this._charts.market = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: '종목 수', data: mb.map((m) => m.count), backgroundColor: labels.map((l) => colors[l] || '#6c757d'), yAxisID: 'y' },
+            { label: '평균 점수', data: mb.map((m) => m.avg), type: 'line', borderColor: '#dc3545', backgroundColor: '#dc3545', yAxisID: 'y1', tension: 0.2 },
+          ],
+        },
+        options: {
+          plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+          scales: {
+            y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: '종목 수' } },
+            y1: { type: 'linear', position: 'right', beginAtZero: true, max: 100, grid: { display: false }, title: { display: true, text: '평균 점수' } },
+          },
+        },
+      });
+    },
+    _drawSector() {
+      const ctx = document.getElementById('sectorChart');
+      if (!ctx || !this.distribution || !this.distribution.sectorBreakdown || this.distribution.sectorBreakdown.length === 0) return;
+      if (ctx.clientWidth === 0) { console.warn('sectorChart width=0, skip'); return; }
+      const sb = this.distribution.sectorBreakdown.slice(0, 12);
+      const labels = sb.map((s) => s.sector.length > 6 ? s.sector.slice(0, 6) + '…' : s.sector);
+      if (this._charts.sector) this._charts.sector.destroy();
+      this._charts.sector = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: '종목 수', data: sb.map((s) => s.count), backgroundColor: '#0d6efd', yAxisID: 'y', order: 2 },
+            { label: '평균 점수', data: sb.map((s) => s.avg), type: 'line', borderColor: '#dc3545', backgroundColor: '#dc3545', yAxisID: 'y1', tension: 0.2, order: 1 },
+          ],
+        },
+        options: {
+          indexAxis: 'y',
+          plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+          scales: {
+            x: { beginAtZero: true, title: { display: true, text: '종목 수' } },
+            y: { ticks: { font: { size: 10 } } },
+            y1: { display: false, beginAtZero: true, max: 100 },
+          },
+        },
+      });
+    },
+    _drawFactorRadar() {
+      const ctx = document.getElementById('factorRadarChart');
+      if (!ctx || !this.distribution || !this.distribution.factorAvg) return;
+      if (ctx.clientWidth === 0) { console.warn('factorRadarChart width=0, skip'); return; }
+      const fa = this.distribution.factorAvg;
+      const labels = ['가치', '모멘텀', '퀄리티', '저변동', '성장', '유동', '수급'];
+      const keys = ['value_score', 'momentum_score', 'quality_score', 'volatility_score', 'growth_score', 'liquidity_score', 'supply_score'];
+      if (this._charts.factorRadar) this._charts.factorRadar.destroy();
+      this._charts.factorRadar = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels,
+          datasets: [
+            { label: '전체 종목 평균', data: keys.map((k) => fa.all?.[k] || 0), backgroundColor: 'rgba(13, 110, 253, 0.2)', borderColor: '#0d6efd', borderWidth: 2, pointRadius: 3 },
+            { label: 'Top 20 평균', data: keys.map((k) => fa.top20?.[k] || 0), backgroundColor: 'rgba(220, 53, 69, 0.2)', borderColor: '#dc3545', borderWidth: 2, pointRadius: 3 },
+          ],
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom' } },
+          scales: { r: { beginAtZero: true, max: 100, ticks: { stepSize: 25 } } },
+        },
+      });
     },
 
     // ----- 백테스트 4개 차트 -----
@@ -1478,6 +1653,19 @@ function app() {
         if (r && !r.__error) this.portfolio = r;
       } catch (e) { console.error('[portfolio]', e); }
       this.portfolioLoading = false;
+    },
+
+    async loadDynamicPortfolio() {
+      try {
+        const r = await window.apiGet('/api/dynamic-portfolio');
+        if (r && !r.__error) this.dynamicPortfolio = r;
+      } catch (e) { console.error('[dynamicPortfolio]', e); }
+    },
+
+    // stock detail의 동적 포트폴리오 이력 조회
+    dynamicPortfolioFor(code) {
+      if (!this.dynamicPortfolio || !this.dynamicPortfolio.byStock) return null;
+      return this.dynamicPortfolio.byStock[code] || null;
     },
 
     async loadAnalytics(force = false) {

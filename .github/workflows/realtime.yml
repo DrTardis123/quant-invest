@@ -1,0 +1,55 @@
+name: Realtime Price Update
+
+on:
+  # 장중(KST 9:00~15:30 = UTC 0:00~6:30) 평일 5분마다
+  schedule:
+    - cron: '*/5 0-6 * * 1-5'
+  workflow_dispatch:
+
+concurrency:
+  group: quant-realtime
+  cancel-in-progress: true   # 동시에 여러 개 안 돌게
+
+jobs:
+  realtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 24 세팅
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm install --no-audit --no-fund --prefer-offline
+
+      - name: 실시간 시세 fetch
+        env:
+          DATA_SOURCE: naver
+        run: |
+          echo "=== 실시간 시세 fetch 시작 ==="
+          node scripts/fetch-realtime.js 2>&1 | tee logs/realtime.log
+          echo "=== 완료 ==="
+
+      - name: 커밋 & 푸시
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          if git diff --quiet public/data/realtime.json 2>/dev/null; then
+            echo "realtime.json 변경 없음"
+          else
+            git add public/data/realtime.json
+            git commit -m "data(realtime): $(date -u +%H:%M) KST $(date -u +%Y-%m-%d) 갱신"
+            git push
+          fi
+
+      - name: 실패시 로그
+        if: failure()
+        run: |
+          if [ -f logs/realtime.log ]; then tail -50 logs/realtime.log; fi

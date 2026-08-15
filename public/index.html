@@ -180,7 +180,12 @@
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center">
               <h5 class="card-title mb-0">🏆 상위 <span x-text="top.length"></span>개 종목</h5>
-              <small class="text-muted">💡 행 클릭 → 퀀트 지표 상세</small>
+              <div class="d-flex gap-2 align-items-center">
+                <small class="text-muted">💡 행 클릭 → 퀀트 지표 상세</small>
+                <span class="badge" :style="`background:${realtimeColor()};font-size:10px`"
+                      x-text="realtimeStatus() === 'live' ? '● LIVE ' + (realtimeAgeMin() ?? '') + '분전' : (realtimeStatus() === 'stale' ? '● ' + (realtimeAgeMin() ?? '') + '분전' : (realtimeStatus() === 'old' ? '● ' + (realtimeAgeMin() ?? '') + '분전' : '● OFF'))"
+                      :title="realtime?.fetchedAt || '실시간 데이터 없음'"></span>
+              </div>
             </div>
             <div class="table-responsive mt-2">
               <table class="table table-sm table-hover align-middle clickable-table">
@@ -188,6 +193,8 @@
                   <tr>
                     <th>⭐</th>
                     <th>#</th><th>등급</th><th>종목</th><th>시장</th>
+                    <th class="text-end" title="실시간 현재가 (장중 60초 폴링)">현재가</th>
+                    <th class="text-end" title="전일 대비 등락률">등락률</th>
                     <th title="가치 팩터: PER/PBR 낮을수록 고점 (백분위)">가치</th>
                     <th title="모멘텀 팩터: 12개월-최근1개월 수익률 (Jegadeesh-Titman)">모멘텀</th>
                     <th title="퀄리티 팩터: ROE 높고 부채비율 낮은 우량주">퀄리티</th>
@@ -217,6 +224,9 @@
                         <span class="badge bg-secondary ms-1" x-show="r.status === 'low_liquidity'" title="소형주 (거래대금 1억 미만)">💧</span>
                       </td>
                       <td><span class="badge" :class="r.market === 'KOSPI' ? 'bg-primary' : 'bg-info'" x-text="r.market"></span></td>
+                      <td class="text-end fw-bold" x-text="r.close ? r.close.toLocaleString() + '원' : '—'"></td>
+                      <td class="text-end" :class="(r.change || 0) > 0 ? 'text-danger fw-bold' : ((r.change || 0) < 0 ? 'text-primary fw-bold' : 'text-muted')"
+                          x-text="r.change_pct != null ? ((r.change_pct >= 0 ? '+' : '') + r.change_pct.toFixed(2) + '%') : '—'"></td>
                       <td><span class="score" :data-s="r.value_score" x-text="fmt(r.value_score)"></span></td>
                       <td><span class="score" :data-s="r.momentum_score" x-text="fmt(r.momentum_score)"></span></td>
                       <td><span class="score" :data-s="r.quality_score" x-text="fmt(r.quality_score)"></span></td>
@@ -236,7 +246,7 @@
                       </td>
                     </tr>
                   </template>
-                  <tr x-show="top.length === 0"><td colspan="14" class="text-center text-muted py-4">아직 데이터가 없어요. 잠시 후 새로고침 해보세요.</td></tr>
+                  <tr x-show="top.length === 0"><td colspan="16" class="text-center text-muted py-4">아직 데이터가 없어요. 잠시 후 새로고침 해보세요.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -662,38 +672,100 @@
           <canvas id="factorChart" height="220"></canvas>
         </div></div>
       </div>
+
+      <div class="col-md-4">
+        <div class="card"><div class="card-body">
+          <h6>🎯 등급 분포</h6>
+          <p class="text-muted small mb-2">A+ ≥80 / A ≥70 / B+ ≥60 / B ≥50 / C ≥40 / D ≥30 / F &lt;30</p>
+          <canvas id="gradeDonutChart" height="220"></canvas>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card"><div class="card-body">
+          <h6>📊 시장별 분포</h6>
+          <p class="text-muted small mb-2">KOSPI vs KOSDAQ 종목 수 / 평균 점수</p>
+          <canvas id="marketChart" height="220"></canvas>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card"><div class="card-body">
+          <h6>🏷️ 섹터별 분포 (상위 12)</h6>
+          <p class="text-muted small mb-2">종목 수 / 평균 점수</p>
+          <canvas id="sectorChart" height="220"></canvas>
+        </div></div>
+      </div>
+
+      <div class="col-12">
+        <div class="card"><div class="card-body">
+          <h6>🕸️ 팩터 평균 비교 (전체 vs Top 20)</h6>
+          <p class="text-muted small mb-2">각 팩터의 평균 점수를 0-100 스케일로 비교. Top 20 편향 확인.</p>
+          <div style="height:280px"><canvas id="factorRadarChart"></canvas></div>
+        </div></div>
+      </div>
     </div>
   </div>
 
   <!-- ===== 상관 ===== -->
   <div x-show="tab==='corr'">
-    <div class="card">
-      <div class="card-body">
-        <h6>팩터 간 상관관계</h6>
-        <p class="text-muted small">+1: 완전양의 상관, 0: 무상관, -1: 완전음의 상관. 절댓값 0.7 이상이면 중복 가능성.</p>
-        <div class="corr-matrix">
-          <table class="table table-bordered table-sm mb-0">
-            <thead>
-              <tr>
-                <th></th>
-                <template x-for="k in correlation.keys" :key="k">
-                  <th class="text-center" x-text="factorLabel(k)"></th>
-                </template>
-              </tr>
-            </thead>
-            <tbody>
-              <template x-for="a in correlation.keys" :key="a">
-                <tr>
-                  <th x-text="factorLabel(a)"></th>
-                  <template x-for="b in correlation.keys" :key="a + '-' + b">
-                    <td class="text-center corr-cell"
-                        :style="`background:${corrColor(correlation.matrix[a]?.[b] || 0)}; color:${Math.abs(correlation.matrix[a]?.[b] || 0) > 0.5 ? '#fff' : '#000'}`"
-                        x-text="(correlation.matrix[a]?.[b] || 0).toFixed(2)"></td>
+    <div class="row g-3">
+      <div class="col-md-8">
+        <div class="card h-100">
+          <div class="card-body">
+            <h6>팩터 간 상관관계 (전체 종목, n=<span x-text="correlation.n || 0"></span>)</h6>
+            <p class="text-muted small">+1: 완전양의 상관, 0: 무상관, -1: 완전음의 상관. 절댓값 0.7 이상이면 중복 가능성.</p>
+            <div class="corr-matrix">
+              <table class="table table-bordered table-sm mb-0">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <template x-for="k in correlation.keys" :key="k">
+                      <th class="text-center" x-text="factorLabel(k)"></th>
+                    </template>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="a in correlation.keys" :key="a">
+                    <tr>
+                      <th x-text="factorLabel(a)"></th>
+                      <template x-for="b in correlation.keys" :key="a + '-' + b">
+                        <td class="text-center corr-cell"
+                            :style="`background:${corrColor(correlation.matrix[a]?.[b] || 0)}; color:${Math.abs(correlation.matrix[a]?.[b] || 0) > 0.5 ? '#fff' : '#000'}`"
+                            x-text="(correlation.matrix[a]?.[b] || 0).toFixed(2)"></td>
+                      </template>
+                    </tr>
                   </template>
-                </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <h6>🔗 높은 상관 페어 (|r| ≥ 0.4)</h6>
+            <p class="text-muted small">가중치 중복 위험. 한쪽 가중치를 줄여 분산 효과 ↑</p>
+            <ul class="list-group list-group-flush" style="max-height:480px;overflow-y:auto">
+              <template x-for="p in (correlation.highPairs || [])" :key="p.a + '-' + p.b">
+                <li class="list-group-item d-flex justify-content-between align-items-center p-2">
+                  <div>
+                    <strong x-text="factorLabel(p.a)"></strong>
+                    <span class="text-muted mx-1">↔</span>
+                    <strong x-text="factorLabel(p.b)"></strong>
+                    <br>
+                    <small class="text-muted" x-text="(p.r > 0 ? '양의 상관' : '음의 상관') + ' · 중복 가능성' + (Math.abs(p.r) > 0.7 ? ' ⚠️' : '')"></small>
+                  </div>
+                  <span class="badge" :class="Math.abs(p.r) > 0.7 ? 'bg-danger' : 'bg-warning text-dark'" x-text="p.r.toFixed(2)"></span>
+                </li>
               </template>
-            </tbody>
-          </table>
+              <li x-show="!correlation.highPairs || correlation.highPairs.length === 0" class="list-group-item text-center text-muted">
+                |r| ≥ 0.4 인 페어 없음 (독립적)
+              </li>
+            </ul>
+            <div class="alert alert-info mt-3 small" x-show="correlation.asOf">
+              📅 갱신: <strong x-text="correlation.asOf"></strong>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1417,6 +1489,7 @@
             <li class="nav-item"><a class="nav-link" :class="{active: detailTab==='regression'}" href="#" @click.prevent="detailTab='regression'">📈 회귀</a></li>
             <li class="nav-item"><a class="nav-link" :class="{active: detailTab==='charts'}" href="#" @click.prevent="detailTab='charts'">차트</a></li>
             <li class="nav-item"><a class="nav-link" :class="{active: detailTab==='radar'}" href="#" @click.prevent="detailTab='radar'">레이더</a></li>
+            <li class="nav-item"><a class="nav-link" :class="{active: detailTab==='history'}" href="#" @click.prevent="detailTab='history'">📅 이력</a></li>
           </ul>
           <div x-show="detailTab==='overview'">
             <div class="row">
@@ -1752,6 +1825,76 @@
               • 한쪽으로 쏠리면 해당 팩터 강점 (또는 약점)<br>
               • 가치는 낮고 모멘텀이 높으면 = 추세 추종형<br>
               • 가치는 높고 모멘텀이 낮으면 = 역발상 가치주
+            </div>
+          </div>
+          <div x-show="detailTab==='history'">
+            <h6>📅 동적 포트폴리오 진입/이탈 이력 (13개월 백테스트)</h6>
+            <p class="text-muted small mb-2">rebal 전략 (가치 50 가중치, 매월 top 10 리밸런싱) 시뮬레이션 기준. 이 종목이 top 10에 포함된 달과 이탈한 달을 표시합니다.</p>
+
+            <!-- 1) 요약 통계 -->
+            <div class="row g-2 mb-3" x-show="dynamicPortfolioFor(stockDetail?.stock?.code)">
+              <div class="col-md-3"><div class="card stat-card"><div class="card-body">
+                <div class="text-muted small">총 관측 개월</div>
+                <div class="fs-5 fw-bold" x-text="(dynamicPortfolioFor(stockDetail?.stock?.code)?.totalMonths || 0) + '개월'"></div>
+              </div></div></div>
+              <div class="col-md-3"><div class="card stat-card"><div class="card-body">
+                <div class="text-muted small">보유 개월</div>
+                <div class="fs-5 fw-bold text-success" x-text="(dynamicPortfolioFor(stockDetail?.stock?.code)?.inMonths || 0) + '개월'"></div>
+              </div></div></div>
+              <div class="col-md-3"><div class="card stat-card"><div class="card-body">
+                <div class="text-muted small">미보유 개월</div>
+                <div class="fs-5 fw-bold text-muted" x-text="(dynamicPortfolioFor(stockDetail?.stock?.code)?.outMonths || 0) + '개월'"></div>
+              </div></div></div>
+              <div class="col-md-3"><div class="card stat-card"><div class="card-body">
+                <div class="text-muted small">현재 상태</div>
+                <div class="fs-5 fw-bold" :class="(dynamicPortfolio.currentlyHeld || []).includes(stockDetail?.stock?.code) ? 'text-success' : 'text-muted'"
+                     x-text="(dynamicPortfolio.currentlyHeld || []).includes(stockDetail?.stock?.code) ? '🟢 보유중' : '⚪ 미보유'"></div>
+              </div></div></div>
+            </div>
+
+            <!-- 2) 월별 보유 타임라인 (시각화) -->
+            <div x-show="dynamicPortfolio?.monthlyComposition" class="mb-3">
+              <h6 class="mt-2">🗓️ 월별 보유 타임라인</h6>
+              <div class="d-flex flex-wrap gap-1" style="overflow-x:auto">
+                <template x-for="m in (dynamicPortfolio?.monthlyComposition || [])" :key="m.ym">
+                  <div class="text-center" :title="m.ym + ': ' + (m.top10.includes(stockDetail?.stock?.code) ? 'top 10 보유 (rank ' + (m.top10.indexOf(stockDetail.stock.code) + 1) + ', score ' + (m.scoreMap[stockDetail.stock.code] || 0) + ')' : '미보유')"
+                       :style="`width:48px;height:48px;border-radius:6px;cursor:pointer;background:${m.top10.includes(stockDetail?.stock?.code) ? '#198754' : '#e9ecef'};color:${m.top10.includes(stockDetail?.stock?.code) ? '#fff' : '#6c757d'};font-size:10px;display:flex;align-items:center;justify-content:center;flex-direction:column`">
+                    <div style="font-weight:bold" x-text="m.ym.slice(5, 7)"></div>
+                    <div style="font-size:8px" x-text="m.ym.slice(2, 4)"></div>
+                  </div>
+                </template>
+              </div>
+              <div class="text-muted small mt-1">🟢 초록 = 보유, ⚪ 회색 = 미보유 (마우스 오버 시 score/rank 표시)</div>
+            </div>
+
+            <!-- 3) 진입/이탈 이벤트 타임라인 -->
+            <h6 class="mt-3">⚡ 진입/이탈 이벤트</h6>
+            <div x-show="dynamicPortfolioFor(stockDetail?.stock?.code)?.entries?.length > 0">
+              <ul class="list-group">
+                <template x-for="e in dynamicPortfolioFor(stockDetail?.stock?.code)?.entries || []" :key="e.ym + e.type">
+                  <li class="list-group-item d-flex justify-content-between align-items-center p-2">
+                    <div>
+                      <span class="badge" :class="e.type === 'in' ? 'bg-success' : 'bg-secondary'" x-text="e.type === 'in' ? '진입' : '이탈'"></span>
+                      <strong class="ms-2" x-text="e.ym"></strong>
+                      <span class="text-muted ms-2" x-show="e.type === 'in' && e.rank" x-text="'rank ' + e.rank + ' · score ' + (e.score || 0)"></span>
+                    </div>
+                    <span class="text-muted small" x-text="e.type === 'in' ? '🟢 신규 매수' : '⚪ top 10 이탈'"></span>
+                  </li>
+                </template>
+              </ul>
+            </div>
+            <div class="alert alert-warning" x-show="!dynamicPortfolioFor(stockDetail?.stock?.code)" role="alert">
+              ⚠️ 이 종목은 13개월 백테스트 기간 동안 top 10에 한 번도 포함되지 않았습니다.
+              <br>현재 top 10 포함 여부: <strong x-text="(dynamicPortfolio?.currentlyHeld || []).includes(stockDetail?.stock?.code) ? '🟢 포함' : '⚪ 미포함'"></strong>
+            </div>
+
+            <!-- 4) 가이드 -->
+            <div class="alert alert-info mt-3 small">
+              <strong>💡 가이드</strong><br>
+              • 보유 비중이 높을수록 전략이 자주 선택한 종목 (안정적 우선주)<br>
+              • 진입/이탈이 잦으면 변동성 큼 (단기 모멘텀 종목)<br>
+              • 마지막 달 보유중이면 현재 rebal 포트폴리오에 포함<br>
+              • 1.2년치 데이터 한계: 5년치 데이터 있으면 ±20% 이내로 더 정확
             </div>
           </div>
         </div>

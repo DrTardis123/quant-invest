@@ -725,49 +725,57 @@ async function exportStatic() {
     writeJson('heatmap.json', []);
   }
 
-  // 상관관계 (DB에서 직접 계산 - factor_scores 기반)
+  // 상관관계 (in-memory 계산 - DB factor_scores는 liquidity/supply null + 5팩터만 저장되므로)
+  // 7팩터 전체의 실제 상관을 allFactors에서 직접 계산
   try {
-    const corr = await db.all(`
-      SELECT
-        CORR(value_score, momentum_score) AS value_momentum,
-        CORR(value_score, quality_score) AS value_quality,
-        CORR(value_score, volatility_score) AS value_volatility,
-        CORR(value_score, growth_score) AS value_growth,
-        CORR(value_score, liquidity_score) AS value_liquidity,
-        CORR(value_score, supply_score) AS value_supply,
-        CORR(momentum_score, quality_score) AS momentum_quality,
-        CORR(momentum_score, volatility_score) AS momentum_volatility,
-        CORR(momentum_score, growth_score) AS momentum_growth,
-        CORR(momentum_score, liquidity_score) AS momentum_liquidity,
-        CORR(momentum_score, supply_score) AS momentum_supply,
-        CORR(quality_score, volatility_score) AS quality_volatility,
-        CORR(quality_score, growth_score) AS quality_growth,
-        CORR(quality_score, liquidity_score) AS quality_liquidity,
-        CORR(quality_score, supply_score) AS quality_supply,
-        CORR(volatility_score, growth_score) AS volatility_growth,
-        CORR(volatility_score, liquidity_score) AS volatility_liquidity,
-        CORR(volatility_score, supply_score) AS volatility_supply,
-        CORR(growth_score, liquidity_score) AS growth_liquidity,
-        CORR(growth_score, supply_score) AS growth_supply,
-        CORR(liquidity_score, supply_score) AS liquidity_supply
-      FROM factor_scores
-      WHERE date = (SELECT MAX(date) FROM factor_scores)
-    `);
-    const r = corr[0] || {};
-    const num = (v) => (v === null || v === undefined || !Number.isFinite(Number(v)) ? 0 : Number(v));
-    const matrix = {
-      value_score: { value_score: 1, momentum_score: num(r.value_momentum), quality_score: num(r.value_quality), volatility_score: num(r.value_volatility), growth_score: num(r.value_growth), liquidity_score: num(r.value_liquidity), supply_score: num(r.value_supply) },
-      momentum_score: { value_score: num(r.value_momentum), momentum_score: 1, quality_score: num(r.momentum_quality), volatility_score: num(r.momentum_volatility), growth_score: num(r.momentum_growth), liquidity_score: num(r.momentum_liquidity), supply_score: num(r.momentum_supply) },
-      quality_score: { value_score: num(r.value_quality), momentum_score: num(r.momentum_quality), quality_score: 1, volatility_score: num(r.quality_volatility), growth_score: num(r.quality_growth), liquidity_score: num(r.quality_liquidity), supply_score: num(r.quality_supply) },
-      volatility_score: { value_score: num(r.value_volatility), momentum_score: num(r.momentum_volatility), quality_score: num(r.quality_volatility), volatility_score: 1, growth_score: num(r.volatility_growth), liquidity_score: num(r.volatility_liquidity), supply_score: num(r.volatility_supply) },
-      growth_score: { value_score: num(r.value_growth), momentum_score: num(r.momentum_growth), quality_score: num(r.quality_growth), volatility_score: num(r.volatility_growth), growth_score: 1, liquidity_score: num(r.growth_liquidity), supply_score: num(r.growth_supply) },
-      liquidity_score: { value_score: num(r.value_liquidity), momentum_score: num(r.momentum_liquidity), quality_score: num(r.quality_liquidity), volatility_score: num(r.volatility_liquidity), growth_score: num(r.growth_liquidity), liquidity_score: 1, supply_score: num(r.liquidity_supply) },
-      supply_score: { value_score: num(r.value_supply), momentum_score: num(r.momentum_supply), quality_score: num(r.quality_supply), volatility_score: num(r.volatility_supply), growth_score: num(r.growth_supply), liquidity_score: num(r.liquidity_supply), supply_score: 1 },
-    };
+    const FACTOR_KEYS = ['value_score', 'momentum_score', 'quality_score', 'volatility_score', 'growth_score', 'liquidity_score', 'supply_score'];
+    // status !== halt/zero_volume 인 정상 종목만 (메인 점수 분포와 일치)
+    const validRows = allFactors.filter((r) =>
+      r.status !== 'halt' && r.status !== 'zero_volume' &&
+      Number(r.total_score) > 0
+    );
+    // 각 팩터의 평균/표준편차
+    const stats = {};
+    for (const k of FACTOR_KEYS) {
+      const vals = validRows.map((r) => Number(r[k]) || 0);
+      const mean = vals.reduce((a, b) => a + b, 0) / (vals.length || 1);
+      const variance = vals.reduce((a, b) => a + (b - mean) ** 2, 0) / (vals.length || 1);
+      stats[k] = { mean, std: Math.sqrt(variance) };
+    }
+    // Pearson 상관계수 매트릭스
+    const matrix = {};
+    for (const a of FACTOR_KEYS) {
+      matrix[a] = {};
+      for (const b of FACTOR_KEYS) {
+        if (a === b) { matrix[a][b] = 1; continue; }
+        const sa = stats[a].std, sb = stats[b].std;
+        if (sa === 0 || sb === 0) { matrix[a][b] = 0; continue; }
+        let num = 0;
+        for (const r of validRows) {
+          num += ((Number(r[a]) || 0) - stats[a].mean) * ((Number(r[b]) || 0) - stats[b].mean);
+        }
+        matrix[a][b] = Number((num / (validRows.length * sa * sb)).toFixed(3));
+      }
+    }
+    // 상관 높은 페어 추출 (|r| >= 0.4, 대각 제외)
+    const highPairs = [];
+    for (let i = 0; i < FACTOR_KEYS.length; i++) {
+      for (let j = i + 1; j < FACTOR_KEYS.length; j++) {
+        const a = FACTOR_KEYS[i], b = FACTOR_KEYS[j];
+        const r = matrix[a][b];
+        if (Math.abs(r) >= 0.4) highPairs.push({ a, b, r });
+      }
+    }
+    highPairs.sort((x, y) => Math.abs(y.r) - Math.abs(x.r));
     writeJson('correlation.json', {
-      keys: ['value_score', 'momentum_score', 'quality_score', 'volatility_score', 'growth_score', 'liquidity_score', 'supply_score'],
+      keys: FACTOR_KEYS,
       matrix,
+      stats,
+      n: validRows.length,
+      highPairs: highPairs.slice(0, 10),
+      asOf: new Date().toISOString().slice(0, 10),
     });
+    console.log(`     → correlation ${validRows.length}개, highPairs ${highPairs.length}개`);
   } catch (e) {
     console.error('[export] correlation 실패:', e.message);
     writeJson('correlation.json', { keys: [], matrix: {} });
@@ -1034,16 +1042,18 @@ async function exportStatic() {
 
   // 분포 (전체 점수, 10점 단위 bin + 등급 분포 + 평균/중앙값)
 
-  // 분포 (전체 점수, 10점 단위 bin + 등급 분포 + 평균/중앙값)
+  // 분포 (전체 점수, 10점 단위 bin + 등급 분포 + 평균/중앙값 + 시장/섹터/팩터 평균)
   try {
     const distRows = await db.all(`
       SELECT total_score FROM factor_scores
       WHERE date = (SELECT MAX(date) FROM factor_scores) AND total_score > 0
     `);
     let scores = distRows.map((r) => Number(r.total_score) || 0);
-    if (scores.length === 0) {
-      scores = allFactors.filter((r) => r.total_score > 0).map((r) => r.total_score);
-    }
+    // DB query fallback (DuckDB MAX(date) 바인딩 이슈 대비)
+    let validRows = allFactors.filter((r) =>
+      r.status !== 'halt' && r.status !== 'zero_volume' && Number(r.total_score) > 0
+    );
+    if (scores.length === 0) scores = validRows.map((r) => r.total_score);
     // 평균, 중앙값, 최고, 최빈값, 표준편차
     const mean = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
     const sorted = [...scores].sort((a, b) => a - b);
@@ -1056,7 +1066,6 @@ async function exportStatic() {
     const gradeOrder = ['A+', 'A', 'B+', 'B', 'C', 'D', 'F'];
     const gradeCounts = Object.fromEntries(gradeOrder.map((g) => [g, 0]));
     for (const s of scores) {
-      // scoring.gradeFor는 외부에서 import (factors 아님 src/scoring)
       const letter = (() => {
         if (s >= 80) return 'A+';
         if (s >= 70) return 'A';
@@ -1077,10 +1086,75 @@ async function exportStatic() {
       const idx = Math.min(9, Math.max(0, Math.floor(s / 10)));
       bins[idx].count++;
     }
+
+    // ★ 시장별 분포 (KOSPI vs KOSDAQ)
+    const marketStats = { KOSPI: { count: 0, sum: 0, max: 0 }, KOSDAQ: { count: 0, sum: 0, max: 0 } };
+    for (const r of validRows) {
+      const m = r.market;
+      if (!marketStats[m]) marketStats[m] = { count: 0, sum: 0, max: 0 };
+      marketStats[m].count++;
+      marketStats[m].sum += Number(r.total_score) || 0;
+      marketStats[m].max = Math.max(marketStats[m].max, Number(r.total_score) || 0);
+    }
+    const marketBreakdown = Object.entries(marketStats)
+      .filter(([k, v]) => v.count > 0)
+      .map(([k, v]) => ({
+        market: k,
+        count: v.count,
+        avg: Number((v.sum / v.count).toFixed(2)),
+        max: v.max,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    // ★ 섹터별 분포 (상위 12)
+    // allFactors rows는 sector 필드가 없으므로 stocks 테이블에서 직접 fetch
+    let sectorMap = new Map();
+    try {
+      if (validRows.length > 0) {
+        const codes = validRows.map((r) => r.code);
+        const placeholders = codes.map(() => '?').join(',');
+        const stockSecRows = await db.all(
+          `SELECT code, COALESCE(NULLIF(sector, ''), '미분류') AS sector FROM stocks WHERE code IN (${placeholders})`,
+          codes
+        );
+        const secByCode = new Map(stockSecRows.map((s) => [s.code, s.sector]));
+        for (const r of validRows) {
+          const sec = secByCode.get(r.code) || '미분류';
+          if (!sectorMap.has(sec)) sectorMap.set(sec, { count: 0, sum: 0 });
+          sectorMap.get(sec).count++;
+          sectorMap.get(sec).sum += Number(r.total_score) || 0;
+        }
+      }
+    } catch (e) {
+      console.error('[export] sector 분포 fetch 실패:', e.message);
+    }
+    const sectorBreakdown = Array.from(sectorMap.entries())
+      .map(([sector, v]) => ({
+        sector,
+        count: v.count,
+        avg: Number((v.sum / v.count).toFixed(2)),
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12);
+
+    // ★ 팩터별 평균 (전체 종목 vs TOP 20)
+    const FACTOR_KEYS = ['value_score', 'momentum_score', 'quality_score', 'volatility_score', 'growth_score', 'liquidity_score', 'supply_score'];
+    const factorAvgAll = {};
+    const factorAvgTop = {};
+    for (const k of FACTOR_KEYS) {
+      const all = validRows.map((r) => Number(r[k]) || 0);
+      factorAvgAll[k] = all.length ? Number((all.reduce((a, b) => a + b, 0) / all.length).toFixed(2)) : 0;
+      const top = validRows.slice(0, 20).map((r) => Number(r[k]) || 0);
+      factorAvgTop[k] = top.length ? Number((top.reduce((a, b) => a + b, 0) / top.length).toFixed(2)) : 0;
+    }
+
     writeJson('distribution.json', {
       scores,
       bins,
       gradeCounts,
+      marketBreakdown,
+      sectorBreakdown,
+      factorAvg: { all: factorAvgAll, top20: factorAvgTop },
       summary: {
         count: scores.length,
         mean: Number(mean.toFixed(2)),
@@ -1090,7 +1164,7 @@ async function exportStatic() {
         std: Number(std.toFixed(2)),
       },
     });
-    console.log(`     → distribution ${scores.length}개 점수, 평균 ${mean.toFixed(1)}점, 중앙값 ${median.toFixed(1)}점`);
+    console.log(`     → distribution ${scores.length}개 점수, 평균 ${mean.toFixed(1)}점, ${marketBreakdown.length}시장/${sectorBreakdown.length}섹터`);
   } catch (e) {
     console.error('[export] distribution 실패:', e.message);
     writeJson('distribution.json', { scores: [] });

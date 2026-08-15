@@ -178,6 +178,7 @@ async function loadData() {
 function simulate(strategy, monthlyScores, monthlyRetArr, kospiReturns) {
   const W = 10;
   const monthlyRet = [];
+  let monthlyComposition = []; // rebal 전용: 매월 top 10 구성
   const tradeLog = []; // [{ym, type: 'buy'/'sell', code, ret, reason}]
 
   if (strategy === 'static') {
@@ -198,13 +199,16 @@ function simulate(strategy, monthlyScores, monthlyRetArr, kospiReturns) {
     }
   } else if (strategy === 'rebal') {
     // 동적 매월 리밸런싱: 매월 top 10으로 전부 교체
+    monthlyComposition = []; // [{ym, date, top10: [code1, ...], scoreMap: {code: total}}, ...]
     for (let i = 0; i < monthlyScores.length - 1; i++) {
       const cur = monthlyScores[i];
-      const top10 = cur.stocks
+      const sorted = cur.stocks
         .slice()
-        .sort((a, b) => (b.scores.total || 0) - (a.scores.total || 0))
-        .slice(0, W)
-        .map((s) => s.code);
+        .sort((a, b) => (b.scores.total || 0) - (a.scores.total || 0));
+      const top10 = sorted.slice(0, W).map((s) => s.code);
+      const scoreMap = {};
+      for (const s of sorted.slice(0, W)) scoreMap[s.code] = round2(s.scores.total || 0);
+      monthlyComposition.push({ ym: cur.ym, date: cur.date, top10, scoreMap });
       const retMap = new Map(Object.entries(monthlyRetArr[i]?.returns || {}));
       let sumRet = 0, n = 0;
       for (const code of top10) {
@@ -273,7 +277,7 @@ function simulate(strategy, monthlyScores, monthlyRetArr, kospiReturns) {
   const alpha = mean - kospiMean;
   let nav = 1, peak = 1, mdd = 0;
   for (const m of monthlyRet) { nav *= 1 + m; if (nav > peak) peak = nav; const dd = (nav - peak) / peak; if (dd < mdd) mdd = dd; }
-  return { total, kospiTotal, sharpe, alpha, mdd, nMonths: monthlyRet.length, mean, std, monthlyRet, tradeLog };
+  return { total, kospiTotal, sharpe, alpha, mdd, nMonths: monthlyRet.length, mean, std, monthlyRet, tradeLog, monthlyComposition };
 }
 
 async function main() {
@@ -321,6 +325,36 @@ async function main() {
 
   // 현재 보유 종목 + sell2 hit 시뮬레이션 (다음달 예측)
   const currentTop10 = rebalResult.tradeLog ? rebalResult.tradeLog : [];
+  // ★ 종목별 진입/이탈 이력 (rebal 전략의 monthlyComposition 기반)
+  const comp = rebalResult.monthlyComposition || [];
+  const byStock = {};
+  let prevCodes = new Set();
+  for (let i = 0; i < comp.length; i++) {
+    const cur = new Set(comp[i].top10);
+    for (const code of cur) {
+      if (!prevCodes.has(code)) {
+        if (!byStock[code]) byStock[code] = { entries: [], totalMonths: 0, inMonths: 0, outMonths: 0, lastSeen: null };
+        byStock[code].entries.push({ ym: comp[i].ym, type: 'in', rank: comp[i].top10.indexOf(code) + 1, score: comp[i].scoreMap[code] });
+        byStock[code].inMonths++;
+      }
+    }
+    for (const code of prevCodes) {
+      if (!cur.has(code)) {
+        if (byStock[code]) byStock[code].outMonths++;
+        // 이탈 시점 기록
+        if (!byStock[code]) byStock[code] = { entries: [], totalMonths: 0, inMonths: 0, outMonths: 0, lastSeen: null };
+        byStock[code].entries.push({ ym: comp[i].ym, type: 'out' });
+      }
+    }
+    for (const code of cur) {
+      if (!byStock[code]) byStock[code] = { entries: [], totalMonths: 0, inMonths: 0, outMonths: 0, lastSeen: null };
+      byStock[code].totalMonths++;
+      byStock[code].lastSeen = comp[i].ym;
+    }
+    prevCodes = cur;
+  }
+  // 현재 보유중인 종목
+  const currentlyHeld = comp.length > 0 ? comp[comp.length - 1].top10 : [];
   const out = {
     asOf: new Date().toISOString(),
     period: `${monthlyScores[0]?.ym} ~ ${monthlyScores[monthlyScores.length - 1]?.ym}`,
@@ -332,10 +366,13 @@ async function main() {
       sell2: { sharpe: round4(results.sell2.sharpe), total: round4(results.sell2.total), kospiTotal: round4(results.sell2.kospiTotal), mdd: round4(results.sell2.mdd), alpha: round4(results.sell2.alpha), n: results.sell2.nMonths, trades: results.sell2.tradeLog.length, buys: results.sell2.tradeLog.filter((t) => t.type === 'buy').length, sells: results.sell2.tradeLog.filter((t) => t.type === 'sell').length },
     },
     best: { name: best.name, sharpe: round4(best.sharpe), total: round4(best.total), mdd: round4(best.mdd) },
+    monthlyComposition: comp,
+    currentlyHeld,
+    byStock,
     description: '10개 종목 동적 리밸런싱. 매월 종합 점수 (가치 50 가중치) 기준 top 10으로 재구성. sell2 신호 (+21% 3R / -7% 1R) hit 종목 매도 → 다음 best 매수. 10개 종목 항상 유지.',
   };
   fs.writeFileSync(path.join(ROOT, 'public', 'data', 'dynamic-portfolio.json'), JSON.stringify(out, null, 2));
-  console.log(`[dp] dynamic-portfolio.json 저장`);
+  console.log(`[dp] dynamic-portfolio.json 저장 (byStock: ${Object.keys(byStock).length}개 종목 이력)`);
 }
 
 main().catch((e) => { console.error('[dp] fatal:', e.message, e.stack); process.exit(1); });
