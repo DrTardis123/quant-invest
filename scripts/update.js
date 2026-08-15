@@ -973,6 +973,67 @@ async function exportStatic() {
     writeJson('supply-signals.json', { buy: [], sell: [] });
   }
 
+  // === 신규: 10개 종목 분산 포트폴리오 (섹터 분산, 1/N 비중) ===
+  try {
+    const { buildPortfolio } = require('../src/data/portfolio');
+    // top.json의 KOSPI 메인 (거래정지/우선주/ETF 제외) 중 상위 30개 → 10개 선정
+    const topRows = top
+      .filter((r) => r.market === 'KOSPI' && r.total_score > 0 && r.status !== 'halt' && r.status !== 'zero_volume')
+      .slice(0, 30);
+    const portfolio = buildPortfolio(topRows, { maxN: 10, equalWeight: true, maxPerSector: 2 });
+    // 시총/외인/기관 5일 추가
+    if (portfolio.items.length > 0) {
+      const codes = portfolio.items.map((p) => p.code);
+      const placeholders = codes.map(() => '?').join(',');
+      const closeRows = await db.all(
+        `SELECT code, close FROM daily_prices dp
+         WHERE (code, date) IN (SELECT code, MAX(date) FROM daily_prices GROUP BY code)
+           AND code IN (${placeholders})`,
+        codes
+      );
+      const closeMap = new Map(closeRows.map((c) => [c.code, Number(c.close)]));
+      const supRows = await db.all(`
+        WITH ranked AS (
+          SELECT code, foreign_net, institution_net, ROW_NUMBER() OVER (PARTITION BY code ORDER BY date DESC) AS rn
+          FROM investor_flow
+          WHERE code IN (${placeholders})
+        )
+        SELECT code,
+               SUM(foreign_net) FILTER (WHERE rn <= 5) AS foreign_5d,
+               SUM(institution_net) FILTER (WHERE rn <= 5) AS inst_5d
+        FROM ranked GROUP BY code
+      `, codes);
+      const supMap = new Map(supRows.map((s) => [s.code, s]));
+      for (const item of portfolio.items) {
+        item.close = closeMap.get(item.code) || 0;
+        const sup = supMap.get(item.code) || {};
+        item.foreign_5d = Number(sup.foreign_5d) || 0;
+        item.inst_5d = Number(sup.inst_5d) || 0;
+      }
+    }
+    portfolio.asOf = new Date().toISOString();
+    portfolio.description = '10개 섹터 분산 (1/N=10% 비중), 거래정지/우선주/ETF/액티브/스팩/레버리지/인버스 제외. 1차/2차 매수·매도 신호는 종목 상세 페이지 참고.';
+    portfolio.riskManagement = {
+      perTradeRisk: '1R = 1% (계좌 대비), 1매매 최대 손실 -7% = 1R',
+      totalRisk: '10종목 분산 → 단일 종목 리스크 1/10',
+      stopLoss: '1차매도: 매입가 -7% (오닐) OR 5일선 종가 -2% 이탈',
+      takeProfit: '2차매도: +21% (3R) OR +8% (단기) OR 60일선 터치',
+      rebalance: '월 1회 리밸런싱 권장, 5일선 데드크로스 시 즉시 재평가',
+    };
+    portfolio.positionSizing = {
+      perTradePct: 14, // 1매매 -7% 손실 = 1R = 1% 계좌, → 1매매 14% / 10종목 = 1.4%
+      split: { first: 50, second: 30, third: 20 },
+      note: '1차매수 50% + 2차매수 30% + 3차매수 20% (분할 진입)',
+    };
+    writeJson('portfolio.json', portfolio);
+    console.log(`[export] portfolio ${portfolio.items.length}개 (섹터 ${Object.keys(portfolio.sectorDistribution).length}개 분산)`);
+  } catch (e) {
+    console.error('[export] portfolio 실패:', e.message);
+    writeJson('portfolio.json', { n: 0, items: [] });
+  }
+
+  // 분포 (전체 점수, 10점 단위 bin + 등급 분포 + 평균/중앙값)
+
   // 분포 (전체 점수, 10점 단위 bin + 등급 분포 + 평균/중앙값)
   try {
     const distRows = await db.all(`
@@ -1136,6 +1197,12 @@ async function exportStatic() {
       investor_flow: flow,
       technical: tech.summary,
       technical_series: tech.indicators,
+      signals: (() => {
+        try {
+          const { calculateSignals } = require('../src/data/signals');
+          return calculateSignals(prices, tech.summary);
+        } catch (e) { return null; }
+      })(),
     };
     fs.writeFileSync(path.join(STOCK_DIR, `${code}.json`), JSON.stringify(detail, (_k, v) => typeof v === 'bigint' ? Number(v) : v));
   }

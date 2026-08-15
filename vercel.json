@@ -23,7 +23,8 @@
     { "source": "/api/backtest",    "destination": "/data/backtest.json" },
     { "source": "/api/movers",      "destination": "/data/movers.json" },
     { "source": "/api/highlow",     "destination": "/data/highlow.json" },
-    { "source": "/api/supply-signals", "destination": "/data/supply-signals.json" }
+    { "source": "/api/supply-signals", "destination": "/data/supply-signals.json" },
+    { "source": "/api/portfolio",   "destination": "/data/portfolio.json" }
   ],
   "headers": [
     {

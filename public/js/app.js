@@ -48,6 +48,8 @@ function app() {
     newLows: [],
     strongBuy: [],
     strongSell: [],
+    portfolio: null,
+    portfolioLoading: false,
     briefing: '',
 
     // 옵티마이저 + 백테스트
@@ -138,6 +140,7 @@ function app() {
           else if (t === 'movers') { this.loadMovers(); }
           else if (t === 'highlow') { this.loadHighLow(); }
           else if (t === 'supply') { this.loadSupplySignals(); }
+          else if (t === 'portfolio') { this.loadPortfolio(); }
           else if (t === 'watchlist') { this._tabDraws.watchlist = true; }
         });
       });
@@ -251,6 +254,7 @@ function app() {
         else if (t === 'corr') { this.loadCorrelation(); this.$nextTick(() => this._drawCorrelation()); }
         else if (t === 'optimizer') { this.loadOptimizer(); this.$nextTick(() => this._drawOptimizer()); }
         else if (t === 'backtest') { this.loadBacktest(); this.$nextTick(() => this._drawBacktestCharts()); }
+        else if (t === 'portfolio') { this.loadPortfolio(); }
         else if (t === 'top') { this._drawTopCharts(); }
         else if (t === 'movers') { this.loadMovers(); }
         else if (t === 'highlow') { this.loadHighLow(); }
@@ -1340,6 +1344,15 @@ function app() {
           this.strongSell = (r.sell || []).slice(0, 15);
         }
       } catch (e) { /* ignore */ }
+    },
+
+    async loadPortfolio() {
+      this.portfolioLoading = true;
+      try {
+        const r = await window.apiGet('/api/portfolio');
+        if (r && !r.__error) this.portfolio = r;
+      } catch (e) { console.error('[portfolio]', e); }
+      this.portfolioLoading = false;
     },
 
     // ===== 가중치 슬라이더 (실시간) =====

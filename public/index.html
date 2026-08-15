@@ -167,6 +167,7 @@
     <li class="nav-item"><a class="nav-link" :class="{active: tab==='corr'}" href="#" @click.prevent="setTab('corr')">🔗 상관</a></li>
     <li class="nav-item"><a class="nav-link text-warning fw-bold" :class="{active: tab==='optimizer'}" href="#" @click.prevent="setTab('optimizer')">🎯 최적화</a></li>
     <li class="nav-item"><a class="nav-link text-warning fw-bold" :class="{active: tab==='backtest'}" href="#" @click.prevent="setTab('backtest')">⏪ 백테스트 <kbd>B</kbd></a></li>
+    <li class="nav-item"><a class="nav-link text-success fw-bold" :class="{active: tab==='portfolio'}" href="#" @click.prevent="setTab('portfolio')">💼 10종목 분산 <kbd>P</kbd></a></li>
     <li class="nav-item"><a class="nav-link" :class="{active: tab==='log'}" href="#" @click.prevent="setTab('log')">📋 로그</a></li>
   </ul>
 
@@ -936,6 +937,98 @@
     </div>
   </div>
 
+  <!-- ===== 10종목 분산 포트폴리오 (섹터 분산 자동) ===== -->
+  <div x-show="tab==='portfolio'">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
+          <h5 class="mb-0">💼 10종목 분산 포트폴리오 (섹터 자동 분산)</h5>
+          <span class="text-muted small">단일 종목 편향 방지. 매매 신호는 종목 상세 페이지 참고.</span>
+          <button class="btn btn-sm btn-outline-success ms-auto" @click="loadPortfolio()" :disabled="portfolioLoading">
+            <span x-show="!portfolioLoading">🔄 새로고침</span>
+            <span x-show="portfolioLoading">⏳ 로딩...</span>
+          </button>
+        </div>
+
+        <div class="alert alert-info" x-show="portfolio">
+          <div class="row g-2 small">
+            <div class="col-md-3"><strong>📅 기준일:</strong> <span x-text="portfolio?.asOf || '—'"></span></div>
+            <div class="col-md-3"><strong>📦 종목 수:</strong> <span x-text="portfolio?.n || 0"></span>개</div>
+            <div class="col-md-3"><strong>🏷️ 섹터 분산:</strong> <span x-text="Object.keys(portfolio?.sectorDistribution || {}).length"></span>개</div>
+            <div class="col-md-3"><strong>⚖️ 비중:</strong> 균등 1/N (<span x-text="(100 / (portfolio?.n || 1)).toFixed(1)"></span>%)</div>
+          </div>
+          <hr>
+          <div class="row g-2 small">
+            <div class="col-md-12">
+              <strong>🛡️ 리스크 관리 (1차매도 -7% / 2차매도 +21% 3R / 손익비 3:1):</strong>
+              <ul class="mb-0 mt-1">
+                <li>1매매 -7% 손실 = 1R (계좌의 1%). 1매매 최대 14% / 10종목 = 1.4%.</li>
+                <li>분할 진입: 1차매수 50% + 2차매수 30% + 3차매수 20%.</li>
+                <li>월 1회 리밸런싱 권장. 5일선 데드크로스 시 즉시 재평가.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert alert-warning" x-show="portfolio && portfolio.n === 0">
+          ⚠️ 포트폴리오 종목이 없습니다. 새로고침 시도 후에도 없으면 데이터 갱신 필요.
+        </div>
+
+        <div class="table-responsive" x-show="portfolio?.items?.length">
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>#</th>
+                <th>코드</th>
+                <th>종목명</th>
+                <th>섹터</th>
+                <th class="text-end">현재가</th>
+                <th class="text-end">총점</th>
+                <th class="text-end">등급</th>
+                <th class="text-end">비중</th>
+                <th class="text-end">외인 5일</th>
+                <th class="text-end">기관 5일</th>
+                <th>⭐</th>
+                <th>📊</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="item in (portfolio?.items || [])" :key="item.code">
+                <tr style="cursor:pointer" @click="openStock(item.code)">
+                  <td x-text="item.rank"></td>
+                  <td><small class="text-muted" x-text="item.code"></small></td>
+                  <td><strong x-text="item.name"></strong> <small class="text-muted" x-text="item.market === 'KOSPI' ? 'KOSPI' : 'KOSDAQ'"></small></td>
+                  <td><small x-text="item.sector || '—'"></small></td>
+                  <td class="text-end" x-text="(item.close || 0).toLocaleString() + '원'"></td>
+                  <td class="text-end"><strong :class="scoreClass(item.total_score)" x-text="(item.total_score || 0).toFixed(1)"></strong></td>
+                  <td class="text-end">
+                    <span class="grade-badge" :class="'grade-' + (item.grade?.color || 'secondary')" x-text="item.grade?.letter || '—'"></span>
+                  </td>
+                  <td class="text-end"><strong class="text-success" x-text="(item.weight || 0).toFixed(1) + '%'"></strong></td>
+                  <td class="text-end" :class="(item.foreign_5d || 0) > 0 ? 'text-danger fw-bold' : (item.foreign_5d || 0) < 0 ? 'text-primary fw-bold' : ''" x-text="(item.foreign_5d || 0).toLocaleString()"></td>
+                  <td class="text-end" :class="(item.inst_5d || 0) > 0 ? 'text-danger fw-bold' : (item.inst_5d || 0) < 0 ? 'text-primary fw-bold' : ''" x-text="(item.inst_5d || 0).toLocaleString()"></td>
+                  <td><button class="btn btn-sm star-btn" :class="isWatch(item.code) ? 'star-on' : 'star-off'" @click.stop="toggleWatch(item)">☆</button></td>
+                  <td><button class="btn btn-sm btn-outline-primary" @click.stop="openStock(item.code)">📊</button></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="row g-2 mt-3" x-show="portfolio?.sectorDistribution">
+          <div class="col-12">
+            <h6>🏷️ 섹터 분포</h6>
+            <div class="d-flex flex-wrap gap-2">
+              <template x-for="[sec, n] in Object.entries(portfolio?.sectorDistribution || {})" :key="sec">
+                <span class="badge bg-secondary" x-text="sec + ' ×' + n"></span>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== 로그 ===== -->
   <div x-show="tab==='log'">
     <div class="card">
@@ -1100,6 +1193,109 @@
             </div>
             <div class="small" x-text="stockDetail?.analyst?.oneLine || stockDetail?.analyst?.comment" style="font-weight:600; margin-bottom:4px;"></div>
             <div class="small text-muted" x-text="stockDetail?.analyst?.comment" style="line-height:1.5;"></div>
+          </div>
+
+          <!-- ★ 1차/2차 매수·매도 신호 (웹서칭 기반: 골든크로스+정배열+거래량+손익비 3:1) -->
+          <div class="row g-2 mb-3" x-show="stockDetail?.signals">
+            <div class="col-12 mb-1">
+              <div class="d-flex align-items-center flex-wrap gap-2">
+                <strong>🎯 매수·매도 신호</strong>
+                <span class="text-muted small">웹서칭 기반 정확 기준 (골든크로스 + 정배열 + 거래량 + 손익비 3:1)</span>
+                <span class="ms-auto small" x-show="stockDetail?.signals?.riskReward">
+                  손익비 <strong class="text-danger" x-text="'1 : ' + (stockDetail?.signals?.riskReward?.ratio || 0)"></strong>
+                  <span class="text-muted ms-1">(손절 -7% / 익절 +21% 3R)</span>
+                </span>
+              </div>
+            </div>
+            <!-- 1차매수 -->
+            <div class="col-md-3 col-6">
+              <div class="card border-0 shadow-sm h-100" :class="stockDetail?.signals?.buy1?.active ? 'bg-danger text-white' : 'bg-light'">
+                <div class="card-body p-2">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <strong class="small">1️⃣ 1차매수</strong>
+                    <span class="badge" :class="stockDetail?.signals?.buy1?.active ? 'bg-white text-danger' : 'bg-secondary'" x-text="stockDetail?.signals?.buy1?.active ? '🟢 BUY' : '⚪ WAIT'"></span>
+                  </div>
+                  <div class="small mb-1" style="line-height:1.4" x-text="stockDetail?.signals?.buy1?.description"></div>
+                  <div class="small" x-show="stockDetail?.signals?.buy1?.reasons?.length">
+                    <span class="opacity-75">조건:</span>
+                    <span x-text="(stockDetail?.signals?.buy1?.reasons || []).slice(0, 3).join(' · ')"></span>
+                  </div>
+                  <div class="mt-1 d-flex justify-content-between small">
+                    <span>점수 <strong x-text="stockDetail?.signals?.buy1?.score || 0"></strong>/100</span>
+                    <span x-text="(stockDetail?.signals?.buy1?.price || 0).toLocaleString() + '원'"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- 2차매수 -->
+            <div class="col-md-3 col-6">
+              <div class="card border-0 shadow-sm h-100" :class="stockDetail?.signals?.buy2?.active ? 'bg-warning text-dark' : 'bg-light'">
+                <div class="card-body p-2">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <strong class="small">2️⃣ 2차매수 (눌림)</strong>
+                    <span class="badge" :class="stockDetail?.signals?.buy2?.active ? 'bg-dark text-warning' : 'bg-secondary'" x-text="stockDetail?.signals?.buy2?.active ? '🟡 BUY' : '⚪ WAIT'"></span>
+                  </div>
+                  <div class="small mb-1" style="line-height:1.4" x-text="stockDetail?.signals?.buy2?.description"></div>
+                  <div class="small" x-show="stockDetail?.signals?.buy2?.reasons?.length">
+                    <span class="opacity-75">조건:</span>
+                    <span x-text="(stockDetail?.signals?.buy2?.reasons || []).slice(0, 3).join(' · ')"></span>
+                  </div>
+                  <div class="mt-1 d-flex justify-content-between small">
+                    <span>점수 <strong x-text="stockDetail?.signals?.buy2?.score || 0"></strong>/100</span>
+                    <span x-text="(stockDetail?.signals?.buy2?.price || 0).toLocaleString() + '원'"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- 1차매도 -->
+            <div class="col-md-3 col-6">
+              <div class="card border-0 shadow-sm h-100" :class="stockDetail?.signals?.sell1?.active ? 'bg-primary text-white' : 'bg-light'">
+                <div class="card-body p-2">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <strong class="small">1️⃣ 1차매도 (손절)</strong>
+                    <span class="badge" :class="stockDetail?.signals?.sell1?.active ? 'bg-white text-primary' : 'bg-secondary'" x-text="stockDetail?.signals?.sell1?.active ? '🔵 SELL' : '⚪ HOLD'"></span>
+                  </div>
+                  <div class="small mb-1" style="line-height:1.4" x-text="stockDetail?.signals?.sell1?.description"></div>
+                  <div class="small" x-show="stockDetail?.signals?.sell1?.reasons?.length">
+                    <span class="opacity-75">조건:</span>
+                    <span x-text="(stockDetail?.signals?.sell1?.reasons || []).slice(0, 3).join(' · ')"></span>
+                  </div>
+                  <div class="mt-1 d-flex justify-content-between small">
+                    <span class="text-danger">손실 <strong x-text="(stockDetail?.signals?.sell1?.lossPct || 0) + '%'"></strong></span>
+                    <span x-text="(stockDetail?.signals?.sell1?.price || 0).toLocaleString() + '원'"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- 2차매도 -->
+            <div class="col-md-3 col-6">
+              <div class="card border-0 shadow-sm h-100" :class="stockDetail?.signals?.sell2?.active ? 'bg-success text-white' : 'bg-light'">
+                <div class="card-body p-2">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <strong class="small">2️⃣ 2차매도 (익절)</strong>
+                    <span class="badge" :class="stockDetail?.signals?.sell2?.active ? 'bg-white text-success' : 'bg-secondary'" x-text="stockDetail?.signals?.sell2?.active ? '🟢 SELL' : '⚪ HOLD'"></span>
+                  </div>
+                  <div class="small mb-1" style="line-height:1.4" x-text="stockDetail?.signals?.sell2?.description"></div>
+                  <div class="small" x-show="stockDetail?.signals?.sell2?.reasons?.length">
+                    <span class="opacity-75">조건:</span>
+                    <span x-text="(stockDetail?.signals?.sell2?.reasons || []).slice(0, 3).join(' · ')"></span>
+                  </div>
+                  <div class="mt-1 d-flex justify-content-between small">
+                    <span class="text-danger">수익 <strong x-text="(stockDetail?.signals?.sell2?.profitPct || 0) + '%'"></strong></span>
+                    <span x-text="(stockDetail?.signals?.sell2?.price || 0).toLocaleString() + '원'"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- 손익비/포지션 사이징 -->
+            <div class="col-12" x-show="stockDetail?.signals?.riskReward">
+              <div class="d-flex align-items-center flex-wrap gap-3 p-2 bg-white border rounded small">
+                <span>📍 <strong>손절가</strong> <span class="text-primary fw-bold" x-text="(stockDetail?.signals?.riskReward?.stopLoss || 0).toLocaleString() + '원'"></span></span>
+                <span>🎯 <strong>익절가</strong> <span class="text-danger fw-bold" x-text="(stockDetail?.signals?.riskReward?.takeProfit || 0).toLocaleString() + '원'"></span></span>
+                <span>📊 <strong>손익비</strong> 1:<strong x-text="stockDetail?.signals?.riskReward?.ratio || 0"></strong></span>
+                <span class="ms-auto text-muted" x-text="stockDetail?.signals?.positionSizing?.note"></span>
+              </div>
+            </div>
           </div>
           <ul class="nav nav-pills nav-fill mb-3 flex-wrap">
             <li class="nav-item"><a class="nav-link" :class="{active: detailTab==='overview'}" href="#" @click.prevent="detailTab='overview'">개요</a></li>
