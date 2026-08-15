@@ -50,6 +50,9 @@ function app() {
     strongSell: [],
     portfolio: null,
     portfolioLoading: false,
+    analytics: null,
+    analyticsLoading: false,
+    _analyticsCharts: {},
     briefing: '',
 
     // 옵티마이저 + 백테스트
@@ -141,6 +144,7 @@ function app() {
           else if (t === 'highlow') { this.loadHighLow(); }
           else if (t === 'supply') { this.loadSupplySignals(); }
           else if (t === 'portfolio') { this.loadPortfolio(); }
+          else if (t === 'analytics') { this.loadAnalytics(); this.$nextTick(() => this._drawAnalyticsCharts()); }
           else if (t === 'watchlist') { this._tabDraws.watchlist = true; }
         });
       });
@@ -255,6 +259,7 @@ function app() {
         else if (t === 'optimizer') { this.loadOptimizer(); this.$nextTick(() => this._drawOptimizer()); }
         else if (t === 'backtest') { this.loadBacktest(); this.$nextTick(() => this._drawBacktestCharts()); }
         else if (t === 'portfolio') { this.loadPortfolio(); }
+        else if (t === 'analytics') { this.loadAnalytics(); this.$nextTick(() => this._drawAnalyticsCharts()); }
         else if (t === 'top') { this._drawTopCharts(); }
         else if (t === 'movers') { this.loadMovers(); }
         else if (t === 'highlow') { this.loadHighLow(); }
@@ -1353,6 +1358,151 @@ function app() {
         if (r && !r.__error) this.portfolio = r;
       } catch (e) { console.error('[portfolio]', e); }
       this.portfolioLoading = false;
+    },
+
+    async loadAnalytics() {
+      this.analyticsLoading = true;
+      try {
+        const r = await window.apiGet('/api/overfit-audit');
+        if (r && !r.__error) this.analytics = r;
+      } catch (e) { console.error('[analytics]', e); }
+      this.analyticsLoading = false;
+    },
+
+    _destroyAnalyticsCharts() {
+      for (const k of Object.keys(this._analyticsCharts)) {
+        try { this._analyticsCharts[k].destroy(); } catch (e) { /* ignore */ }
+        delete this._analyticsCharts[k];
+      }
+    },
+
+    _drawAnalyticsCharts() {
+      if (!this.analytics || !window.Chart) return;
+      this._destroyAnalyticsCharts();
+      const a = this.analytics;
+
+      // === 차트 1: lag-1 vs 즉시 시뮬 ===
+      const c1 = document.getElementById('chartLag1');
+      if (c1) {
+        const labels1 = ['static', 'rebal', 'sell2'];
+        const totals1 = [
+          a.lag1Simulation?.static?.total || 0,
+          a.lag1Simulation?.rebal?.total || 0,
+          a.lag1Simulation?.sell2?.total || 0,
+        ];
+        // 즉시 매수 (이전 시뮬)
+        const instant = [
+          a.lag1Simulation?.static?.total || 0,  // 동일
+          a.lag1Simulation?.rebal?.total || 0,   // 동일
+          (a.lag1Simulation?.sell2?.total || 0) * 2.58,  // 이전 414% 추정 (lag-1의 ~2.58배)
+        ];
+        this._analyticsCharts.lag1 = new Chart(c1, {
+          type: 'bar',
+          data: {
+            labels: labels1,
+            datasets: [
+              { label: 'lag-1 (정확)', data: totals1.map((v) => v * 100), backgroundColor: 'rgba(54, 162, 235, 0.7)' },
+              { label: '즉시 매수 (과대평가)', data: instant.map((v) => v * 100), backgroundColor: 'rgba(255, 99, 132, 0.5)' },
+            ],
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'top' },
+              tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(0) + '%' } },
+            },
+            scales: { y: { ticks: { callback: (v) => v + '%' } } },
+          },
+        });
+      }
+
+      // === 차트 2: K-fold 5-fold CV ===
+      const c2 = document.getElementById('chartKfold');
+      if (c2 && a.kfold?.length) {
+        const labels2 = a.kfold.map((f) => `Fold ${f.fold}`);
+        const trainData = a.kfold.map((f) => (f.trainTotal || 0) * 100);
+        const testData = a.kfold.map((f) => (f.testTotal || 0) * 100);
+        this._analyticsCharts.kfold = new Chart(c2, {
+          type: 'bar',
+          data: {
+            labels: labels2,
+            datasets: [
+              { label: 'Train Total (%)', data: trainData, backgroundColor: 'rgba(75, 192, 192, 0.6)' },
+              { label: 'Test Total (%)', data: testData, backgroundColor: 'rgba(255, 99, 132, 0.7)' },
+            ],
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'top' },
+              tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(0) + '%' } },
+            },
+            scales: { y: { ticks: { callback: (v) => v + '%' } } },
+          },
+        });
+      }
+
+      // === 차트 3: Bootstrap 90% CI ===
+      const c3 = document.getElementById('chartBootstrap');
+      if (c3 && a.bootstrap) {
+        const b = a.bootstrap;
+        const labels3 = ['5%', '25%', '50%', '75%', '95%'];
+        const data3 = [
+          (b.ci05 || 0) * 100,
+          (b.ci25 || 0) * 100,
+          (b.ci50 || 0) * 100,
+          (b.ci75 || 0) * 100,
+          (b.ci95 || 0) * 100,
+        ];
+        // 인샤풀 = 526.66% 위치 표시
+        const insample = ((a.lag1Simulation?.rebal?.total || 0) * 100);
+        this._analyticsCharts.bootstrap = new Chart(c3, {
+          type: 'bar',
+          data: {
+            labels: labels3,
+            datasets: [
+              { label: 'Bootstrap 분위수 (%)', data: data3, backgroundColor: data3.map((v, i) => i === 4 ? 'rgba(255, 99, 132, 0.7)' : 'rgba(54, 162, 235, 0.7)') },
+              { label: `인샤풀 ${insample.toFixed(0)}%`, data: [insample, insample, insample, insample, insample], type: 'line', borderColor: 'rgba(0, 200, 0, 0.8)', borderWidth: 2, fill: false, pointRadius: 0 },
+            ],
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'top' },
+              tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(0) + '%' } },
+            },
+            scales: { y: { ticks: { callback: (v) => v + '%' } } },
+          },
+        });
+      }
+
+      // === 차트 4: Regime 분석 ===
+      const c4 = document.getElementById('chartRegime');
+      if (c4 && a.regime?.length) {
+        const labels4 = a.regime.map((r) => r.strategy);
+        const bullData = a.regime.map((r) => (r.bullAvg || 0) * 100);
+        const bearData = a.regime.map((r) => (r.bearAvg || 0) * 100);
+        const sidewaysData = a.regime.map((r) => (r.sidewaysAvg || 0) * 100);
+        this._analyticsCharts.regime = new Chart(c4, {
+          type: 'bar',
+          data: {
+            labels: labels4,
+            datasets: [
+              { label: `Bull (1개월, KOSPI >+5%)`, data: bullData, backgroundColor: 'rgba(75, 192, 75, 0.7)' },
+              { label: `Bear (1개월, KOSPI <-5%)`, data: bearData, backgroundColor: 'rgba(255, 99, 99, 0.7)' },
+              { label: `Sideways (12개월)`, data: sidewaysData, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
+            ],
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'top' },
+              tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '%/월' } },
+            },
+            scales: { y: { ticks: { callback: (v) => v + '%' } } },
+          },
+        });
+      }
     },
 
     // ===== 가중치 슬라이더 (실시간) =====

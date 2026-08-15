@@ -24,7 +24,11 @@
     { "source": "/api/movers",      "destination": "/data/movers.json" },
     { "source": "/api/highlow",     "destination": "/data/highlow.json" },
     { "source": "/api/supply-signals", "destination": "/data/supply-signals.json" },
-    { "source": "/api/portfolio",   "destination": "/data/portfolio.json" }
+    { "source": "/api/portfolio",   "destination": "/data/portfolio.json" },
+    { "source": "/api/overfit-audit", "destination": "/data/overfit-audit.json" },
+    { "source": "/api/dynamic-portfolio", "destination": "/data/dynamic-portfolio.json" },
+    { "source": "/api/single-factor", "destination": "/data/single-factor.json" },
+    { "source": "/api/regression-2", "destination": "/data/regression-2.json" }
   ],
   "headers": [
     {

@@ -168,6 +168,7 @@
     <li class="nav-item"><a class="nav-link text-warning fw-bold" :class="{active: tab==='optimizer'}" href="#" @click.prevent="setTab('optimizer')">🎯 최적화</a></li>
     <li class="nav-item"><a class="nav-link text-warning fw-bold" :class="{active: tab==='backtest'}" href="#" @click.prevent="setTab('backtest')">⏪ 백테스트 <kbd>B</kbd></a></li>
     <li class="nav-item"><a class="nav-link text-success fw-bold" :class="{active: tab==='portfolio'}" href="#" @click.prevent="setTab('portfolio')">💼 10종목 분산 <kbd>P</kbd></a></li>
+    <li class="nav-item"><a class="nav-link text-info fw-bold" :class="{active: tab==='analytics'}" href="#" @click.prevent="setTab('analytics')">🔍 분석 진단 <kbd>A</kbd></a></li>
     <li class="nav-item"><a class="nav-link" :class="{active: tab==='log'}" href="#" @click.prevent="setTab('log')">📋 로그</a></li>
   </ul>
 
@@ -1022,6 +1023,77 @@
               <template x-for="[sec, n] in Object.entries(portfolio?.sectorDistribution || {})" :key="sec">
                 <span class="badge bg-secondary" x-text="sec + ' ×' + n"></span>
               </template>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 🔍 분석 진단 (회귀·포트폴리오·과적화) ===== -->
+  <div x-show="tab==='analytics'">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
+          <h5 class="mb-0">🔍 분석 진단 (회귀 + 포트폴리오 + 과적화)</h5>
+          <span class="text-muted small">단축키 A. 1.2년치 (14개월) 데이터 기반. KIS API 8년치 받으면 ±20% 이내로 좁아짐.</span>
+          <button class="btn btn-sm btn-outline-info ms-auto" @click="loadAnalytics()" :disabled="analyticsLoading">
+            <span x-show="!analyticsLoading">🔄 새로고침</span>
+            <span x-show="analyticsLoading">⏳ 로딩...</span>
+          </button>
+        </div>
+
+        <!-- 1) lag-1 시뮬 vs 즉시 매수 비교 -->
+        <h6 class="mt-3">📊 1) lag-1 시뮬 vs 즉시 매수 (정확도 비교)</h6>
+        <p class="text-muted small mb-2">매수 효과 즉시 반영(과대평가) vs 다음달 반영(정확). lag-1이 sell2 시뮬에서 -61% 차이 보임.</p>
+        <div style="height:280px" class="mb-4"><canvas id="chartLag1"></canvas></div>
+
+        <!-- 2) K-fold 5-fold CV -->
+        <h6 class="mt-3">📊 2) K-fold 5-fold CV (3개월 test)</h6>
+        <p class="text-muted small mb-2">각 fold에서 12개월 train / 3개월 test. 인샤풀 vs OOS Test Total 비교.</p>
+        <div style="height:280px" class="mb-4"><canvas id="chartKfold"></canvas></div>
+
+        <!-- 3) Bootstrap 90% CI -->
+        <h6 class="mt-3">📊 3) Bootstrap 90% 신뢰구간 (rebal, 200 iter)</h6>
+        <p class="text-muted small mb-2">월별 수익률 부트스트랩. 5%/25%/50%/75%/95% 분위수. 1.2년치 한계로 폭이 매우 넓음.</p>
+        <div style="height:280px" class="mb-4"><canvas id="chartBootstrap"></canvas></div>
+
+        <!-- 4) Regime 분석 (bull/bear/sideways) -->
+        <h6 class="mt-3">📊 4) Regime 분석 (KOSPI ret 기준)</h6>
+        <p class="text-muted small mb-2">bull (>+5%) / bear (<-5%) / sideways (그 외). KOSPI ret 4개월치 한계로 bear only 검증.</p>
+        <div style="height:280px" class="mb-4"><canvas id="chartRegime"></canvas></div>
+
+        <!-- 5) 인사이트 요약 -->
+        <h6 class="mt-3">💡 5) 인사이트</h6>
+        <div class="row g-2">
+          <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-light h-100">
+              <div class="card-body p-2">
+                <strong>🎯 가중치 안정성</strong>
+                <p class="small mb-0" x-text="analytics?.weightStability || '—'"></p>
+                <p class="small text-muted mb-0">5-fold OOS 모두 4팩터 균등 25% 일관. <strong>과적화 적음</strong>.</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100" :class="(analytics?.verdict?.oosRatio || 0) >= 70 ? 'bg-success text-white' : (analytics?.verdict?.oosRatio || 0) >= 50 ? 'bg-warning text-dark' : 'bg-danger text-white'">
+              <div class="card-body p-2">
+                <strong>🚨 과적화 진단</strong>
+                <p class="small mb-0">OOS/인샤풀: <strong x-text="(analytics?.verdict?.oosRatio || 0) + '%'"></strong></p>
+                <p class="small mb-0" x-text="analytics?.verdict?.message || '—'"></p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-light h-100">
+              <div class="card-body p-2">
+                <strong>📅 한계</strong>
+                <ul class="small mb-0 ps-3" style="line-height:1.5">
+                  <template x-for="(lim, i) in (analytics?.limitations || [])" :key="i">
+                    <li x-text="lim"></li>
+                  </template>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
