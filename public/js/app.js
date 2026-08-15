@@ -327,7 +327,37 @@ function app() {
     _drawCorrelation() {
       // 상관 행렬은 HTML로 직접 그려져 있어 별도 작업 없음
     },
-    _drawOptimizer() {},
+    _drawOptimizer() {
+      try {
+        const c = document.getElementById('chartOptimizerCompare');
+        if (!c || c.clientWidth === 0) return;
+        const data1 = this.optimizer?.best || { sharpe: 0, total: 0, mdd: 0 };
+        // 2차 회귀 결과: fetch
+        Promise.all([
+          window.apiGet('/api/regression-2').catch(() => null),
+        ]).then(([r2]) => {
+          const data2 = r2?.finalBest || r2?.best || { sharpe: 0, total: 0, mdd: 0 };
+          const labels = ['1차 회귀 (인샤풀)', '2차 회귀 (Ridge+5fold)'];
+          const sharpes = [data1.sharpe || 0, data2.sharpe || 0];
+          const totals = [(data1.total || 0) * 100, (data2.total || 0) * 100];
+          const mdds = [(data1.mdd || 0) * 100, (data2.mdd || 0) * 100];
+          if (this._charts.optCmp) this._charts.optCmp.destroy();
+          this._charts.optCmp = new Chart(c, {
+            type: 'bar',
+            data: {
+              labels,
+              datasets: [
+                { label: 'Sharpe × 100', data: sharpes.map((v) => v * 100), backgroundColor: 'rgba(75, 192, 75, 0.7)' },
+                { label: 'Total (%)', data: totals, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
+                { label: 'MDD (% 음수)', data: mdds, backgroundColor: 'rgba(255, 99, 132, 0.7)' },
+              ],
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { ticks: { callback: (v) => v + (Math.abs(v) >= 10 ? '%' : '') } } } },
+          });
+          console.log('[chartOptimizerCompare] OK');
+        });
+      } catch (e) { console.error('[chartOptimizerCompare] error:', e); }
+    },
     _drawHeatmap() {},
 
     onStrategyChange() {

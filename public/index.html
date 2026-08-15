@@ -701,6 +701,15 @@
 
   <!-- ===== 가중치 최적화 (NEW) ===== -->
   <div x-show="tab==='optimizer'">
+    <!-- ★ 1차 vs 2차 회귀분석 비교 차트 -->
+    <div class="card mb-3" x-show="optimizer.ok || true">
+      <div class="card-body">
+        <h6 class="card-title">📈 1차 vs 2차 회귀분석 비교</h6>
+        <p class="text-muted small mb-2">Sharpe / Total / MDD 비교. 2차 회귀 (Ridge + 5-fold CV) 가 인샤풀 정확도 더 높음.</p>
+        <div style="height:240px"><canvas id="chartOptimizerCompare"></canvas></div>
+      </div>
+    </div>
+
     <div class="card mb-3" x-show="optimizer.ok === false">
       <div class="card-body">
         <h6 class="text-warning">⏳ 가중치 최적화 데이터 준비 중</h6>
