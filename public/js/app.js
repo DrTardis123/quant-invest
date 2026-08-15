@@ -1070,11 +1070,39 @@ function app() {
     },
 
     _drawPriceChart() {
-      const ctx = document.getElementById('priceChart');
-      if (!ctx || !this.stockDetail?.prices) return;
-      const sorted = [...this.stockDetail.prices].sort((a, b) => new Date(a.date) - new Date(b.date));
-      if (this._charts.price) this._charts.price.destroy();
-      this._charts.price = new Chart(ctx, { type: 'line', data: { labels: sorted.map((p) => p.date), datasets: [{ label: '종가', data: sorted.map((p) => p.close), borderColor: '#0d6efd', tension: 0.15, pointRadius: 0 }] }, options: { plugins: { legend: { display: false } }, scales: { x: { display: false } } } });
+      try {
+        const ctx = document.getElementById('priceChart');
+        if (!ctx || !this.stockDetail?.prices) return;
+        const sorted = [...this.stockDetail.prices].sort((a, b) => new Date(a.date) - new Date(b.date));
+        if (this._charts.price) this._charts.price.destroy();
+        const sig = this.stockDetail.signals || {};
+        const datasets = [
+          { label: '종가', data: sorted.map((p) => p.close), borderColor: '#0d6efd', tension: 0.15, pointRadius: 0, fill: false },
+        ];
+        // 매수/매도 가격 수평선
+        if (sig.buyPrice) {
+          datasets.push({ label: `🟢 매수가 ${sig.buyPrice.toLocaleString()}`, data: sorted.map(() => sig.buyPrice), borderColor: 'rgba(40, 167, 69, 0.7)', borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false });
+        }
+        if (sig.riskReward?.stopLoss) {
+          datasets.push({ label: `🔴 손절가 ${Math.round(sig.riskReward.stopLoss).toLocaleString()}`, data: sorted.map(() => sig.riskReward.stopLoss), borderColor: 'rgba(220, 53, 69, 0.7)', borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false });
+        }
+        if (sig.riskReward?.takeProfit) {
+          datasets.push({ label: `🔵 익절가 ${Math.round(sig.riskReward.takeProfit).toLocaleString()}`, data: sorted.map(() => sig.riskReward.takeProfit), borderColor: 'rgba(13, 110, 253, 0.7)', borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false });
+        }
+        // 매수/매도 신호 활성 시 마지막 가격에 마커
+        const lastIdx = sorted.length - 1;
+        if (lastIdx >= 0) {
+          const last = sorted[lastIdx].close;
+          if (sig.buy1?.active || sig.buy2?.active) {
+            datasets.push({ label: '🟢 매수 신호', data: sorted.map((_, i) => i === lastIdx ? last : null), borderColor: 'transparent', backgroundColor: 'rgba(40, 167, 69, 0.9)', pointRadius: 8, pointStyle: 'triangle', showLine: false });
+          }
+          if (sig.sell1?.active || sig.sell2?.active) {
+            datasets.push({ label: '🔴 매도 신호', data: sorted.map((_, i) => i === lastIdx ? last : null), borderColor: 'transparent', backgroundColor: 'rgba(220, 53, 69, 0.9)', pointRadius: 8, pointStyle: 'rectRot', showLine: false });
+          }
+        }
+        this._charts.price = new Chart(ctx, { type: 'line', data: { labels: sorted.map((p) => p.date), datasets }, options: { plugins: { legend: { position: 'top', labels: { font: { size: 10 } } } }, scales: { x: { display: false } } } });
+        console.log('[priceChart] OK with signals');
+      } catch (e) { console.error('[priceChart] error:', e); }
     },
 
     _drawVolumeChart() {
