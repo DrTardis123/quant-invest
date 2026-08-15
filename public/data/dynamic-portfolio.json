@@ -1,0 +1,50 @@
+{
+  "asOf": "2026-08-15T00:58:39.770Z",
+  "period": "2025-07 ~ 2026-08",
+  "nMonths": 14,
+  "weights": {
+    "value": 50,
+    "momentum": 10,
+    "quality": 15,
+    "volatility": 5,
+    "growth": 10,
+    "liquidity": 5,
+    "supply": 5
+  },
+  "strategies": {
+    "static": {
+      "sharpe": 1.1574,
+      "total": 3.4383,
+      "kospiTotal": 0.0325,
+      "mdd": -0.1901,
+      "alpha": 0.1812,
+      "n": 13
+    },
+    "rebal": {
+      "sharpe": 1.1093,
+      "total": 5.2666,
+      "kospiTotal": 0.0325,
+      "mdd": -0.1211,
+      "alpha": 0.2794,
+      "n": 13
+    },
+    "sell2": {
+      "sharpe": 1.041,
+      "total": 4.1468,
+      "kospiTotal": 0.0325,
+      "mdd": -0.0639,
+      "alpha": 0.2609,
+      "n": 13,
+      "trades": 108,
+      "buys": 54,
+      "sells": 54
+    }
+  },
+  "best": {
+    "name": "rebal",
+    "sharpe": 1.1093,
+    "total": 5.2666,
+    "mdd": -0.1211
+  },
+  "description": "10개 종목 동적 리밸런싱. 매월 종합 점수 (가치 50 가중치) 기준 top 10으로 재구성. sell2 신호 (+21% 3R / -7% 1R) hit 종목 매도 → 다음 best 매수. 10개 종목 항상 유지."
+}
