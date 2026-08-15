@@ -261,23 +261,49 @@ function app() {
     setTab(t) {
       const oldTab = this.tab;
       this.tab = t;
-      this.$nextTick(() => {
+      // canvas 렌더링 보장을 위해 $nextTick 대신 setTimeout (50ms 후)
+      // Alpine.js x-show + $nextTick race condition 회피
+      setTimeout(() => {
         try {
-          if (t === 'heatmap') { this.loadHeatmap(); this.$nextTick(() => this._drawHeatmap()); }
+          if (t === 'heatmap') { this.loadHeatmap(); setTimeout(() => this._drawHeatmap(), 100); }
           else if (t === 'sector') { this.loadSectors(); }
           else if (t === 'chart') { this.drawCharts(); }
-          else if (t === 'corr') { this.loadCorrelation(); this.$nextTick(() => this._drawCorrelation()); }
-          else if (t === 'optimizer') { this.loadOptimizer(); this.$nextTick(() => this._drawOptimizer()); }
-          else if (t === 'backtest') { this.loadBacktest(); this.$nextTick(() => this._drawBacktestCharts()); }
+          else if (t === 'corr') { this.loadCorrelation(); setTimeout(() => this._drawCorrelation(), 100); }
+          else if (t === 'optimizer') { this.loadOptimizer(); setTimeout(() => this._drawOptimizer(), 100); }
+          else if (t === 'backtest') { this.loadBacktest(); setTimeout(() => this._drawBacktestCharts(), 100); }
           else if (t === 'portfolio') { this.loadPortfolio(); }
-          else if (t === 'analytics') { this.loadAnalytics(); this.$nextTick(() => this._drawAnalyticsCharts()); }
+          else if (t === 'analytics') { this.loadAnalytics(); setTimeout(() => this._drawAnalyticsCharts(), 100); }
           else if (t === 'top') { this._drawTopCharts(); }
           else if (t === 'movers') { this.loadMovers(); }
           else if (t === 'highlow') { this.loadHighLow(); }
           else if (t === 'supply') { this.loadSupplySignals(); }
           else if (t === 'watchlist') { this._drawTopCharts(); }
         } catch (e) { console.error('[setTab]', t, e); }
-      });
+      }, 50);
+    },
+
+    // === 안전한 차트 그리기 (canvas width 0 / Chart.js 에러 방지) ===
+    _safeDraw(canvasId, drawFn) {
+      const c = document.getElementById(canvasId);
+      if (!c) { console.warn(`[${canvasId}] not found`); return false; }
+      if (c.clientWidth === 0) { console.warn(`[${canvasId}] canvas width=0, skip`); return false; }
+      try { drawFn(c); console.log(`[${canvasId}] OK`); return true; }
+      catch (e) { console.error(`[${canvasId}] error:`, e); return false; }
+    },
+
+    // === 안전한 fetch (10초 timeout) ===
+    async _safeFetch(url, ms = 10000) {
+      const ctl = new AbortController();
+      const t = setTimeout(() => ctl.abort(), ms);
+      try {
+        const r = await fetch(url, { signal: ctl.signal });
+        clearTimeout(t);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return await r.json();
+      } catch (e) {
+        clearTimeout(t);
+        throw e;
+      }
     },
 
     _drawCorrelation() {
