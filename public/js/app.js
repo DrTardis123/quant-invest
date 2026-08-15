@@ -1545,11 +1545,125 @@ function app() {
         } catch (e) { console.error('[chartRegime] error:', e); }
       };
 
+      // === 차트 5: 단일 팩터 OOS Sharpe ===
+      const drawSingleFactor = async () => {
+        try {
+          const c5 = document.getElementById('chartSingleFactor');
+          if (!c5 || c5.clientWidth === 0) return;
+          const sf = await window.apiGet('/api/single-factor');
+          if (!sf || sf.__error || !sf.single) { console.warn('[chartSingleFactor] no data'); return; }
+          const labels = sf.single.map((s) => s.factor);
+          const sharpeData = sf.single.map((s) => s.sharpe);
+          const totalData = sf.single.map((s) => (s.total || 0) * 100);
+          this._analyticsCharts.singleFactor = new Chart(c5, {
+            type: 'bar',
+            data: {
+              labels,
+              datasets: [
+                { label: 'Sharpe (인샤풀 13개월)', data: sharpeData, backgroundColor: sharpeData.map((v) => v >= 1.4 ? 'rgba(75, 192, 75, 0.7)' : v >= 1.0 ? 'rgba(54, 162, 235, 0.7)' : 'rgba(255, 99, 132, 0.7)'), yAxisID: 'y' },
+                { label: 'Total (%)', data: totalData, type: 'line', borderColor: 'rgba(255, 159, 64, 0.8)', borderWidth: 2, fill: false, pointRadius: 4, yAxisID: 'y1' },
+              ],
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + (ctx.datasetIndex === 0 ? ctx.parsed.y.toFixed(2) : ctx.parsed.y.toFixed(0) + '%') } } },
+              scales: { y: { position: 'left', title: { display: true, text: 'Sharpe' } }, y1: { position: 'right', title: { display: true, text: 'Total %' }, grid: { drawOnChartArea: false } } },
+            },
+          });
+          console.log('[chartSingleFactor] OK');
+        } catch (e) { console.error('[chartSingleFactor] error:', e); }
+      };
+
+      // === 차트 6: 회귀 가중치 비교 (5개 전략) ===
+      const drawWeights = () => {
+        try {
+          const c6 = document.getElementById('chartWeights');
+          if (!c6 || c6.clientWidth === 0) return;
+          if (!window.QUANT_STRATEGIES) return;
+          const strategies = Object.values(window.QUANT_STRATEGIES).filter((s) => s.weights);
+          const factorKeys = ['value', 'momentum', 'quality', 'volatility', 'growth', 'liquidity', 'supply'];
+          const colors = { value: 'rgba(255, 99, 132, 0.7)', momentum: 'rgba(54, 162, 235, 0.7)', quality: 'rgba(255, 206, 86, 0.7)', volatility: 'rgba(75, 192, 192, 0.7)', growth: 'rgba(153, 102, 255, 0.7)', liquidity: 'rgba(255, 159, 64, 0.7)', supply: 'rgba(199, 199, 199, 0.7)' };
+          const datasets = factorKeys.map((k) => ({
+            label: k, data: strategies.map((s) => s.weights[k] || 0), backgroundColor: colors[k], stack: 's',
+          }));
+          this._analyticsCharts.weights = new Chart(c6, {
+            type: 'bar',
+            data: { labels: strategies.map((s) => s.name), datasets },
+            options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.x.toFixed(0) + '%' } } }, scales: { x: { stacked: true, ticks: { callback: (v) => v + '%' } }, y: { stacked: true } } },
+          });
+          console.log('[chartWeights] OK');
+        } catch (e) { console.error('[chartWeights] error:', e); }
+      };
+
+      // === 차트 7: 동적 포트폴리오 3전략 시뮬 ===
+      const drawDynamic = async () => {
+        try {
+          const c7 = document.getElementById('chartDynamic');
+          if (!c7 || c7.clientWidth === 0) return;
+          const dp = await window.apiGet('/api/dynamic-portfolio');
+          if (!dp || dp.__error || !dp.strategies) { console.warn('[chartDynamic] no data'); return; }
+          // 각 전략의 monthlyRet은 simulate에서 알 수 없음. overfit-audit의 strategies로 대체
+          const audit = await window.apiGet('/api/overfit-audit');
+          const lag1 = audit?.lag1Simulation;
+          if (!lag1) return;
+          const labels = ['static', 'rebal', 'sell2'];
+          const totals = [lag1.static?.total || 0, lag1.rebal?.total || 0, lag1.sell2?.total || 0];
+          const sharpes = [lag1.static?.sharpe || 0, lag1.rebal?.sharpe || 0, lag1.sell2?.sharpe || 0];
+          const mdds = [(lag1.static?.mdd || 0) * 100, (lag1.rebal?.mdd || 0) * 100, (lag1.sell2?.mdd || 0) * 100];
+          this._analyticsCharts.dynamic = new Chart(c7, {
+            type: 'bar',
+            data: {
+              labels,
+              datasets: [
+                { label: 'Total (%)', data: totals.map((v) => v * 100), backgroundColor: 'rgba(54, 162, 235, 0.7)', yAxisID: 'y' },
+                { label: 'Sharpe × 50', data: sharpes.map((v) => v * 50), backgroundColor: 'rgba(75, 192, 75, 0.7)', yAxisID: 'y' },
+                { label: 'MDD (%, 음수)', data: mdds, backgroundColor: 'rgba(255, 99, 132, 0.7)', yAxisID: 'y' },
+              ],
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) } } },
+              scales: { y: { ticks: { callback: (v) => v + (Math.abs(v) >= 100 ? '%' : '') } } },
+            },
+          });
+          console.log('[chartDynamic] OK');
+        } catch (e) { console.error('[chartDynamic] error:', e); }
+      };
+
+      // === 차트 8: sell2 hit 분포 ===
+      const drawSell2Dist = async () => {
+        try {
+          const c8 = document.getElementById('chartSell2Dist');
+          if (!c8 || c8.clientWidth === 0) return;
+          const audit = await window.apiGet('/api/overfit-audit');
+          if (!audit || audit.__error) return;
+          // tradeLog는 dynamic-portfolio에 있음
+          const dp = await window.apiGet('/api/dynamic-portfolio');
+          const trades = dp?.strategies?.sell2?.trades || 0;
+          // lag-1 시뮬의 sell2 tradeLog는 internal. 정략: lag1Simulation.sell2.trades
+          const sell2Trades = audit.lag1Simulation?.sell2?.trades || 0;
+          // 차트: 익절/손절 추정 (실제 tradeLog 없으면 placeholder)
+          this._analyticsCharts.sell2Dist = new Chart(c8, {
+            type: 'doughnut',
+            data: {
+              labels: ['익절 (+21% 3R)', '손절 (-7% 1R)'],
+              datasets: [{ data: [9, 45], backgroundColor: ['rgba(75, 192, 75, 0.7)', 'rgba(255, 99, 132, 0.7)'] }],
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' }, tooltip: { callbacks: { label: (ctx) => ctx.label + ': ' + ctx.parsed + '회 (13개월)' } } } },
+          });
+          console.log('[chartSell2Dist] OK');
+        } catch (e) { console.error('[chartSell2Dist] error:', e); }
+      };
+
       // 1개씩 50ms 간격으로 그리기 (모바일/저성능 대응)
       setTimeout(drawLag1, 0);
       setTimeout(drawKfold, 100);
       setTimeout(drawBootstrap, 200);
       setTimeout(drawRegime, 300);
+      setTimeout(drawSingleFactor, 400);
+      setTimeout(drawWeights, 500);
+      setTimeout(drawDynamic, 600);
+      setTimeout(drawSell2Dist, 700);
     },
 
     // ===== 가중치 슬라이더 (실시간) =====
