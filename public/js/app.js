@@ -261,6 +261,9 @@ function app() {
     setTab(t) {
       const oldTab = this.tab;
       this.tab = t;
+      // 이전 fetch 취소 (race condition 방지)
+      if (this._currentFetchCtl) { try { this._currentFetchCtl.abort(); } catch (e) {} }
+      this._currentFetchCtl = new AbortController();
       // canvas 렌더링 보장을 위해 $nextTick 대신 setTimeout (50ms 후)
       // Alpine.js x-show + $nextTick race condition 회피
       setTimeout(() => {
@@ -280,6 +283,18 @@ function app() {
           else if (t === 'watchlist') { this._drawTopCharts(); }
         } catch (e) { console.error('[setTab]', t, e); }
       }, 50);
+    },
+
+    // === 모든 차트 destroy (메모리 누수 방지) ===
+    _destroyAllCharts() {
+      for (const k of Object.keys(this._charts || {})) {
+        try { if (this._charts[k] && this._charts[k].destroy) this._charts[k].destroy(); } catch (e) { /* ignore */ }
+        delete this._charts[k];
+      }
+      for (const k of Object.keys(this._analyticsCharts || {})) {
+        try { if (this._analyticsCharts[k] && this._analyticsCharts[k].destroy) this._analyticsCharts[k].destroy(); } catch (e) { /* ignore */ }
+        delete this._analyticsCharts[k];
+      }
     },
 
     // === 안전한 차트 그리기 (canvas width 0 / Chart.js 에러 방지) ===
