@@ -1043,25 +1043,32 @@
           </button>
         </div>
 
+        <div class="alert alert-info" x-show="analyticsLoading" role="alert">
+          ⏳ 분석 데이터 로딩 중... (모바일은 5~10초 소요)
+        </div>
+        <div class="alert alert-warning" x-show="!analyticsLoading && !analytics" role="alert">
+          ⚠️ 데이터를 불러오지 못했습니다. 새로고침 버튼을 눌러보거나, Vercel CDN 캐시 (5분) 대기.
+        </div>
+
         <!-- 1) lag-1 시뮬 vs 즉시 매수 비교 -->
         <h6 class="mt-3">📊 1) lag-1 시뮬 vs 즉시 매수 (정확도 비교)</h6>
         <p class="text-muted small mb-2">매수 효과 즉시 반영(과대평가) vs 다음달 반영(정확). lag-1이 sell2 시뮬에서 -61% 차이 보임.</p>
-        <div style="height:280px" class="mb-4"><canvas id="chartLag1"></canvas></div>
+        <div style="height:220px" class="mb-4"><canvas id="chartLag1"></canvas></div>
 
         <!-- 2) K-fold 5-fold CV -->
         <h6 class="mt-3">📊 2) K-fold 5-fold CV (3개월 test)</h6>
         <p class="text-muted small mb-2">각 fold에서 12개월 train / 3개월 test. 인샤풀 vs OOS Test Total 비교.</p>
-        <div style="height:280px" class="mb-4"><canvas id="chartKfold"></canvas></div>
+        <div style="height:220px" class="mb-4"><canvas id="chartKfold"></canvas></div>
 
         <!-- 3) Bootstrap 90% CI -->
         <h6 class="mt-3">📊 3) Bootstrap 90% 신뢰구간 (rebal, 200 iter)</h6>
         <p class="text-muted small mb-2">월별 수익률 부트스트랩. 5%/25%/50%/75%/95% 분위수. 1.2년치 한계로 폭이 매우 넓음.</p>
-        <div style="height:280px" class="mb-4"><canvas id="chartBootstrap"></canvas></div>
+        <div style="height:220px" class="mb-4"><canvas id="chartBootstrap"></canvas></div>
 
         <!-- 4) Regime 분석 (bull/bear/sideways) -->
         <h6 class="mt-3">📊 4) Regime 분석 (KOSPI ret 기준)</h6>
         <p class="text-muted small mb-2">bull (>+5%) / bear (<-5%) / sideways (그 외). KOSPI ret 4개월치 한계로 bear only 검증.</p>
-        <div style="height:280px" class="mb-4"><canvas id="chartRegime"></canvas></div>
+        <div style="height:220px" class="mb-4"><canvas id="chartRegime"></canvas></div>
 
         <!-- 5) 인사이트 요약 -->
         <h6 class="mt-3">💡 5) 인사이트</h6>
