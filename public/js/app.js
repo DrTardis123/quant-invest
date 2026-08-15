@@ -182,11 +182,15 @@ function app() {
       document.addEventListener('keydown', (e) => {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
         if (e.ctrlKey || e.altKey || e.metaKey) return;
-        if (e.key === 't' || e.key === 'T') { e.preventDefault(); this.setTab('top'); }
-        else if (e.key === 'h' || e.key === 'H') { e.preventDefault(); this.setTab('highlow'); }
+        // 페이지 감지: 메인(index.html) / 분석(analysis.html)
+        const isAnalysis = typeof location !== 'undefined' && location.pathname && location.pathname.endsWith('/analysis.html');
+        if (e.key === 't' || e.key === 'T') { e.preventDefault(); if (isAnalysis) location.href = '/index.html'; else this.setTab('top'); }
+        else if (e.key === 'h' || e.key === 'H') { e.preventDefault(); if (isAnalysis) location.href = '/index.html'; else this.setTab('highlow'); }
         else if (e.key === 'b' || e.key === 'B') { e.preventDefault(); this.setTab('backtest'); }
-        else if (e.key === 'm' || e.key === 'M') { e.preventDefault(); this.setTab('movers'); }
-        else if (e.key === 'w' || e.key === 'W') { e.preventDefault(); this.setTab('watchlist'); }
+        else if (e.key === 'm' || e.key === 'M') { e.preventDefault(); if (isAnalysis) location.href = '/index.html'; else this.setTab('movers'); }
+        else if (e.key === 'w' || e.key === 'W') { e.preventDefault(); if (isAnalysis) location.href = '/index.html'; else this.setTab('watchlist'); }
+        else if (e.key === 'a' || e.key === 'A') { e.preventDefault(); this.setTab('analytics'); }  // 메인/분석 양쪽에서 동작
+        else if (e.key === 'p' || e.key === 'P') { e.preventDefault(); this.setTab('portfolio'); }  // 메인/분석 양쪽에서 동작
         else if (e.key === '?') { e.preventDefault(); this.showShortcuts(); }
         else if (e.key === 'c' || e.key === 'C') { e.preventDefault(); this.openCompare(); }
         else if (e.key === 'n' || e.key === 'N') {
@@ -1051,6 +1055,12 @@ function app() {
     // ----- 종목 상세 -----
     async openStock(code) {
       try {
+        // 분석 페이지에서는 종목 상세 모달 대신 메인 페이지로 이동 (?code=XXX)
+        if (typeof location !== 'undefined' && location.pathname && location.pathname.endsWith('/analysis.html')) {
+          const market = this.marketFilter || 'KOSPI';
+          location.href = '/index.html?code=' + encodeURIComponent(code) + '&market=' + encodeURIComponent(market);
+          return;
+        }
         const r = await window.apiGet('/api/stock/' + encodeURIComponent(code));
         if (!r || r.__error || !r.stock) return;
         this.stockDetail = r;
