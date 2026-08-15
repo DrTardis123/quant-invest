@@ -696,7 +696,9 @@ function app() {
     },
 
     // ----- TOP 차트 -----
-    _drawTopCharts() { this._drawGradeChart(); this._drawFactorAvg(); },
+    _drawTopCharts() {
+      try { this._drawGradeChart(); this._drawFactorAvg(); } catch (e) { console.error('[topCharts] error:', e); }
+    },
     _drawGradeChart() {
       const ctx = document.getElementById('gradeChart');
       if (!ctx) return;
@@ -764,10 +766,12 @@ function app() {
 
     // ----- 백테스트 4개 차트 -----
     _drawBacktestCharts() {
-      this._drawNavChart();
-      this._drawYearlyChart();
-      this._drawMonthHeatmap();
-      this._drawDrawdownChart();
+      try {
+        this._drawNavChart();
+        this._drawYearlyChart();
+        this._drawMonthHeatmap();
+        this._drawDrawdownChart();
+      } catch (e) { console.error('[backtestCharts] error:', e); }
     },
     _drawNavChart() {
       const ctx = document.getElementById('navChart');
@@ -1063,10 +1067,12 @@ function app() {
 
     // ===== 차트 그리기 =====
     _drawStockCharts() {
-      // modal 첫 화면(overview)에 있는 차트만 그리기
-      this._drawPriceChart();
-      this._drawVolumeChart();
-      this._drawRadarChart();
+      try {
+        // modal 첫 화면(overview)에 있는 차트만 그리기
+        this._drawPriceChart();
+        this._drawVolumeChart();
+        this._drawRadarChart();
+      } catch (e) { console.error('[stockCharts] error:', e); }
     },
 
     _drawPriceChart() {
