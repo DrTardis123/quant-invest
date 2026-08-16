@@ -18,6 +18,7 @@
   <script src="/js/strategies.js"></script>
   <script src="/js/reweight.js"></script>
   <script src="/js/api.js"></script>
+  <script src="/js/notifications.js"></script>
 </head>
 <body>
 <nav class="navbar navbar-dark bg-dark sticky-top">
@@ -39,6 +40,41 @@
         <span x-show="!state.updating">🔄 지금 갱신</span>
         <span x-show="state.updating">진행 중...</span>
       </button>
+      <!-- 알림 벨 -->
+      <div class="position-relative" @click.outside="notifOpen = false">
+        <button class="btn btn-sm btn-outline-light position-relative" @click="toggleNotifPanel()" :title="notifUnreadCount > 0 ? notifUnreadCount + '개 안읽음' : '알림'">
+          🔔
+          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" x-show="notifUnreadCount > 0" x-text="notifUnreadCount" style="font-size:9px;padding:2px 5px"></span>
+        </button>
+        <!-- 알림 드롭다운 패널 -->
+        <div class="notif-panel" x-show="notifOpen" x-cloak x-transition>
+          <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+            <strong>🔔 알림</strong>
+            <div>
+              <button class="btn btn-sm btn-link p-0 me-2" @click="markAllNotifRead()" x-show="notifUnreadCount > 0">모두 읽음</button>
+              <button class="btn btn-sm btn-link p-0" @click="clearNotifs()">전체 삭제</button>
+            </div>
+          </div>
+          <div style="max-height:380px;overflow-y:auto">
+            <template x-for="n in notifications.slice(0, 30)" :key="n.id">
+              <div class="notif-item p-2 border-bottom" :class="{ 'notif-unread': !n.read }" @click="openNotif(n)">
+                <div class="d-flex justify-content-between">
+                  <strong :class="notifPriorityClass(n.priority)" x-text="n.title"></strong>
+                  <small class="text-muted" x-text="notifTimeAgo(n.timestamp)"></small>
+                </div>
+                <div class="small text-muted" x-text="n.message"></div>
+                <span class="badge bg-secondary" x-show="n.code" x-text="n.code"></span>
+              </div>
+            </template>
+            <div x-show="notifications.length === 0" class="text-center text-muted p-3">
+              알림이 없습니다
+            </div>
+          </div>
+          <div class="text-center p-2 small text-muted">
+            인앱 알림 (localStorage 저장 · 최대 50개)
+          </div>
+        </div>
+      </div>
       <button class="btn btn-sm btn-outline-light" @click="toggleDark()" :title="darkMode ? '라이트모드' : '다크모드'">
         <span x-text="darkMode ? '☀️' : '🌙'"></span>
       </button>

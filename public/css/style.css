@@ -206,3 +206,35 @@ body.dark-mode .loading-spinner { border-color: #495057; border-top-color: #0dca
 .clickable-row { cursor: pointer; }
 .clickable-row:hover { background: rgba(13,110,253,0.05); }
 body.dark-mode .clickable-row:hover { background: rgba(255,255,255,0.05); }
+
+/* === 알림 패널 === */
+.notif-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  width: 360px;
+  max-width: 95vw;
+  background: #fff;
+  color: #212529;
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 8px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.18);
+  z-index: 1080;
+  font-size: 13px;
+}
+body.dark-mode .notif-panel { background: #2b3035; color: #e9ecef; border-color: #495057; }
+.notif-item { cursor: pointer; transition: background 0.12s; }
+.notif-item:hover { background: rgba(13,110,253,0.07); }
+.notif-item.notif-unread { background: rgba(13,110,253,0.04); border-left: 3px solid #0d6efd; padding-left: 5px !important; }
+body.dark-mode .notif-item:hover { background: rgba(255,255,255,0.05); }
+body.dark-mode .notif-item.notif-unread { background: rgba(13,110,253,0.08); }
+
+/* === x-cloak (Alpine init 전 깜빡임 방지) === */
+[x-cloak] { display: none !important; }
+
+/* === 분포/상관 인터랙티브 === */
+.clickable-cell { cursor: pointer; transition: all 0.15s; }
+.clickable-cell:hover { outline: 2px solid #0d6efd; outline-offset: -2px; }
+.dist-filter-active { background: rgba(13,110,253,0.1) !important; font-weight: bold; }
+body.dark-mode .dist-filter-active { background: rgba(13,110,253,0.2) !important; }

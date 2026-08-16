@@ -57,6 +57,11 @@ function app() {
     realtime: null,  // 실시간 시세 (TOP 20)
     realtimeLastFetch: 0,
     _realtimeTimer: null,
+    notifications: [],  // 인앱 알림
+    notifOpen: false,  // 알림 패널 열림/닫힘
+    notifUnreadCount: 0,  // 안읽음 카운트
+    distGradeFilter: null,  // 분포 등급 필터 (null=전체, 'A+', 'A', ...)
+    distSectorFilter: null,  // 분포 섹터 필터
 
     // 옵티마이저 + 백테스트
     optimizer: { ok: false, error: '로딩 중...' },
@@ -234,6 +239,8 @@ function app() {
       }
       this.$nextTick(() => this._drawAllSparklines());
       this._generateBriefing();
+      // 인앱 알림 로드 (portfolio/top/logs 등 사용)
+      this.loadNotifications();
       // 실시간 시세 폴링 (60초마다, TOP 페이지 활성 시)
       this.loadRealtime();
       this._startRealtimePolling();
@@ -643,6 +650,72 @@ function app() {
       return '#dc3545';                      // 빨강 (없음/에러)
     },
 
+    // ===== 인앱 알림 =====
+    loadNotifications() {
+      // 1) localStorage에서 기존 알림 로드
+      try { this.notifications = window.NotifStore.load(); } catch (e) { this.notifications = []; }
+      this._updateNotifUnread();
+      // 2) 현재 데이터로 새 알림 생성 + 병합
+      try {
+        const newOnes = window.NotifStore.generateFromData({
+          portfolio: this.portfolio,
+          top: this.top,
+          distribution: this.distribution,
+          movers: { gainers: this.gainers, losers: this.losers },
+          supplySignals: this.supplySignals || { buy: [] },
+          log: this.logs,
+        });
+        if (newOnes.length > 0) {
+          this.notifications = window.NotifStore.mergeAndSave(newOnes);
+          this._updateNotifUnread();
+        }
+      } catch (e) { console.warn('[notif] generate failed:', e); }
+    },
+    _updateNotifUnread() {
+      this.notifUnreadCount = this.notifications.filter((n) => !n.read).length;
+    },
+    toggleNotifPanel() {
+      this.notifOpen = !this.notifOpen;
+      // 패널 열면 모두 읽음 처리
+      if (this.notifOpen && this.notifUnreadCount > 0) {
+        this.notifications = this.notifications.map((n) => ({ ...n, read: true }));
+        try { window.NotifStore.markAllRead(); } catch (e) {}
+        this.notifUnreadCount = 0;
+      }
+    },
+    markAllNotifRead() {
+      this.notifications = this.notifications.map((n) => ({ ...n, read: true }));
+      try { window.NotifStore.markAllRead(); } catch (e) {}
+      this.notifUnreadCount = 0;
+    },
+    clearNotifs() {
+      if (!confirm('모든 알림을 삭제하시겠습니까?')) return;
+      try { window.NotifStore.clear(); } catch (e) {}
+      this.notifications = [];
+      this.notifUnreadCount = 0;
+    },
+    openNotif(n) {
+      if (n.code) this.openStock(n.code);
+      this.notifOpen = false;
+    },
+    notifTimeAgo(iso) {
+      if (!iso) return '';
+      const t = new Date(iso).getTime();
+      if (!Number.isFinite(t)) return '';
+      const diff = Date.now() - t;
+      const min = Math.round(diff / 60000);
+      if (min < 1) return '방금';
+      if (min < 60) return `${min}분 전`;
+      const hr = Math.round(min / 60);
+      if (hr < 24) return `${hr}시간 전`;
+      return `${Math.round(hr / 24)}일 전`;
+    },
+    notifPriorityClass(p) {
+      if (p === 'high') return 'text-danger';
+      if (p === 'normal') return 'text-primary';
+      return 'text-muted';
+    },
+
     forceDrawBacktest() {
       // 백테스트 탭 버튼 클릭 시 (탭이 비활성 → 활성 시점에 호출)
       this.$nextTick(() => this._drawBacktestCharts());
@@ -702,29 +775,25 @@ function app() {
       ctx2d.stroke();
     },
 
-    // ----- 유틸 -----
-    fmt(v) { if (v === null || v === undefined) return '—'; if (typeof v === 'number') return v.toFixed(2); return v; },
-    fmtFund(v) { if (v === null || v === undefined || v === '' || !Number.isFinite(Number(v))) return '—'; return Number(v).toFixed(2); },
-    formatPct(v) { if (v === null || v === undefined || !Number.isFinite(v)) return '—'; const sign = v >= 0 ? '+' : ''; return sign + (v * 100).toFixed(2) + '%'; },
-    formatIdx(v) { if (v === null || v === undefined) return '—'; return Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
-    formatCap(v) { if (!v) return '—'; const eok = v / 1e8; if (eok >= 10000) return (eok / 10000).toFixed(1) + '조'; return eok.toFixed(0) + '억'; },
-    // 수급/거래량 단위 변환 (주 → 만주 / 원 → 억)
-    formatVolume(shares) {
-      if (shares === null || shares === undefined || !Number.isFinite(shares)) return '—';
-      const n = Number(shares);
-      if (Math.abs(n) >= 100000000) return (n / 100000000).toFixed(1) + '억주';
-      if (Math.abs(n) >= 10000) return (n / 10000).toFixed(1) + '만주';
-      return n.toLocaleString() + '주';
-    },
-    formatWon(won) {
-      if (won === null || won === undefined || !Number.isFinite(won)) return '—';
-      const n = Number(won);
-      if (Math.abs(n) >= 1e12) return (n / 1e12).toFixed(1) + '조';
-      if (Math.abs(n) >= 1e8) return (n / 1e8).toFixed(0) + '억';
-      return n.toLocaleString() + '원';
-    },
-    weightLabel(k) { return ({ value: '가치', momentum: '모멘텀', quality: '퀄리티', volatility: '저변동', growth: '성장', liquidity: '유동', supply: '수급' })[k] || k; },
-    factorLabel(k) { return ({ value_score: '가치', momentum_score: '모멘텀', quality_score: '퀄리티', volatility_score: '저변동', growth_score: '성장', liquidity_score: '유동', supply_score: '수급', total_score: '총점', value: '가치', momentum: '모멘텀', quality: '퀄리티', volatility: '저변동', growth: '성장', liquidity: '유동', supply: '수급' })[k] || k; },
+    // ----- 유틸 (common.js 위임, 하위 호환) -----
+    fmt(v) { return window.Q ? window.Q.fmt(v) : (v ?? '—'); },
+    fmtFund(v) { return window.Q ? window.Q.fmtFund(v) : (v ?? '—'); },
+    formatPct(v) { return window.Q ? window.Q.formatPct(v) : '—'; },
+    formatIdx(v) { return window.Q ? window.Q.formatIdx(v) : (v ?? '—'); },
+    formatCap(v) { return window.Q ? window.Q.formatCap(v) : (v ?? '—'); },
+    formatVolume(shares) { return window.Q ? window.Q.formatVolume(shares) : '—'; },
+    formatWon(won) { return window.Q ? window.Q.formatWon(won) : '—'; },
+    weightLabel(k) { return window.Q ? window.Q.weightLabel(k) : k; },
+    factorLabel(k) { return window.Q ? window.Q.factorLabel(k) : k; },
+    // scoreClass/corrColor는 common.js에 동일 시그니처로 존재
+    scoreColor(s) { return window.Q ? window.Q.scoreColor(s) : '#6c757d'; },
+    scoreClass(s) { return window.Q ? window.Q.scoreClass(s) : ''; },
+    corrColor(r) { return window.Q ? window.Q.corrColor(r) : '#ffffff'; },
+    valuationLabel(k) { return window.Q ? window.Q.valuationLabel(k) : k; },
+    valuationClass(k, v) { return window.Q ? window.Q.valuationClass(k, v) : ''; },
+    qualityLabel(k) { return window.Q ? window.Q.qualityLabel(k) : k; },
+    qualityClass(k, v) { return window.Q ? window.Q.qualityClass(k, v) : ''; },
+    analystRatingClass(rating) { return window.Q ? window.Q.analystRatingClass(rating) : 'bg-secondary'; },
     // 밸류에이션 라벨/색상
     valuationLabel(k) { return ({ per: 'PER', pbr: 'PBR', psr: 'PSR', eps: 'EPS', bps: 'BPS', dividend_yield: '배당률(%)' })[k] || k; },
     valuationClass(k, v) {
@@ -838,12 +907,33 @@ function app() {
       const w = ctx.clientWidth || 400;
       const h = ctx.clientHeight || 220;
       if (w === 0) { console.warn('distChart width=0, skip'); return; }
+      // 등급/섹터 필터 적용
+      let filtered = scores;
+      if (this.distGradeFilter || this.distSectorFilter) {
+        // allFactors에서 코드 → score 매핑
+        const codeMap = new Map((this.all || []).map((r) => [r.code, r]));
+        filtered = scores.filter((s, idx) => {
+          // scores는 숫자 배열이지만, 원본 allFactors를 순회하면서 매칭
+          // 단순화: scores는 분포 데이터이므로, sectorFilter는 추가 데이터 필요
+          // → 일단 gradeFilter만 작동 (sectorFilter는 후속)
+          if (!this.distGradeFilter) return true;
+          // 점수를 등급으로 변환
+          const letter = s >= 80 ? 'A+' : s >= 70 ? 'A' : s >= 60 ? 'B+' : s >= 50 ? 'B' : s >= 40 ? 'C' : s >= 30 ? 'D' : 'F';
+          return letter === this.distGradeFilter;
+        });
+      }
       const bins = new Array(10).fill(0);
-      for (const s of scores) { const i = Math.min(9, Math.max(0, Math.floor(s / 10))); bins[i]++; }
+      for (const s of filtered) { const i = Math.min(9, Math.max(0, Math.floor(s / 10))); bins[i]++; }
       const labels = bins.map((_, i) => `${i*10}-${i*10+10}`);
-      const colors = bins.map((_, i) => this.scoreColor(i * 10 + 5));
+      const colors = bins.map((_, i) => this.distGradeFilter && (i * 10 + 5) >= this.gradeFilterMin && (i * 10 + 5) < this.gradeFilterMax ? '#0d6efd' : this.scoreColor(i * 10 + 5));
       if (this._charts.dist) this._charts.dist.destroy();
-      this._charts.dist = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: '종목 수', data: bins, backgroundColor: colors }] }, options: { plugins: { legend: { display: false } } } });
+      // 필터 활성 시 제목 표시
+      const filterLabel = this.distGradeFilter ? ` (등급: ${this.distGradeFilter})` : '';
+      this._charts.dist = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [{ label: '종목 수' + filterLabel, data: bins, backgroundColor: colors }] },
+        options: { plugins: { legend: { display: true }, tooltip: { callbacks: { afterLabel: () => this.distGradeFilter ? '필터 적용 중 — 더블클릭 해제' : '' } } } }
+      });
     },
     _drawFactorStack() {
       const ctx = document.getElementById('factorChart');
@@ -874,11 +964,50 @@ function app() {
       const total = data.reduce((a, b) => a + b, 0);
       if (total === 0) return;
       if (this._charts.gradeDonut) this._charts.gradeDonut.destroy();
+      // 활성 필터 강조 (offset)
+      const offset = order.map((g) => this.distGradeFilter === g ? 18 : 0);
       this._charts.gradeDonut = new Chart(ctx, {
         type: 'doughnut',
-        data: { labels: order, datasets: [{ data, backgroundColor: order.map((g) => colors[g]), borderWidth: 2, borderColor: '#fff' }] },
-        options: { plugins: { legend: { position: 'right', labels: { font: { size: 11 } } }, tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.parsed}개 (${(ctx.parsed / total * 100).toFixed(1)}%)` } } }, maintainAspectRatio: false, cutout: '50%' },
+        data: {
+          labels: order,
+          datasets: [{
+            data, backgroundColor: order.map((g) => colors[g]), borderWidth: 2, borderColor: '#fff', offset
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { position: 'right', labels: { font: { size: 11 } } },
+            tooltip: { callbacks: { label: (c) => `${c.label}: ${c.parsed}개 (${(c.parsed / total * 100).toFixed(1)}%) · 클릭 시 필터` } }
+          },
+          maintainAspectRatio: false, cutout: '50%',
+          onClick: (e, els) => {
+            if (els && els.length > 0) {
+              const g = order[els[0].index];
+              this.distGradeFilter = this.distGradeFilter === g ? null : g;
+              this._drawGradeDonut();
+              this._drawDist();
+            }
+          }
+        },
       });
+    },
+    // === 분포 인터랙티브: 필터 ===
+    setDistGradeFilter(g) {
+      this.distGradeFilter = this.distGradeFilter === g ? null : g;
+      this._drawGradeDonut();
+      this._drawDist();
+    },
+    setDistSectorFilter(s) {
+      this.distSectorFilter = this.distSectorFilter === s ? null : s;
+      this._drawSector();
+      this._drawDist();
+    },
+    clearDistFilter() {
+      this.distGradeFilter = null;
+      this.distSectorFilter = null;
+      this._drawGradeDonut();
+      this._drawSector();
+      this._drawDist();
     },
     _drawMarket() {
       const ctx = document.getElementById('marketChart');
