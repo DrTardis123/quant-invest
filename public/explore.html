@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0d6efd">
   <meta name="description" content="7팩터 (가치/모멘텀/퀄리티/저변동/성장/유동/수급) 기반 KOSPI/KOSDAQ 종목 분석 및 백테스트">
-  <title>퀀트 투자 대시보드</title>
+  <title>탐색 — 퀀트 투자</title>
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
@@ -197,176 +197,335 @@
 
   <!-- ===== 탭 ===== -->
   <ul class="nav nav-tabs mb-3 flex-wrap">
-    <li class="nav-item"><a class="nav-link" :class="{active: tab==='top'}" href="#" @click.prevent="setTab('top')">🏆 TOP <kbd>T</kbd></a></li>
-    <li class="nav-item"><a class="nav-link" :class="{active: tab==='watchlist'}" href="#" @click.prevent="setTab('watchlist')">⭐ 관심종목 <span class="badge bg-warning text-dark" x-text="watchlist.length" x-show="watchlist.length > 0"></span></a></li>
-    <li class="nav-item ms-auto"><a class="nav-link text-secondary" href="/explore.html">🔍 탐색 페이지 →</a></li>
+    <li class="nav-item"><a class="nav-link" :class="{active: tab==='movers'}" href="#" @click.prevent="setTab('movers')">🚀 급등/급락 <kbd>M</kbd></a></li>
+    <li class="nav-item"><a class="nav-link" :class="{active: tab==='highlow'}" href="#" @click.prevent="setTab('highlow')">📈 신고/신저 <kbd>H</kbd></a></li>
+    <li class="nav-item"><a class="nav-link" :class="{active: tab==='heatmap'}" href="#" @click.prevent="setTab('heatmap')">🟥 히트맵</a></li>
+    <li class="nav-item"><a class="nav-link" :class="{active: tab==='all'}" href="#" @click.prevent="setTab('all')">📈 전체</a></li>
+    <li class="nav-item"><a class="nav-link" :class="{active: tab==='sector'}" href="#" @click.prevent="setTab('sector')">🏷️ 섹터</a></li>
+    <li class="nav-item"><a class="nav-link" :class="{active: tab==='supply'}" href="#" @click.prevent="setTab('supply')">💰 수급이상</a></li>
+    <li class="nav-item ms-auto"><a class="nav-link text-secondary" href="/index.html">← 메인으로</a></li>
     <li class="nav-item"><a class="nav-link text-info fw-bold" href="/analysis.html">📊 분석 페이지 →</a></li>
   </ul>
 
-  <!-- ===== TOP 픽 ===== -->
-  <div x-show="tab==='top'">
+  <!-- ===== 급등/급락 ===== -->
+  <div x-show="tab==='movers'">
+    <div class="alert alert-info py-2 mb-2" role="alert">
+      📅 데이터 기준: <strong x-text="moversPeriod || '전일 종가 vs 직전일 종가'"></strong>
+      <span class="text-muted ms-2">· 갱신: <span x-text="moversAsOf || '—'"></span></span>
+      <span class="badge bg-warning text-dark ms-2">⚠️ 시총 1000억+ & 20일 평균 거래대금 1억+ (저유동성/조성주 제외)</span>
+      <br><small class="text-muted">💡 실시간 가격은 🏆 TOP 20 페이지에서 확인 가능합니다.</small>
+    </div>
     <div class="row g-3">
-      <div class="col-md-8">
-        <div class="card">
+      <div class="col-md-6">
+        <div class="card border-danger">
           <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-              <h5 class="card-title mb-0">🏆 상위 <span x-text="top.length"></span>개 종목</h5>
-              <div class="d-flex gap-2 align-items-center">
-                <small class="text-muted">💡 행 클릭 → 퀀트 지표 상세</small>
-                <span class="badge" :style="`background:${realtimeColor()};font-size:10px`"
-                      x-text="realtimeStatus() === 'live' ? '● LIVE ' + (realtimeAgeMin() ?? '') + '분전' : (realtimeStatus() === 'stale' ? '● ' + (realtimeAgeMin() ?? '') + '분전' : (realtimeStatus() === 'old' ? '● ' + (realtimeAgeMin() ?? '') + '분전' : '● OFF'))"
-                      :title="realtime?.fetchedAt || '실시간 데이터 없음'"></span>
-              </div>
-            </div>
-            <div class="table-responsive mt-2">
-              <table class="table table-sm table-hover align-middle clickable-table">
-                <thead class="table-light">
-                  <tr>
-                    <th>⭐</th>
-                    <th>#</th><th>등급</th><th>종목</th><th>시장</th>
-                    <th class="text-end" title="실시간 현재가 (장중 60초 폴링)">현재가</th>
-                    <th class="text-end" title="전일 대비 등락률">등락률</th>
-                    <th title="가치 팩터: PER/PBR 낮을수록 고점 (백분위)">가치</th>
-                    <th title="모멘텀 팩터: 12개월-최근1개월 수익률 (Jegadeesh-Titman)">모멘텀</th>
-                    <th title="퀄리티 팩터: ROE 높고 부채비율 낮은 우량주">퀄리티</th>
-                    <th title="저변동 팩터: 60일 변동성 낮을수록 고점">저변동</th>
-                    <th title="성장 팩터: 매출/이익 YoY 성장률">성장</th>
-                    <th title="유동 팩터: 20일 평균 거래대금 높을수록 좋음">유동</th>
-                    <th title="수급 팩터: 외인+기관 5일 누적 순매수">수급</th>
-                    <th title="가중치 적용 7팩터 종합 점수">총점</th>
-                    <th>액션</th>
+            <h5 class="card-title text-danger">🚀 급등 TOP 10 (전일대비)</h5>
+            <table class="table table-sm table-hover">
+              <thead><tr><th>#</th><th>종목</th><th>시장</th><th>등락률</th><th>총점</th><th>시총</th></tr></thead>
+              <tbody>
+                <template x-for="(r, i) in gainers" :key="r.code">
+                  <tr class="clickable-row" @click="openStock(r.code)">
+                    <td x-text="i+1"></td>
+                    <td><strong x-text="r.name"></strong> <small class="text-muted" x-text="r.code"></small></td>
+                    <td><span class="badge" :class="r.market === 'KOSPI' ? 'bg-primary' : 'bg-info'" x-text="r.market"></span></td>
+                    <td class="text-danger fw-bold" x-text="formatPct(r.change_pct / 100)"></td>
+                    <td><strong x-text="fmt(r.total_score)"></strong></td>
+                    <td class="text-end"><small x-text="formatCap(r.market_cap)"></small></td>
                   </tr>
-                </thead>
-                <tbody>
-                  <template x-for="r in top" :key="r.code">
-                    <tr class="clickable-row" :class="r.status && r.status !== 'normal' ? 'table-warning' : ''" @click="openStock(r.code)">
-                      <td @click.stop>
-                        <button class="btn btn-sm star-btn" :class="isWatch(r.code) ? 'star-on' : 'star-off'" @click="toggleWatch(r)" :title="isWatch(r.code) ? '관심종목에서 제거' : '관심종목에 추가'">
-                          <span x-text="isWatch(r.code) ? '★' : '☆'"></span>
-                        </button>
-                      </td>
-                      <td x-text="r.rank"></td>
-                      <td><span class="grade-badge" :class="'grade-' + r.grade.color" x-text="r.grade.letter"></span></td>
-                      <td>
-                        <strong x-text="r.name"></strong>
-                        <small class="text-muted" x-text="r.code"></small>
-                        <span class="badge bg-danger ms-1" x-show="r.status === 'halt'" title="거래정지">🚫</span>
-                        <span class="badge bg-warning text-dark ms-1" x-show="r.status === 'caution'" title="거래주의 (유동성 부족)">⚠️</span>
-                        <span class="badge bg-secondary ms-1" x-show="r.status === 'low_liquidity'" title="소형주 (거래대금 1억 미만)">💧</span>
-                      </td>
-                      <td><span class="badge" :class="r.market === 'KOSPI' ? 'bg-primary' : 'bg-info'" x-text="r.market"></span></td>
-                      <td class="text-end fw-bold" x-text="r.close ? r.close.toLocaleString() + '원' : '—'"></td>
-                      <td class="text-end" :class="(r.change || 0) > 0 ? 'text-danger fw-bold' : ((r.change || 0) < 0 ? 'text-primary fw-bold' : 'text-muted')"
-                          x-text="r.change_pct != null ? ((r.change_pct >= 0 ? '+' : '') + r.change_pct.toFixed(2) + '%') : '—'"></td>
-                      <td><span class="score" :data-s="r.value_score" x-text="fmt(r.value_score)"></span></td>
-                      <td><span class="score" :data-s="r.momentum_score" x-text="fmt(r.momentum_score)"></span></td>
-                      <td><span class="score" :data-s="r.quality_score" x-text="fmt(r.quality_score)"></span></td>
-                      <td><span class="score" :data-s="r.volatility_score" x-text="fmt(r.volatility_score)"></span></td>
-                      <td><span class="score" :data-s="r.growth_score" x-text="fmt(r.growth_score)"></span></td>
-                      <td><span class="score" :data-s="r.liquidity_score" x-text="fmt(r.liquidity_score)"></span></td>
-                      <td><span class="score" :data-s="r.supply_score" x-text="fmt(r.supply_score)"></span></td>
-                      <td><strong class="total-score" :data-s="r.total_score" x-text="fmt(r.total_score)"></strong></td>
-                      <td class="text-end" @click.stop>
-                        <div class="btn-group btn-group-sm" role="group">
-                          <input type="checkbox" class="btn-check" :id="'cmp-' + r.code" @change="toggleCompare(r, $event.target.checked)">
-                          <label class="btn btn-outline-secondary" :for="'cmp-' + r.code" title="비교 선택">⚖️</label>
-                          <a class="btn btn-outline-secondary" :href="'https://finance.naver.com/item/main.naver?code=' + r.code" target="_blank" rel="noopener" title="네이버 증권">N</a>
-                          <a class="btn btn-outline-secondary" :href="'https://finance.daum.net/quotes/A' + r.code" target="_blank" rel="noopener" title="다음 증권">D</a>
-                          <button class="btn btn-outline-primary" @click="openStock(r.code)">상세</button>
-                        </div>
-                      </td>
-                    </tr>
-                  </template>
-                  <tr x-show="top.length === 0"><td colspan="16" class="text-center text-muted py-4">아직 데이터가 없어요. 잠시 후 새로고침 해보세요.</td></tr>
-                </tbody>
-              </table>
-            </div>
+                </template>
+                <tr x-show="gainers.length === 0"><td colspan="6" class="text-center text-muted py-3">데이터 로딩 중...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
-      <div class="col-md-4">
-        <div class="card mb-3">
+      <div class="col-md-6">
+        <div class="card border-primary">
           <div class="card-body">
-            <h6>등급 분포 (Top <span x-text="top.length"></span>)</h6>
-            <div class="d-flex justify-content-around small text-muted mb-1">
-              <span>평균 <strong class="text-primary" x-text="top.length ? (top.reduce((a,b)=>a+(b.total_score||0),0)/top.length).toFixed(1) + '점' : '—'"></strong></span>
-              <span>중앙값 <strong class="text-primary" x-text="top.length ? (() => { const s = top.map(r=>r.total_score||0).sort((a,b)=>a-b); const m = Math.floor(s.length/2); return s.length % 2 ? s[m].toFixed(1) : ((s[m-1]+s[m])/2).toFixed(1); })() + '점' : '—'"></strong></span>
-              <span>최고 <strong class="text-danger" x-text="top.length ? Math.max(...top.map(r=>r.total_score||0)).toFixed(1) + '점' : '—'"></strong></span>
-            </div>
-            <canvas id="gradeChart" height="180"></canvas>
-          </div>
-        </div>
-        <div class="card mb-3">
-          <div class="card-body">
-            <h6>팩터 평균 (Top <span x-text="top.length"></span>)</h6>
-            <canvas id="factorAvgChart" height="180"></canvas>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-body">
-            <h6>💡 핵심 인사이트</h6>
-            <ul class="small text-muted mb-0" style="padding-left:1.2em">
-              <li>거래정지·거래량0 종목은 <span class="text-danger">완전 제외</span></li>
-              <li>거래주의 종목은 <span class="text-warning">-50점</span> 자동 감점</li>
-              <li>KOSDAQ 종목은 메인에서 <span class="text-info">제외</span> (별도 페이지)</li>
-              <li>5팩터 + 2팩터 (유동/수급) = <strong>7팩터 종합</strong></li>
-              <li>백테스트 Sharpe 가중치 적용 (10/25/25/15/15/5/5)</li>
-              <li>ETF/레버리지/인버스/SPAC/우선주 자동 제외</li>
-            </ul>
+            <h5 class="card-title text-primary">💧 급락 TOP 10 (전일대비)</h5>
+            <table class="table table-sm table-hover">
+              <thead><tr><th>#</th><th>종목</th><th>시장</th><th>등락률</th><th>총점</th><th>시총</th></tr></thead>
+              <tbody>
+                <template x-for="(r, i) in losers" :key="r.code">
+                  <tr class="clickable-row" @click="openStock(r.code)">
+                    <td x-text="i+1"></td>
+                    <td><strong x-text="r.name"></strong> <small class="text-muted" x-text="r.code"></small></td>
+                    <td><span class="badge" :class="r.market === 'KOSPI' ? 'bg-primary' : 'bg-info'" x-text="r.market"></span></td>
+                    <td class="text-primary fw-bold" x-text="formatPct(r.change_pct / 100)"></td>
+                    <td><strong x-text="fmt(r.total_score)"></strong></td>
+                    <td class="text-end"><small x-text="formatCap(r.market_cap)"></small></td>
+                  </tr>
+                </template>
+                <tr x-show="losers.length === 0"><td colspan="6" class="text-center text-muted py-3">데이터 로딩 중...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ===== 관심종목 ===== -->
-  <div x-show="tab==='watchlist'">
+  <!-- ===== 신고/신저 ===== -->
+  <div x-show="tab==='highlow'">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">📈 52주 신고가 TOP 10</h5>
+            <table class="table table-sm table-hover">
+              <thead><tr><th>#</th><th>종목</th><th>시장</th><th>52주고가</th><th>총점</th></tr></thead>
+              <tbody>
+                <template x-for="(r, i) in newHighs" :key="r.code">
+                  <tr class="clickable-row" @click="openStock(r.code)">
+                    <td x-text="i+1"></td>
+                    <td><strong x-text="r.name"></strong> <small class="text-muted" x-text="r.code"></small></td>
+                    <td><span class="badge" :class="r.market === 'KOSPI' ? 'bg-primary' : 'bg-info'" x-text="r.market"></span></td>
+                    <td class="text-danger" x-text="r.week52_high ? r.week52_high.toLocaleString() + '원' : '—'"></td>
+                    <td><strong x-text="fmt(r.total_score)"></strong></td>
+                  </tr>
+                </template>
+                <tr x-show="newHighs.length === 0"><td colspan="5" class="text-center text-muted py-3">데이터 로딩 중...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">📉 52주 신저가 TOP 10</h5>
+            <table class="table table-sm table-hover">
+              <thead><tr><th>#</th><th>종목</th><th>시장</th><th>52주저가</th><th>총점</th></tr></thead>
+              <tbody>
+                <template x-for="(r, i) in newLows" :key="r.code">
+                  <tr class="clickable-row" @click="openStock(r.code)">
+                    <td x-text="i+1"></td>
+                    <td><strong x-text="r.name"></strong> <small class="text-muted" x-text="r.code"></small></td>
+                    <td><span class="badge" :class="r.market === 'KOSPI' ? 'bg-primary' : 'bg-info'" x-text="r.market"></span></td>
+                    <td class="text-primary" x-text="r.week52_low ? r.week52_low.toLocaleString() + '원' : '—'"></td>
+                    <td><strong x-text="fmt(r.total_score)"></strong></td>
+                  </tr>
+                </template>
+                <tr x-show="newLows.length === 0"><td colspan="5" class="text-center text-muted py-3">데이터 로딩 중...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 히트맵 ===== -->
+  <div x-show="tab==='heatmap'">
     <div class="card">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-2">
-          <h5 class="card-title mb-0">⭐ 관심종목 (<span x-text="watchlist.length"></span>개)</h5>
-          <small class="text-muted">💡 TOP 표에서 ☆ 클릭해서 추가. localStorage에 저장됩니다.</small>
+          <h5 class="card-title mb-0">🟥 시가총액 × 점수 히트맵</h5>
+          <div class="d-flex gap-2 align-items-center">
+            <select class="form-select form-select-sm" style="width:auto" x-model.number="heatmapLimit" @change="loadHeatmap()">
+              <option :value="50">50</option>
+              <option :value="80">80</option>
+              <option :value="120">120</option>
+            </select>
+            <div class="heatmap-legend">
+              <span class="legend-label">낮음</span>
+              <span class="legend-bar"></span>
+              <span class="legend-label">높음</span>
+            </div>
+          </div>
         </div>
-        <div x-show="watchlist.length === 0" class="text-center text-muted py-5">
-          <div style="font-size:3em">☆</div>
-          아직 관심종목이 없어요. TOP 픽에서 ☆ 버튼을 눌러 추가하세요.
+        <div class="heatmap-grid" id="heatmapGrid">
+          <template x-for="c in heatmap" :key="c.code">
+            <div class="heatmap-cell"
+                 :style="`flex-grow:${c.weight}; background:${c.color}`"
+                 :title="`${c.name} (${c.code}) — ${c.sector || ''} | 점수: ${fmt(c.total_score)} | 시총: ${formatCap(c.market_cap)}`"
+                 @click="openStock(c.code)">
+              <div class="hc-name" x-text="c.name"></div>
+              <div class="hc-score" x-text="fmt(c.total_score)"></div>
+            </div>
+          </template>
         </div>
-        <div class="table-responsive" x-show="watchlist.length > 0">
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 전체 ===== -->
+  <div x-show="tab==='all'">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="card-title mb-0">📈 전체 종목</h5>
+          <small class="text-muted">💡 행 클릭 → 상세 분석</small>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-md-3">
+            <input type="text" class="form-control form-control-sm" placeholder="이름/코드 검색" x-model="filter.q">
+          </div>
+          <div class="col-md-2">
+            <select class="form-select form-select-sm" x-model="filter.market">
+              <option value="">전체 시장</option>
+              <template x-for="m in meta.markets" :key="m"><option x-text="m" :value="m"></option></template>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <select class="form-select form-select-sm" x-model="filter.sector">
+              <option value="">전체 섹터</option>
+              <template x-for="s in meta.sectors" :key="s"><option x-text="s" :value="s"></option></template>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <select class="form-select form-select-sm" x-model="filter.grade">
+              <option value="">전체 등급</option>
+              <option value="A+">A+ Strong Buy</option>
+              <option value="A">A Buy</option>
+              <option value="B+">B+ Accumulate</option>
+              <option value="B">B Hold</option>
+              <option value="C">C Watch</option>
+              <option value="D">D Avoid</option>
+              <option value="F">F Sell</option>
+            </select>
+          </div>
+          <div class="col-md-2 text-end">
+            <span class="text-muted small" x-text="filteredAll.length + ' / ' + all.length"></span>
+          </div>
+        </div>
+        <div class="table-responsive" style="max-height:72vh;overflow:auto">
           <table class="table table-sm table-hover">
-            <thead class="table-light">
+            <thead class="table-light sticky-top">
               <tr>
-                <th></th><th>#</th><th>등급</th><th>종목</th><th>시장</th>
-                <th>총점</th><th>가치</th><th>모멘텀</th><th>퀄리티</th><th>저변동</th><th>성장</th>
-                <th>액션</th>
+                <th>#</th><th>등급</th><th>종목</th><th>시장</th><th>섹터</th>
+                <th>가치</th><th>모멘텀</th><th>퀄리티</th><th>저변동</th><th>성장</th>
+                <th>총점</th><th></th>
               </tr>
             </thead>
             <tbody>
-              <template x-for="(r, i) in watchlistRows" :key="r.code">
+              <template x-for="r in filteredAll" :key="r.code">
                 <tr class="clickable-row" @click="openStock(r.code)">
-                  <td @click.stop>
-                    <button class="btn btn-sm star-btn star-on" @click="toggleWatch(r)">★</button>
-                  </td>
-                  <td x-text="i+1"></td>
+                  <td x-text="r.rank"></td>
                   <td><span class="grade-badge" :class="'grade-' + r.grade.color" x-text="r.grade.letter"></span></td>
                   <td><strong x-text="r.name"></strong> <small class="text-muted" x-text="r.code"></small></td>
-                  <td><span class="badge" :class="r.market === 'KOSPI' ? 'bg-primary' : 'bg-info'" x-text="r.market"></span></td>
+                  <td x-text="r.market"></td>
+                  <td x-text="r.sector || '—'"></td>
+                  <td><span class="score" :data-s="r.value_score" x-text="fmt(r.value_score)"></span></td>
+                  <td><span class="score" :data-s="r.momentum_score" x-text="fmt(r.momentum_score)"></span></td>
+                  <td><span class="score" :data-s="r.quality_score" x-text="fmt(r.quality_score)"></span></td>
+                  <td><span class="score" :data-s="r.volatility_score" x-text="fmt(r.volatility_score)"></span></td>
+                  <td><span class="score" :data-s="r.growth_score" x-text="fmt(r.growth_score)"></span></td>
                   <td><strong class="total-score" :data-s="r.total_score" x-text="fmt(r.total_score)"></strong></td>
-                  <td x-text="fmt(r.value_score)"></td>
-                  <td x-text="fmt(r.momentum_score)"></td>
-                  <td x-text="fmt(r.quality_score)"></td>
-                  <td x-text="fmt(r.volatility_score)"></td>
-                  <td x-text="fmt(r.growth_score)"></td>
-                  <td @click.stop>
-                    <div class="btn-group btn-group-sm">
-                      <a class="btn btn-outline-secondary" :href="'https://finance.naver.com/item/main.naver?code=' + r.code" target="_blank" rel="noopener" title="네이버 증권">N</a>
-                      <a class="btn btn-outline-secondary" :href="'https://finance.daum.net/quotes/A' + r.code" target="_blank" rel="noopener" title="다음 증권">D</a>
-                      <button class="btn btn-outline-primary" @click="openStock(r.code)">상세</button>
-                    </div>
+                  <td class="text-end">
+                    <button class="btn btn-sm btn-outline-secondary" @click.stop="openStock(r.code)">→</button>
                   </td>
                 </tr>
               </template>
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 섹터 ===== -->
+  <div x-show="tab==='sector'">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body">
+            <h6>시장별 평균</h6>
+            <template x-for="m in sectorData.markets" :key="m.market">
+              <div class="d-flex justify-content-between border-bottom py-2">
+                <div><strong x-text="m.market"></strong> <small class="text-muted" x-text="'(' + m.count + '개)'"></small></div>
+                <div><span class="total-score" :data-s="m.avg_total" x-text="fmt(m.avg_total)"></span></div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-body">
+            <h6>섹터별 점수 (평균)</h6>
+            <div class="table-responsive">
+              <table class="table table-sm table-hover">
+                <thead class="table-light">
+                  <tr>
+                    <th>섹터</th><th>시장</th><th>종목수</th>
+                    <th>가치</th><th>모멘텀</th><th>퀄리티</th><th>저변동</th><th>성장</th>
+                    <th>평균</th><th>분포</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="s in sectorData.sectors" :key="s.sector + s.market">
+                    <tr>
+                      <td><strong x-text="s.sector"></strong></td>
+                      <td><span class="badge bg-secondary" x-text="s.market"></span></td>
+                      <td x-text="s.count"></td>
+                      <td x-text="fmt(s.avg_value)"></td>
+                      <td x-text="fmt(s.avg_momentum)"></td>
+                      <td x-text="fmt(s.avg_quality)"></td>
+                      <td x-text="fmt(s.avg_volatility)"></td>
+                      <td x-text="fmt(s.avg_growth)"></td>
+                      <td><strong class="total-score" :data-s="s.avg_total" x-text="fmt(s.avg_total)"></strong></td>
+                      <td style="width:120px">
+                        <div class="sector-bar">
+                          <div class="sector-bar-fill" :style="`width:${Math.min(100, s.avg_total)}%; background:${scoreColor(s.avg_total)}`"></div>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 수급이상 ===== -->
+  <div x-show="tab==='supply'">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">💰 외인/기관 5일 +20% 이상 순매수 / -20% 이상 순매도</h5>
+        <p class="text-muted small">이틀 연속 순매수/순매도 + 5일 누적 ±20% 이상 종목. 추세 전환 가능성 시사.</p>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <h6 class="text-danger">🔥 강한 매집 (외인+기관 동시 순매수)</h6>
+            <table class="table table-sm table-hover">
+              <thead><tr><th>#</th><th>종목</th><th>시장</th><th>외인 5일</th><th>기관 5일</th><th>총점</th></tr></thead>
+              <tbody>
+                <template x-for="(r, i) in strongBuy" :key="r.code">
+                  <tr class="clickable-row" @click="openStock(r.code)">
+                    <td x-text="i+1"></td>
+                    <td><strong x-text="r.name"></strong> <small class="text-muted" x-text="r.code"></small></td>
+                    <td><span class="badge" :class="r.market === 'KOSPI' ? 'bg-primary' : 'bg-info'" x-text="r.market"></span></td>
+                    <td class="text-danger" x-text="r.foreign_5d > 0 ? '+' + r.foreign_5d.toLocaleString() : r.foreign_5d.toLocaleString()"></td>
+                    <td class="text-danger" x-text="r.inst_5d > 0 ? '+' + r.inst_5d.toLocaleString() : r.inst_5d.toLocaleString()"></td>
+                    <td><strong x-text="fmt(r.total_score)"></strong></td>
+                  </tr>
+                </template>
+                <tr x-show="strongBuy.length === 0"><td colspan="6" class="text-center text-muted py-2">해당 종목 없음</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="col-md-6">
+            <h6 class="text-primary">💧 강한 분산 (외인+기관 동시 순매도)</h6>
+            <table class="table table-sm table-hover">
+              <thead><tr><th>#</th><th>종목</th><th>시장</th><th>외인 5일</th><th>기관 5일</th><th>총점</th></tr></thead>
+              <tbody>
+                <template x-for="(r, i) in strongSell" :key="r.code">
+                  <tr class="clickable-row" @click="openStock(r.code)">
+                    <td x-text="i+1"></td>
+                    <td><strong x-text="r.name"></strong> <small class="text-muted" x-text="r.code"></small></td>
+                    <td><span class="badge" :class="r.market === 'KOSPI' ? 'bg-primary' : 'bg-info'" x-text="r.market"></span></td>
+                    <td class="text-primary" x-text="r.foreign_5d.toLocaleString()"></td>
+                    <td class="text-primary" x-text="r.inst_5d.toLocaleString()"></td>
+                    <td><strong x-text="fmt(r.total_score)"></strong></td>
+                  </tr>
+                </template>
+                <tr x-show="strongSell.length === 0"><td colspan="6" class="text-center text-muted py-2">해당 종목 없음</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -378,11 +537,10 @@
       <div class="card-body py-4">
         <h5>다른 페이지로 이동</h5>
         <div class="d-flex gap-2 justify-content-center flex-wrap mt-3">
-          <a href="/explore.html" class="btn btn-outline-secondary btn-lg">🔍 탐색 페이지 →</a>
+          <a href="/index.html" class="btn btn-outline-secondary btn-lg">🏠 메인으로 (TOP/관심종목)</a>
           <a href="/analysis.html" class="btn btn-primary btn-lg">📊 분석 페이지 →</a>
         </div>
-        <div class="mt-3 small text-muted">탐색: 🚀 급등/급락 · 📈 신고/신저 · 🟥 히트맵 · 📈 전체 · 🏷️ 섹터 · 💰 수급이상</div>
-        <div class="small text-muted">분석: 📊 분포 · 🔗 상관 · 🎯 최적화 · ⏪ 백테스트 · 💼 10종목 · 🔍 진단 · 📋 로그</div>
+        <div class="mt-3 small text-muted">탐색 페이지: 🚀 급등/급락 · 📈 신고/신저 · 🟥 히트맵 · 📈 전체 · 🏷️ 섹터 · 💰 수급이상</div>
       </div>
     </div>
   </div>

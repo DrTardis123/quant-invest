@@ -9,6 +9,13 @@ function app() {
   return {
     // ----- 상태 -----
     tab: 'top',
+    // 페이지 감지: 'main' | 'explore' | 'analysis'
+    page: (() => {
+      const p = (typeof location !== 'undefined' ? location.pathname : '/');
+      if (p.endsWith('/explore.html')) return 'explore';
+      if (p.endsWith('/analysis.html')) return 'analysis';
+      return 'main';
+    })(),
     hosted: false,
     marketFilter: 'KOSPI',  // 기본 KOSPI만 (KOSDAQ은 별도 페이지)
     darkMode: false,
@@ -196,13 +203,12 @@ function app() {
       document.addEventListener('keydown', (e) => {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
         if (e.ctrlKey || e.altKey || e.metaKey) return;
-        // 페이지 감지: 메인(index.html) / 분석(analysis.html)
-        const isAnalysis = typeof location !== 'undefined' && location.pathname && location.pathname.endsWith('/analysis.html');
-        if (e.key === 't' || e.key === 'T') { e.preventDefault(); if (isAnalysis) location.href = '/index.html'; else this.setTab('top'); }
-        else if (e.key === 'h' || e.key === 'H') { e.preventDefault(); if (isAnalysis) location.href = '/index.html'; else this.setTab('highlow'); }
+        // setTab()이 페이지 navigate 자동 처리 — 단축키는 setTab만 호출
+        if (e.key === 't' || e.key === 'T') { e.preventDefault(); this.setTab('top'); }
+        else if (e.key === 'h' || e.key === 'H') { e.preventDefault(); this.setTab('highlow'); }
         else if (e.key === 'b' || e.key === 'B') { e.preventDefault(); this.setTab('backtest'); }
-        else if (e.key === 'm' || e.key === 'M') { e.preventDefault(); if (isAnalysis) location.href = '/index.html'; else this.setTab('movers'); }
-        else if (e.key === 'w' || e.key === 'W') { e.preventDefault(); if (isAnalysis) location.href = '/index.html'; else this.setTab('watchlist'); }
+        else if (e.key === 'm' || e.key === 'M') { e.preventDefault(); this.setTab('movers'); }
+        else if (e.key === 'w' || e.key === 'W') { e.preventDefault(); this.setTab('watchlist'); }
         else if (e.key === 'a' || e.key === 'A') { e.preventDefault(); this.setTab('analytics'); }  // 메인/분석 양쪽에서 동작
         else if (e.key === 'p' || e.key === 'P') { e.preventDefault(); this.setTab('portfolio'); }  // 메인/분석 양쪽에서 동작
         else if (e.key === '?') { e.preventDefault(); this.showShortcuts(); }
@@ -225,27 +231,40 @@ function app() {
         }
       });
 
-      await Promise.all([
+      // URL ?tab= 쿼리로 페이지 진입 시 해당 탭 활성화
+      const params = new URLSearchParams(location.search);
+      const initialTab = params.get('tab');
+      if (initialTab) this.tab = initialTab;
+
+      // 페이지별 초기 fetch — 무거운 데이터는 lazy, 페이지는 가볍게
+      const fetches = [
         this.loadHealth(),
         this.loadMeta(),
         this.loadIndices(),
-        this.loadTop(),         // 상위 20개만 (6KB) - 1.2MB all.json은 lazy
-        this.loadLogs(),
-        this.loadOptimizer(),
-        this.loadBacktest(),
-      ]);
+      ];
+      if (this.page === 'main') {
+        fetches.push(this.loadTop());         // 메인: TOP 20 (6KB)
+        fetches.push(this.loadRealtime());    // 메인: 실시간 가격
+      } else if (this.page === 'analysis') {
+        fetches.push(this.loadLogs());
+        fetches.push(this.loadOptimizer());
+        fetches.push(this.loadBacktest());
+      }
+      // explore: 첫 탭만 lazy fetch (사용자 클릭 시)
+      fetches.push(this.loadNotifications());
+      await Promise.all(fetches);
+
       this._recomputeAndSet();
       // Chart.js 백그라운드 프리로드 (사용자가 차트 탭 클릭 시 즉시 사용 가능)
       if (window.ChartLoader && !window.ChartLoader.isLoaded()) {
         window.ChartLoader.preload();
       }
-      this.$nextTick(() => this._drawAllSparklines());
-      this._generateBriefing();
-      // 인앱 알림 로드 (portfolio/top/logs 등 사용)
-      this.loadNotifications();
-      // 실시간 시세 폴링 (60초마다, TOP 페이지 활성 시)
-      this.loadRealtime();
-      this._startRealtimePolling();
+      // 메인 페이지에서만 sparkline 그리기 (탐색/분석은 다른 차트)
+      if (this.page === 'main') {
+        this.$nextTick(() => this._drawAllSparklines());
+        this._generateBriefing();
+        this._startRealtimePolling();
+      }
       // 자동 새로고침 OFF (수동 새로고침 버튼으로만) — CPU/메모리 보호
     },
 
@@ -293,6 +312,25 @@ function app() {
     },
 
     async setTab(t) {
+      // 현재 페이지에 없는 탭은 해당 페이지로 navigate (?tab= 쿼리로 진입)
+      const mainTabs = ['top', 'watchlist'];
+      const exploreTabs = ['movers', 'highlow', 'heatmap', 'all', 'sector', 'supply'];
+      const analysisTabs = ['distribution', 'corr', 'optimizer', 'backtest', 'portfolio', 'analytics', 'logs'];
+      if (this.page === 'main' && (exploreTabs.includes(t) || analysisTabs.includes(t))) {
+        const target = exploreTabs.includes(t) ? 'explore.html' : 'analysis.html';
+        location.href = `/${target}?tab=${t}`;
+        return;
+      }
+      if (this.page === 'explore' && (mainTabs.includes(t) || analysisTabs.includes(t))) {
+        const target = mainTabs.includes(t) ? '/' : 'analysis.html';
+        location.href = `${target}?tab=${t}`;
+        return;
+      }
+      if (this.page === 'analysis' && (mainTabs.includes(t) || exploreTabs.includes(t))) {
+        const target = mainTabs.includes(t) ? '/' : 'explore.html';
+        location.href = `${target}?tab=${t}`;
+        return;
+      }
       const oldTab = this.tab;
       this.tab = t;
       // 이전 fetch 취소 (race condition 방지)
@@ -409,12 +447,18 @@ function app() {
 
     async _silentRefresh() {
       try {
-        await Promise.all([
-          this.loadHealth(), this.loadMeta(), this.loadIndices(),
-          this.loadAll(), this.loadLogs(),
-        ]);
+        // 페이지별로 필요한 fetch만
+        const fetches = [this.loadHealth(), this.loadMeta(), this.loadIndices()];
+        if (this.page === 'main') {
+          fetches.push(this.loadTop(), this.loadRealtime());
+        } else if (this.page === 'explore') {
+          // loadAll은 이미 메모리에 있을 가능성 큼 (탭 클릭 시 lazy)
+        } else if (this.page === 'analysis') {
+          fetches.push(this.loadLogs());
+        }
+        await Promise.all(fetches);
         this._recomputeAndSet();
-        this.$nextTick(() => this._drawAllSparklines());
+        if (this.page === 'main') this.$nextTick(() => this._drawAllSparklines());
       } catch (e) { /* ignore */ }
     },
 
@@ -1201,8 +1245,8 @@ function app() {
     // ----- 종목 상세 -----
     async openStock(code) {
       try {
-        // 분석 페이지에서는 종목 상세 모달 대신 메인 페이지로 이동 (?code=XXX)
-        if (typeof location !== 'undefined' && location.pathname && location.pathname.endsWith('/analysis.html')) {
+        // 분석 페이지에서는 모달이 없으므로 메인으로 이동 (?code=XXX)
+        if (this.page === 'analysis') {
           const market = this.marketFilter || 'KOSPI';
           location.href = '/index.html?code=' + encodeURIComponent(code) + '&market=' + encodeURIComponent(market);
           return;

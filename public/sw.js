@@ -6,7 +6,7 @@
 //   - /api/* (Vercel): network-first (실시간성 우선), 실패 시 캐시 fallback
 //
 // 캐시 버전: 캐시 구조 변경 시 BUMP
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const APP_SHELL_CACHE = `app-shell-${CACHE_VERSION}`;
 const DATA_CACHE = `data-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
@@ -16,6 +16,7 @@ const CDN_CACHE = `cdn-${CACHE_VERSION}`;
 const APP_SHELL = [
   '/',
   '/index.html',
+  '/explore.html',
   '/analysis.html',
   '/manifest.json',
   '/css/style.css',

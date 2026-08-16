@@ -33,19 +33,25 @@
   ],
   "shortcuts": [
     {
-      "name": "TOP 20",
+      "name": "🏆 TOP 20",
       "short_name": "TOP",
       "url": "/?tab=top",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "분석 페이지",
+      "name": "🔍 탐색 (급등/히트맵/전체)",
+      "short_name": "탐색",
+      "url": "/explore.html",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "📊 분석 페이지",
       "short_name": "분석",
       "url": "/analysis.html",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "실시간 시세",
+      "name": "⏱️ 실시간 시세",
       "short_name": "실시간",
       "url": "/?tab=top&live=1",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
