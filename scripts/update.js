@@ -781,95 +781,74 @@ async function exportStatic() {
     writeJson('correlation.json', { keys: [], matrix: {} });
   }
 
-  // === 신규: 급등/급락 TOP 10 (±29.99% cap, 레버리지/ETF/인버스/SPAC 제외) ===
+  // === 신규: 급등/급락 TOP 10 (±29.99% cap, 레버리지/ETF/인버스/SPAC/저유동성 제외) ===
+  // 시총 1000억+ + 20일 평균 거래대금 1억+ (저유동성 관리종목/조성주 제외)
+  // 변경: AVG(close) close_now → 진짜 종가 (subquery), LIKE 30개 → isExcludedProduct() JS 위임
   try {
-    const movers = await db.all(`
-      WITH latest AS (
-        SELECT code, MAX(date) AS d, AVG(close) AS close_now
+    const { isExcludedProduct } = require('../src/factors');
+    const isExc = (n) => isExcludedProduct(n);
+    // 가장 최근 거래일 (모든 종목 공통)
+    const lastDateRow = await db.one(`SELECT MAX(date) AS d FROM daily_prices`);
+    const lastDateISO = lastDateRow?.d ? duckDateToISO(lastDateRow.d) : new Date().toISOString().slice(0, 10);
+    // 진짜 급등/급락 SQL: (a) close_now = MAX(date)의 close (b) close_prev = 직전일 close (c) change_pct 계산
+    // JS에서 isExcludedProduct() + turnover 필터 (LIKE 30개 → 단일 함수)
+    const moversRaw = await db.all(`
+      WITH last2 AS (
+        SELECT code, date, close,
+               ROW_NUMBER() OVER (PARTITION BY code ORDER BY date DESC) AS rn
         FROM daily_prices
-        GROUP BY code
+        WHERE date >= (SELECT MAX(date) FROM daily_prices) - INTERVAL '5 days'
       ),
-      prev AS (
-        SELECT l.code,
-               (SELECT close FROM daily_prices WHERE code = l.code AND date < l.d ORDER BY date DESC LIMIT 1) AS close_prev,
-               l.d AS latest_d
-        FROM latest l
+      last_close AS (
+        SELECT code, close AS close_now, date AS d
+        FROM last2 WHERE rn = 1
+      ),
+      prev_close AS (
+        SELECT code, close AS close_prev
+        FROM last2 WHERE rn = 2
+      ),
+      metrics AS (
+        SELECT lc.code, lc.close_now, lc.d, pc.close_prev,
+               (SELECT AVG(volume * close) FROM daily_prices dp2
+                WHERE dp2.code = lc.code AND dp2.date > lc.d - INTERVAL '20 days') AS turnover_20d
+        FROM last_close lc
+        LEFT JOIN prev_close pc ON pc.code = lc.code
       )
       SELECT s.code, s.name, s.market, s.sector,
              fs.total_score,
-             ((p.latest_d, p.close_prev, l.close_now, s.name) IS NOT NULL) AS _ok,
-             CASE WHEN p.close_prev > 0 THEN ((l.close_now - p.close_prev) / p.close_prev * 100) ELSE NULL END AS change_pct
-      FROM latest l
-      JOIN prev p ON p.code = l.code
-      JOIN stocks s ON s.code = l.code
-      LEFT JOIN factor_scores fs ON fs.code = l.code AND fs.date = (SELECT MAX(date) FROM factor_scores)
-      WHERE s.market = 'KOSPI' AND p.close_prev > 0
-        AND p.close_prev != l.close_now
-        AND ((l.close_now - p.close_prev) / p.close_prev * 100) BETWEEN -29.99 AND 29.99
-        AND (
-          s.name NOT LIKE '%KODEX%' AND s.name NOT LIKE '%TIGER%' AND s.name NOT LIKE '%KBSTAR%'
-          AND s.name NOT LIKE '%ARIRANG%' AND s.name NOT LIKE '%KINDEX%' AND s.name NOT LIKE '%SOL %'
-          AND s.name NOT LIKE '%ACE %' AND s.name NOT LIKE '%RISE %' AND s.name NOT LIKE '%WOORI %'
-          AND s.name NOT LIKE '%KIWOOM %' AND s.name NOT LIKE '%PLUS %' AND s.name NOT LIKE '%한투 %'
-          AND s.name NOT LIKE '%신한 %' AND s.name NOT LIKE '%미래에셋%' AND s.name NOT LIKE '%삼성 %'
-          AND s.name NOT LIKE '%KB %' AND s.name NOT LIKE '%TRUE %' AND s.name NOT LIKE '%히어로즈%'
-          AND s.name NOT LIKE '%레버리지%' AND s.name NOT LIKE '%인버스%' AND s.name NOT LIKE '%선물%'
-          AND s.name NOT LIKE '%ETN%' AND s.name NOT LIKE '%액티브%' AND s.name NOT LIKE '%합성%'
-          AND s.name NOT LIKE '%스팩%' AND s.name NOT LIKE '%기업인수목적%'
-          AND s.name NOT LIKE '%WON%' AND s.name NOT LIKE '%파워%' AND s.name NOT LIKE '%액티브%'
-        )
-      ORDER BY change_pct DESC
-      LIMIT 10
+             m.turnover_20d,
+             CASE WHEN m.close_prev > 0 THEN ((m.close_now - m.close_prev) / m.close_prev * 100) ELSE NULL END AS change_pct
+      FROM metrics m
+      JOIN stocks s ON s.code = m.code
+      LEFT JOIN factor_scores fs ON fs.code = m.code AND fs.date = (SELECT MAX(date) FROM factor_scores)
+      WHERE s.market = 'KOSPI' AND m.close_prev IS NOT NULL AND m.close_prev > 0
+        AND m.close_prev != m.close_now
     `);
-    const losersRows = await db.all(`
-      WITH latest AS (
-        SELECT code, MAX(date) AS d, AVG(close) AS close_now
-        FROM daily_prices
-        GROUP BY code
-      ),
-      prev AS (
-        SELECT l.code,
-               (SELECT close FROM daily_prices WHERE code = l.code AND date < l.d ORDER BY date DESC LIMIT 1) AS close_prev,
-               l.d AS latest_d
-        FROM latest l
-      )
-      SELECT s.code, s.name, s.market, s.sector,
-             fs.total_score,
-             CASE WHEN p.close_prev > 0 THEN ((l.close_now - p.close_prev) / p.close_prev * 100) ELSE NULL END AS change_pct
-      FROM latest l
-      JOIN prev p ON p.code = l.code
-      JOIN stocks s ON s.code = l.code
-      LEFT JOIN factor_scores fs ON fs.code = l.code AND fs.date = (SELECT MAX(date) FROM factor_scores)
-      WHERE s.market = 'KOSPI' AND p.close_prev > 0
-        AND p.close_prev != l.close_now
-        AND ((l.close_now - p.close_prev) / p.close_prev * 100) BETWEEN -29.99 AND 29.99
-        AND (
-          s.name NOT LIKE '%KODEX%' AND s.name NOT LIKE '%TIGER%' AND s.name NOT LIKE '%KBSTAR%'
-          AND s.name NOT LIKE '%ARIRANG%' AND s.name NOT LIKE '%KINDEX%' AND s.name NOT LIKE '%SOL %'
-          AND s.name NOT LIKE '%ACE %' AND s.name NOT LIKE '%RISE %' AND s.name NOT LIKE '%WOORI %'
-          AND s.name NOT LIKE '%KIWOOM %' AND s.name NOT LIKE '%PLUS %' AND s.name NOT LIKE '%한투 %'
-          AND s.name NOT LIKE '%신한 %' AND s.name NOT LIKE '%미래에셋%' AND s.name NOT LIKE '%삼성 %'
-          AND s.name NOT LIKE '%KB %' AND s.name NOT LIKE '%TRUE %' AND s.name NOT LIKE '%히어로즈%'
-          AND s.name NOT LIKE '%레버리지%' AND s.name NOT LIKE '%인버스%' AND s.name NOT LIKE '%선물%'
-          AND s.name NOT LIKE '%ETN%' AND s.name NOT LIKE '%액티브%' AND s.name NOT LIKE '%합성%'
-          AND s.name NOT LIKE '%스팩%' AND s.name NOT LIKE '%기업인수목적%'
-          AND s.name NOT LIKE '%WON%' AND s.name NOT LIKE '%파워%' AND s.name NOT LIKE '%액티브%'
-        )
-      ORDER BY change_pct ASC
-      LIMIT 10
-    `);
+    // JS 후처리: isExcludedProduct + change_pct cap + turnover_20d
+    const filtered = moversRaw
+      .filter((r) => !isExc(r.name))
+      .filter((r) => {
+        const cp = Number(r.change_pct);
+        return cp >= -29.99 && cp <= 29.99;
+      })
+      .filter((r) => Number(r.turnover_20d) >= 100_000_000)
+      .map((r) => ({
+        code: r.code, name: r.name, market: r.market, sector: r.sector,
+        total_score: r.total_score ? Number(r.total_score) : 0,
+        change_pct: Number(r.change_pct),
+        turnover_20d: Number(r.turnover_20d),
+      }));
+    const movers = filtered.sort((a, b) => b.change_pct - a.change_pct).slice(0, 10);
+    const losersRows = filtered.sort((a, b) => a.change_pct - b.change_pct).slice(0, 10);
+    // 데이터 기준일 (전일 종가 — daily_prices 최신일) — 이미 위에서 계산됨
     writeJson('movers.json', {
-      gainers: movers.map((r) => ({
-        code: r.code, name: r.name, market: r.market, sector: r.sector,
-        total_score: r.total_score ? Number(r.total_score) : 0,
-        change_pct: r.change_pct ? Number(r.change_pct) : 0,
-      })),
-      losers: losersRows.map((r) => ({
-        code: r.code, name: r.name, market: r.market, sector: r.sector,
-        total_score: r.total_score ? Number(r.total_score) : 0,
-        change_pct: r.change_pct ? Number(r.change_pct) : 0,
-      })),
+      asOf: new Date().toISOString(),
+      priceDate: lastDateISO,  // 어떤 날의 종가 기준인지 (전일)
+      period: `전일 종가 (${lastDateISO}) vs 직전일 종가`,
+      gainers: movers,
+      losers: losersRows,
     });
+    console.log(`     → movers gainers=${movers.length} losers=${losersRows.length} (전일종가 ${lastDateISO} 기준)`);
   } catch (e) {
     console.error('[export] movers 실패:', e.message);
     writeJson('movers.json', { gainers: [], losers: [] });

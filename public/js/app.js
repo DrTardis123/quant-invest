@@ -44,6 +44,8 @@ function app() {
     compareSet: [],
     gainers: [],
     losers: [],
+    moversAsOf: '',     // movers.json 갱신 시각
+    moversPeriod: '',   // 데이터 기준일 설명
     newHighs: [],
     newLows: [],
     strongBuy: [],
@@ -1772,6 +1774,9 @@ function app() {
         if (r && !r.__error) {
           this.gainers = r.gainers || [];
           this.losers = r.losers || [];
+          // 데이터 시점 라벨
+          this.moversAsOf = r.asOf || '';
+          this.moversPeriod = r.period || '';
         }
       } catch (e) { /* ignore */ }
     },
