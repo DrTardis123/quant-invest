@@ -74,7 +74,14 @@ function app() {
 
       // 모달 완전히 열린 후 차트 그리기 (transition 대기)
       document.getElementById('stockModal').addEventListener('shown.bs.modal', () => {
-        this.$nextTick(() => this._drawStockCharts());
+        // Chart.js lazy 로드 (모달이 chart-heavy한 페이지 진입 경로)
+        if (window.ChartLoader && !window.ChartLoader.isLoaded()) {
+          window.ChartLoader.ready().then(() => {
+            this.$nextTick(() => this._drawStockCharts());
+          }).catch((e) => console.warn('[modal] chart load:', e));
+        } else {
+          this.$nextTick(() => this._drawStockCharts());
+        }
       });
       // 모달 닫힐 때 모든 chart destroy (메모리 leak 방지)
       document.getElementById('stockModal').addEventListener('hidden.bs.modal', () => {
@@ -221,6 +228,10 @@ function app() {
         this.loadBacktest(),
       ]);
       this._recomputeAndSet();
+      // Chart.js 백그라운드 프리로드 (사용자가 차트 탭 클릭 시 즉시 사용 가능)
+      if (window.ChartLoader && !window.ChartLoader.isLoaded()) {
+        window.ChartLoader.preload();
+      }
       this.$nextTick(() => this._drawAllSparklines());
       this._generateBriefing();
       // 실시간 시세 폴링 (60초마다, TOP 페이지 활성 시)
@@ -272,7 +283,7 @@ function app() {
       }
     },
 
-    setTab(t) {
+    async setTab(t) {
       const oldTab = this.tab;
       this.tab = t;
       // 이전 fetch 취소 (race condition 방지)
@@ -280,6 +291,10 @@ function app() {
       this._currentFetchCtl = new AbortController();
       // 이전 차트 destroy (메모리 누수 방지)
       if (oldTab && oldTab !== t) this._destroyAllCharts();
+      // Chart.js lazy 로드: 차트 그리기 전에 로드 보장 (첫 1회만 ~150ms, 이후 캐시)
+      if (window.ChartLoader && !window.ChartLoader.isLoaded()) {
+        try { await window.ChartLoader.ready(); } catch (e) { console.warn('[setTab] chart loader:', e); }
+      }
       // canvas 렌더링 보장을 위해 $nextTick 대신 setTimeout (50ms 후)
       // Alpine.js x-show + $nextTick race condition 회피
       setTimeout(() => {

@@ -33,15 +33,77 @@
   ],
   "headers": [
     {
+      "source": "/data/realtime.json",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=30, s-maxage=60, stale-while-revalidate=120" }
+      ]
+    },
+    {
+      "source": "/data/(top|all|distribution|correlation|portfolio|backtest|optimizer|overfit-audit|dynamic-portfolio|single-factor|regression-2|indices|heatmap|sectors|strategies-static|movers|highlow|supply-signals|kosdaq-top|value-top|mom-top|quality-top|lowvol-top|meta).json",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=60, s-maxage=600, stale-while-revalidate=300" }
+      ]
+    },
+    {
+      "source": "/data/(log|distribution).json",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=30, s-maxage=300, stale-while-revalidate=60" }
+      ]
+    },
+    {
       "source": "/data/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=60, s-maxage=300, stale-while-revalidate=60" }
       ]
     },
     {
+      "source": "/js/(app|common|strategies|api|reweight|chart-loader).js",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=300, s-maxage=86400, stale-while-revalidate=86400" }
+      ]
+    },
+    {
+      "source": "/css/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=300, s-maxage=86400, stale-while-revalidate=86400" }
+      ]
+    },
+    {
+      "source": "/(index|analysis|sw)\\.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, s-maxage=300, stale-while-revalidate=600" }
+      ]
+    },
+    {
+      "source": "/(.*)\\.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, s-maxage=60, stale-while-revalidate=300" }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/manifest.json",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=300, s-maxage=86400" }
+      ]
+    },
+    {
+      "source": "/icons/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400, s-maxage=2592000" }
+      ]
+    },
+    {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" }
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" }
       ]
     }
   ],
@@ -51,5 +113,3 @@
     }
   }
 }
-
-
