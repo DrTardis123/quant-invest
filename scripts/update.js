@@ -1019,6 +1019,21 @@ async function exportStatic() {
     writeJson('portfolio.json', { n: 0, items: [] });
   }
 
+  // === 신호 추적 백필 (1차/2차 매수·매도 후 실제 수익률) ===
+  // GitHub Actions update 사이클에서 매일 자동 갱신 (90초 소요)
+  try {
+    const { execSync } = require('child_process');
+    console.log('[export] 신호 추적 백필 시작...');
+    const t0 = Date.now();
+    execSync('node scripts/backfill-signal-performance.js --days=100 --market=KOSPI', {
+      stdio: 'pipe',
+      cwd: path.join(__dirname, '..'),
+    });
+    console.log(`[export] 신호 추적 백필 완료 (${((Date.now() - t0) / 1000).toFixed(1)}초)`);
+  } catch (e) {
+    console.error('[export] 신호 추적 백필 실패:', e.message);
+  }
+
   // 분포 (전체 점수, 10점 단위 bin + 등급 분포 + 평균/중앙값)
 
   // 분포 (전체 점수, 10점 단위 bin + 등급 분포 + 평균/중앙값 + 시장/섹터/팩터 평균)

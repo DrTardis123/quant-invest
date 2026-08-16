@@ -59,6 +59,7 @@ function app() {
     strongSell: [],
     portfolio: null,
     portfolioLoading: false,
+    signalPerformance: null,  // 1차/2차 매수·매도 신호 추적 (백필 결과)
     analytics: null,
     analyticsLoading: false,
     _analyticsCharts: {},
@@ -356,6 +357,7 @@ function app() {
           else if (t === 'backtest') { this.loadBacktest(); setTimeout(() => this._drawBacktestCharts(), 100); }
           else if (t === 'portfolio') { this.loadPortfolio(); }
           else if (t === 'analytics') { this.loadAnalytics(); setTimeout(() => this._drawAnalyticsCharts(), 100); }
+          else if (t === 'signals') { this.loadSignalPerformance(); setTimeout(() => this._drawSignalCharts(), 100); }
           else if (t === 'top') { this._drawTopCharts(); }
           else if (t === 'movers') { this.loadMovers(); }
           else if (t === 'highlow') { this.loadHighLow(); }
@@ -2121,6 +2123,126 @@ function app() {
       setTimeout(drawWeights, 500);
       setTimeout(drawDynamic, 600);
       setTimeout(drawSell2Dist, 700);
+    },
+
+    // ===== 신호 추적 (1차/2차 매수·매도) =====
+    async loadSignalPerformance(force = false) {
+      if (this.signalPerformance && !force) return this.signalPerformance;
+      try {
+        const r = await window.apiGet('/api/signal-performance');
+        if (r && !r.__error) this.signalPerformance = r;
+      } catch (e) { console.error('[signal-performance]', e); }
+      return this.signalPerformance;
+    },
+
+    _drawSignalCharts() {
+      if (!this.signalPerformance || !window.Chart) {
+        console.warn('[signalCharts] 스킵:', { hasData: !!this.signalPerformance, hasChart: !!window.Chart });
+        return;
+      }
+      const s = this.signalPerformance;
+      // 기존 차트 destroy
+      for (const k of ['avgReturn', 'winRate']) {
+        if (this._charts[k]) { try { this._charts[k].destroy(); } catch (_) {} this._charts[k] = null; }
+      }
+
+      // 차트 1: 신호 종류별 +10일 후 평균 수익률
+      setTimeout(() => {
+        try {
+          const c1 = document.getElementById('signalAvgReturnChart');
+          if (!c1 || c1.clientWidth === 0) return;
+          const types = ['buy1', 'buy2', 'sell1', 'sell2'];
+          const labels = types.map((t) => this.signalTypeLabel(t));
+          const data10d = types.map((t) => (s.summary?.[t]?.avgReturn10d || 0));
+          const data20d = types.map((t) => (s.summary?.[t]?.avgReturn20d || 0));
+          this._charts.avgReturn = new Chart(c1, {
+            type: 'bar',
+            data: {
+              labels,
+              datasets: [
+                { label: '+10일 평균', data: data10d, backgroundColor: data10d.map((v) => v >= 0 ? 'rgba(220, 53, 69, 0.7)' : 'rgba(13, 110, 253, 0.7)') },
+                { label: '+20일 평균', data: data20d, backgroundColor: data20d.map((v) => v >= 0 ? 'rgba(220, 53, 69, 0.4)' : 'rgba(13, 110, 253, 0.4)') },
+              ],
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + '%' } } }, scales: { y: { ticks: { callback: (v) => v + '%' } } } },
+          });
+        } catch (e) { console.error('[signalAvgReturnChart]', e); }
+      }, 0);
+
+      // 차트 2: 매수 신호 승률
+      setTimeout(() => {
+        try {
+          const c2 = document.getElementById('signalWinRateChart');
+          if (!c2 || c2.clientWidth === 0) return;
+          const buyTypes = ['buy1', 'buy2'];
+          const labels2 = buyTypes.map((t) => this.signalTypeLabel(t));
+          const wr5 = buyTypes.map((t) => (s.summary?.[t]?.winRate5d || 0) * 100);
+          const wr10 = buyTypes.map((t) => (s.summary?.[t]?.winRate10d || 0) * 100);
+          const wr20 = buyTypes.map((t) => (s.summary?.[t]?.winRate20d || 0) * 100);
+          this._charts.winRate = new Chart(c2, {
+            type: 'bar',
+            data: {
+              labels: labels2,
+              datasets: [
+                { label: '+5일 승률 (+1%)', data: wr5, backgroundColor: 'rgba(108, 117, 125, 0.7)' },
+                { label: '+10일 승률 (+2%)', data: wr10, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
+                { label: '+20일 승률 (+3%)', data: wr20, backgroundColor: 'rgba(75, 192, 75, 0.7)' },
+              ],
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '%' } } }, scales: { y: { ticks: { callback: (v) => v + '%' }, max: 100 } } },
+          });
+        } catch (e) { console.error('[signalWinRateChart]', e); }
+      }, 100);
+    },
+
+    signalKpi() {
+      const s = this.signalPerformance;
+      if (!s) return {};
+      const sum = s.summary || {};
+      const fmt = (v) => (v === null || v === undefined) ? '—' : (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+      return {
+        buy1: {
+          label: '🚀 1차매수',
+          main: fmt(sum.buy1?.avgReturn10d),
+          sub: `${sum.buy1?.total || 0}건 · +10일 평균`,
+          color: (sum.buy1?.avgReturn10d || 0) >= 0 ? 'text-danger' : 'text-primary',
+        },
+        buy2: {
+          label: '🛒 2차매수',
+          main: fmt(sum.buy2?.avgReturn10d),
+          sub: `${sum.buy2?.total || 0}건 · +10일 평균`,
+          color: (sum.buy2?.avgReturn10d || 0) >= 0 ? 'text-danger' : 'text-primary',
+        },
+        sell1: {
+          label: '🛑 1차매도 (손절)',
+          main: fmt(sum.sell1?.avgReturn10d),
+          sub: `${sum.sell1?.total || 0}건 · 손절 후 추가하락`,
+          color: 'text-primary', // 손절은 음수 = 좋은 신호
+        },
+        sell2: {
+          label: '💰 2차매도 (익절)',
+          main: fmt(sum.sell2?.avgReturn10d),
+          sub: `${sum.sell2?.total || 0}건 · 익절 후 추가상승`,
+          color: 'text-muted', // 익절 후 추가 상승 거의 없는 게 좋음
+        },
+      };
+    },
+
+    signalTypeLabel(t) {
+      return { buy1: '1차매수', buy2: '2차매수', sell1: '1차매도', sell2: '2차매도' }[t] || t;
+    },
+
+    signalTypeDesc(t) {
+      return {
+        buy1: '골든크로스+정배열',
+        buy2: '눌림목+양봉',
+        sell1: '손절 -7%',
+        sell2: '익절 +21%',
+      }[t] || '';
+    },
+
+    signalTypeColor(t) {
+      return { buy1: 'bg-danger', buy2: 'bg-warning text-dark', sell1: 'bg-primary', sell2: 'bg-success' }[t] || 'bg-secondary';
     },
 
     // ===== 가중치 슬라이더 (실시간) =====

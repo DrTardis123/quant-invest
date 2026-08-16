@@ -27,6 +27,7 @@
     { "source": "/api/portfolio",   "destination": "/data/portfolio.json" },
     { "source": "/api/overfit-audit", "destination": "/data/overfit-audit.json" },
     { "source": "/api/dynamic-portfolio", "destination": "/data/dynamic-portfolio.json" },
+    { "source": "/api/signal-performance", "destination": "/data/signal-performance.json" },
     { "source": "/api/single-factor", "destination": "/data/single-factor.json" },
     { "source": "/api/regression-2", "destination": "/data/regression-2.json" },
     { "source": "/api/realtime",   "destination": "/data/realtime.json" }
