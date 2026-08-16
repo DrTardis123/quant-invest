@@ -315,18 +315,20 @@ function app() {
       // 현재 페이지에 없는 탭은 해당 페이지로 navigate (?tab= 쿼리로 진입)
       const mainTabs = ['top', 'watchlist'];
       const exploreTabs = ['movers', 'highlow', 'heatmap', 'all', 'sector', 'supply'];
-      const analysisTabs = ['distribution', 'corr', 'optimizer', 'backtest', 'portfolio', 'analytics', 'logs'];
-      if (this.page === 'main' && (exploreTabs.includes(t) || analysisTabs.includes(t))) {
+      const analysisTabs = ['distribution', 'corr', 'optimizer', 'backtest', 'analytics', 'logs'];
+      // shared: 양쪽 페이지에 모두 있는 탭 (navigate 불필요)
+      const sharedTabs = ['portfolio'];
+      if (this.page === 'main' && !sharedTabs.includes(t) && (exploreTabs.includes(t) || analysisTabs.includes(t))) {
         const target = exploreTabs.includes(t) ? 'explore.html' : 'analysis.html';
         location.href = `/${target}?tab=${t}`;
         return;
       }
-      if (this.page === 'explore' && (mainTabs.includes(t) || analysisTabs.includes(t))) {
+      if (this.page === 'explore' && !sharedTabs.includes(t) && (mainTabs.includes(t) || analysisTabs.includes(t))) {
         const target = mainTabs.includes(t) ? '/' : 'analysis.html';
         location.href = `${target}?tab=${t}`;
         return;
       }
-      if (this.page === 'analysis' && (mainTabs.includes(t) || exploreTabs.includes(t))) {
+      if (this.page === 'analysis' && !sharedTabs.includes(t) && (mainTabs.includes(t) || exploreTabs.includes(t))) {
         const target = mainTabs.includes(t) ? '/' : 'explore.html';
         location.href = `${target}?tab=${t}`;
         return;

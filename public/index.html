@@ -199,6 +199,7 @@
   <ul class="nav nav-tabs mb-3 flex-wrap">
     <li class="nav-item"><a class="nav-link" :class="{active: tab==='top'}" href="#" @click.prevent="setTab('top')">🏆 TOP <kbd>T</kbd></a></li>
     <li class="nav-item"><a class="nav-link" :class="{active: tab==='watchlist'}" href="#" @click.prevent="setTab('watchlist')">⭐ 관심종목 <span class="badge bg-warning text-dark" x-text="watchlist.length" x-show="watchlist.length > 0"></span></a></li>
+    <li class="nav-item"><a class="nav-link" :class="{active: tab==='portfolio'}" href="#" @click.prevent="setTab('portfolio')">💼 10종목 <kbd>P</kbd></a></li>
     <li class="nav-item ms-auto"><a class="nav-link text-secondary" href="/explore.html">🔍 탐색 페이지 →</a></li>
     <li class="nav-item"><a class="nav-link text-info fw-bold" href="/analysis.html">📊 분석 페이지 →</a></li>
   </ul>
@@ -372,6 +373,99 @@
     </div>
   </div>
 
+  <!-- ===== 10종목 분산 포트폴리오 (섹터 분산 자동) ===== -->
+  <div x-show="tab==='portfolio'">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
+          <h5 class="mb-0">💼 10종목 분산 포트폴리오 (섹터 자동 분산)</h5>
+          <span class="text-muted small">단일 종목 편향 방지. 매매 신호는 종목 상세 페이지 참고.</span>
+          <button class="btn btn-sm btn-outline-success ms-auto" @click="loadPortfolio()" :disabled="portfolioLoading">
+            <span x-show="!portfolioLoading">🔄 새로고침</span>
+            <span x-show="portfolioLoading">⏳ 로딩...</span>
+          </button>
+          <button class="btn btn-sm btn-outline-success" @click="downloadPortfolioCsv()" x-show="portfolio?.items?.length">📥 CSV 다운로드</button>
+        </div>
+
+        <div class="alert alert-info" x-show="portfolio">
+          <div class="row g-2 small">
+            <div class="col-md-3"><strong>📅 기준일:</strong> <span x-text="portfolio?.asOf || '—'"></span></div>
+            <div class="col-md-3"><strong>📦 종목 수:</strong> <span x-text="portfolio?.n || 0"></span>개</div>
+            <div class="col-md-3"><strong>🏷️ 섹터 분산:</strong> <span x-text="Object.keys(portfolio?.sectorDistribution || {}).length"></span>개</div>
+            <div class="col-md-3"><strong>⚖️ 비중:</strong> 균등 1/N (<span x-text="(100 / (portfolio?.n || 1)).toFixed(1)"></span>%)</div>
+          </div>
+          <hr>
+          <div class="row g-2 small">
+            <div class="col-md-12">
+              <strong>🛡️ 리스크 관리 (1차매도 -7% / 2차매도 +21% 3R / 손익비 3:1):</strong>
+              <ul class="mb-0 mt-1">
+                <li>1매매 -7% 손실 = 1R (계좌의 1%). 1매매 최대 14% / 10종목 = 1.4%.</li>
+                <li>분할 진입: 1차매수 50% + 2차매수 30% + 3차매수 20%.</li>
+                <li>월 1회 리밸런싱 권장. 5일선 데드크로스 시 즉시 재평가.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert alert-warning" x-show="portfolio && portfolio.n === 0">
+          ⚠️ 포트폴리오 종목이 없습니다. 새로고침 시도 후에도 없으면 데이터 갱신 필요.
+        </div>
+
+        <div class="table-responsive" x-show="portfolio?.items?.length">
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>#</th>
+                <th>코드</th>
+                <th>종목명</th>
+                <th>섹터</th>
+                <th class="text-end">현재가</th>
+                <th class="text-end">총점</th>
+                <th class="text-end">등급</th>
+                <th class="text-end">비중</th>
+                <th class="text-end">외인 5일</th>
+                <th class="text-end">기관 5일</th>
+                <th>⭐</th>
+                <th>📊</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="item in (portfolio?.items || [])" :key="item.code">
+                <tr style="cursor:pointer" @click="openStock(item.code)">
+                  <td x-text="item.rank"></td>
+                  <td><small class="text-muted" x-text="item.code"></small></td>
+                  <td><strong x-text="item.name"></strong> <small class="text-muted" x-text="item.market === 'KOSPI' ? 'KOSPI' : 'KOSDAQ'"></small></td>
+                  <td><small x-text="item.sector || '—'"></small></td>
+                  <td class="text-end" x-text="(item.close || 0).toLocaleString() + '원'"></td>
+                  <td class="text-end"><strong :class="scoreClass(item.total_score)" x-text="(item.total_score || 0).toFixed(1)"></strong></td>
+                  <td class="text-end">
+                    <span class="grade-badge" :class="'grade-' + (item.grade?.color || 'secondary')" x-text="item.grade?.letter || '—'"></span>
+                  </td>
+                  <td class="text-end"><strong class="text-success" x-text="(item.weight || 0).toFixed(1) + '%'"></strong></td>
+                  <td class="text-end" :class="(item.foreign_5d || 0) > 0 ? 'text-danger fw-bold' : (item.foreign_5d || 0) < 0 ? 'text-primary fw-bold' : ''" x-text="(item.foreign_5d || 0).toLocaleString()"></td>
+                  <td class="text-end" :class="(item.inst_5d || 0) > 0 ? 'text-danger fw-bold' : (item.inst_5d || 0) < 0 ? 'text-primary fw-bold' : ''" x-text="(item.inst_5d || 0).toLocaleString()"></td>
+                  <td><button class="btn btn-sm star-btn" :class="isWatch(item.code) ? 'star-on' : 'star-off'" @click.stop="toggleWatch(item)">☆</button></td>
+                  <td><button class="btn btn-sm btn-outline-primary" @click.stop="openStock(item.code)">📊</button></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="row g-2 mt-3" x-show="portfolio?.sectorDistribution">
+          <div class="col-12">
+            <h6>🏷️ 섹터 분포</h6>
+            <div class="d-flex flex-wrap gap-2">
+              <template x-for="[sec, n] in Object.entries(portfolio?.sectorDistribution || {})" :key="sec">
+                <span class="badge bg-secondary" x-text="sec + ' ×' + n"></span>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== 페이지 이동 ===== -->
   <div class="text-center my-5">
     <div class="card d-inline-block" style="max-width:600px">
@@ -382,7 +476,7 @@
           <a href="/analysis.html" class="btn btn-primary btn-lg">📊 분석 페이지 →</a>
         </div>
         <div class="mt-3 small text-muted">탐색: 🚀 급등/급락 · 📈 신고/신저 · 🟥 히트맵 · 📈 전체 · 🏷️ 섹터 · 💰 수급이상</div>
-        <div class="small text-muted">분석: 📊 분포 · 🔗 상관 · 🎯 최적화 · ⏪ 백테스트 · 💼 10종목 · 🔍 진단 · 📋 로그</div>
+        <div class="small text-muted">분석: 📊 분포 · 🔗 상관 · 🎯 최적화 · ⏪ 백테스트 · 🔍 진단 · 📋 로그</div>
       </div>
     </div>
   </div>
