@@ -115,8 +115,14 @@ function calculateSignals(prices, technical) {
   if (aboveMa60) { buy2Score += 10; buy2Reasons.push('60일선 위 (장기 추세)'); }
   const buy2Active = (nearMa5 || nearMa20) && isBullishCandle && volDecline && ma20RisingFor2 && aboveMa60;
 
-  // === 매수가 가정 (현재가) ===
-  const buyPrice = last;
+  // === 매수가 가정 ===
+  // 1차매수 = ma5 (5일선 = 추세 시작 가격, 골든크로스 후 매수)
+  // 2차매수 = ma20 (20일선 = 단기 눌림목 매수)
+  // 의미: 1차매수(5일선, 추세 진입) → 눌림 발생 → 2차매수(20일선, 더 낮은 가격에서 추가 매수)
+  // 정배열 시 ma5 > ma20 이므로 1차매수 가격이 항상 더 비쌈 (분할 매수 효과)
+  const buy1Price = ma5;
+  const buy2Price = ma20;
+  const buyPrice = last; // 매도/손익비 계산용 (현재가 기준)
 
   // === 1차매도 (손절: -7% OR 5일선 종가 이탈) ===
   const stopLossPct = -7; // -7% (오닐)
@@ -177,7 +183,7 @@ function calculateSignals(prices, technical) {
     buy1: {
       active: buy1Active,
       score: Math.min(100, buy1Score),
-      price: buyPrice,
+      price: Math.round(buy1Price),
       reasons: buy1Reasons,
       action: buy1Active ? 'BUY' : 'WAIT',
       description: '5일↑20일 골든크로스 + 정배열 (5>20>60) + 20일선 우상향 + 거래량 1.5x↑',
@@ -185,7 +191,7 @@ function calculateSignals(prices, technical) {
     buy2: {
       active: buy2Active,
       score: Math.min(100, buy2Score),
-      price: buyPrice,
+      price: Math.round(buy2Price),
       reasons: buy2Reasons,
       action: buy2Active ? 'BUY' : 'WAIT',
       description: '5일선/20일선 눌림 + 양봉 + 거래량 0.8x↓ + 20일선 우상향 + 60일선 위',

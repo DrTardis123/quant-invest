@@ -67,11 +67,11 @@ function mean(arr) {
       if (!sig) continue;
       calcCount++;
       const sigDate = prices[i].date;
-      const sigPrice = sig.currentPrice;
-      if (sig.buy1.active) signals.push({ code, type: 'buy1', date: sigDate, price: sigPrice, score: sig.buy1.score });
-      if (sig.buy2.active) signals.push({ code, type: 'buy2', date: sigDate, price: sigPrice, score: sig.buy2.score });
-      if (sig.sell1.active) signals.push({ code, type: 'sell1', date: sigDate, price: sigPrice, score: sig.sell1.score });
-      if (sig.sell2.active) signals.push({ code, type: 'sell2', date: sigDate, price: sigPrice, score: sig.sell2.score });
+      // 신호별 매수가 분리: buy1=ma5, buy2=ma20 (1차매수 > 2차매수 가격, 분할 매수 효과)
+      if (sig.buy1.active) signals.push({ code, type: 'buy1', date: sigDate, price: sig.buy1.price, score: sig.buy1.score });
+      if (sig.buy2.active) signals.push({ code, type: 'buy2', date: sigDate, price: sig.buy2.price, score: sig.buy2.score });
+      if (sig.sell1.active) signals.push({ code, type: 'sell1', date: sigDate, price: sig.sell1.price, score: sig.sell1.score });
+      if (sig.sell2.active) signals.push({ code, type: 'sell2', date: sigDate, price: sig.sell2.price, score: sig.sell2.score });
     }
   }
   console.log(`  신호 계산: ${calcCount}건, 활성 신호: ${signals.length}건 (${Date.now() - t1}ms)`);
