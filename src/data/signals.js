@@ -115,52 +115,51 @@ function calculateSignals(prices, technical) {
   if (aboveMa60) { buy2Score += 10; buy2Reasons.push('60일선 위 (장기 추세)'); }
   const buy2Active = (nearMa5 || nearMa20) && isBullishCandle && volDecline && ma20RisingFor2 && aboveMa60;
 
-  // === 매수가 가정 ===
-  // 1차매수 = ma5 (5일선 = 추세 시작 가격, 골든크로스 후 매수)
-  // 2차매수 = ma20 (20일선 = 단기 눌림목 매수)
-  // 의미: 1차매수(5일선, 추세 진입) → 눌림 발생 → 2차매수(20일선, 더 낮은 가격에서 추가 매수)
-  // 정배열 시 ma5 > ma20 이므로 1차매수 가격이 항상 더 비쌈 (분할 매수 효과)
-  const buy1Price = ma5;
-  const buy2Price = ma20;
-  const buyPrice = last; // 매도/손익비 계산용 (현재가 기준)
+  // === 매수가/매도가 (스윙 투자: 1~4주 보유) ===
+  // 매수가: 1차매수=ma20 (20일선, 추세 중심), 2차매수=ma60 (60일선, 메인 지지)
+  // 매도가: 1차매도=손절(-10% or ma20 -3% 이탈), 2차매도=익절(+30% or ma120 +2% 도달)
+  // 현재가: 실시간 (last, 참고용)
+  // 거리: 매수가↔매도가 명확, 1차↔2차 매수가 간격 ma20↔ma60 (정배열 시 5~15%)
+  const buy1Price = ma20;   // 1차매수가: 20일선 (스윙 추세 진입)
+  const buy2Price = ma60;   // 2차매수가: 60일선 (스윙 눌림목, 깊은 지지)
+  const buyPrice = last;    // 매도/손익비 계산용 (현재가)
 
-  // === 1차매도 (손절: -7% OR 5일선 종가 이탈) ===
-  const stopLossPct = -7; // -7% (오닐)
+  // === 1차매도 (손절: -10% OR 20일선 -3% 이탈) — 스윙용 여유로운 손절 ===
+  const stopLossPct = -10; // -10% (스윙은 오닐의 -7%보다 여유)
   const sell1LossPrice = buyPrice * (1 + stopLossPct / 100);
-  const sell1Ma5Price = ma5 * 0.98; // 5일선 2% 이탈
-  const sell1Price = Math.max(sell1LossPrice, sell1Ma5Price); // 더 타이트한 손절
-  const belowMa5 = last < ma5 * 0.98;
+  const sell1Ma20Price = ma20 * 0.97; // 20일선 -3% 이탈 (스윙 추세선 이탈)
+  const sell1Price = Math.max(sell1LossPrice, sell1Ma20Price); // 더 타이트한 손절
+  const belowMa20 = last < ma20 * 0.97;
   const lossPctNow = (last - buyPrice) / buyPrice * 100;
 
   let sell1Score = 0;
   const sell1Reasons = [];
-  if (belowMa5) { sell1Score += 50; sell1Reasons.push('5일선 종가 이탈 (장대음봉)'); }
-  if (lossPctNow <= -3) { sell1Score += 20; sell1Reasons.push(`현재 -3%↓ (${lossPctNow.toFixed(1)}%)`); }
+  if (belowMa20) { sell1Score += 50; sell1Reasons.push('20일선 -3% 종가 이탈'); }
   if (lossPctNow <= -5) { sell1Score += 20; sell1Reasons.push(`현재 -5%↓ (${lossPctNow.toFixed(1)}%)`); }
+  if (lossPctNow <= -8) { sell1Score += 20; sell1Reasons.push(`현재 -8%↓ (${lossPctNow.toFixed(1)}%)`); }
   if (volumes.length >= 3 && last < closePrev && volumes[volumes.length - 2] < volumes[volumes.length - 1]) {
     sell1Score += 10; sell1Reasons.push('음봉 + 거래량 증가 (투매)');
   }
-  const sell1Active = belowMa5 || lossPctNow <= -5;
+  const sell1Active = belowMa20 || lossPctNow <= -8;
 
-  // === 2차매도 (익절: +3R +21% OR 60일선 터치) ===
-  const takeProfit1Price = buyPrice * 1.21; // +21% (3R)
-  const takeProfit2Price = buyPrice * 1.08; // +8% (단기)
-  const sell2Price60 = ma60 * 0.99; // 60일선 -1% 터치
-  let sell2Price = takeProfit1Price;
-  if (last >= takeProfit1Price * 0.95) sell2Price = takeProfit1Price; // +21% 근처
-  else if (last >= takeProfit2Price) sell2Price = takeProfit2Price; // +8% 이상
-  else if (last >= sell2Price60) sell2Price = sell2Price60;
+  // === 2차매도 (익절: +30% OR 120일선 +2% 도달) — 스윙용 큰 움직임 ===
+  const ma120 = ma120Arr[ma120Arr.length - 1] || ma60;
+  const takeProfitPrice = buyPrice * 1.30; // +30% (스윙 목표)
+  const sell2PriceMa120 = ma120 * 1.02; // 120일선 +2% 도달
+  // 둘 중 낮은 값 (보수적 익절)
+  const sell2Price = Math.min(takeProfitPrice, sell2PriceMa120);
 
   const profitPctNow = (last - buyPrice) / buyPrice * 100;
-  const touchedMa60 = last >= ma60 * 0.99 && last <= ma60 * 1.02;
+  const touchedMa120 = last >= ma120 * 0.99 && last <= ma120 * 1.02;
 
   let sell2Score = 0;
   const sell2Reasons = [];
-  if (profitPctNow >= 21) { sell2Score += 50; sell2Reasons.push(`+21% 도달 (3R, ${profitPctNow.toFixed(1)}%)`); }
-  else if (profitPctNow >= 8) { sell2Score += 30; sell2Reasons.push(`+8% 도달 (단기, ${profitPctNow.toFixed(1)}%)`); }
-  if (touchedMa60) { sell2Score += 30; sell2Reasons.push('60일선 터치 (과열)'); }
-  if (vol20 > 0.03 && profitPctNow > 10) { sell2Score += 10; sell2Reasons.push('변동성 3%+ (고점 경고)'); }
-  const sell2Active = profitPctNow >= 8 || touchedMa60;
+  if (profitPctNow >= 30) { sell2Score += 50; sell2Reasons.push(`+30% 도달 (스윙 익절, ${profitPctNow.toFixed(1)}%)`); }
+  else if (profitPctNow >= 20) { sell2Score += 30; sell2Reasons.push(`+20% 도달 (중간 익절, ${profitPctNow.toFixed(1)}%)`); }
+  else if (profitPctNow >= 15) { sell2Score += 20; sell2Reasons.push(`+15% 도달 (스윙 최소, ${profitPctNow.toFixed(1)}%)`); }
+  if (touchedMa120) { sell2Score += 30; sell2Reasons.push('120일선 터치 (장기 저항)'); }
+  if (vol20 > 0.04 && profitPctNow > 15) { sell2Score += 10; sell2Reasons.push('변동성 4%+ (고점 경고)'); }
+  const sell2Active = profitPctNow >= 15 || touchedMa120;
 
   // === 손익비 (현재가 → 손절 / 익절) ===
   const risk = buyPrice - sell1Price;
