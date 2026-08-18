@@ -133,37 +133,38 @@ function calculateSignals(prices, technical) {
 
   let buy1Score = 0;
   const buy1Reasons = [];
+  const buy1Contribs = []; // {label, points} - 점수 기여도
   // === 가산 점수 균등화 (14개 요소 × ~7점) ===
   // MA / 정배열 (기존 30+25+15+10 = 80점 → 축소)
-  if (isGoldenCrossNow) { buy1Score += 10; buy1Reasons.push('5일↑20일 골든크로스 (방금)'); }
-  else if (isGoldenCrossRecent) { buy1Score += 7; buy1Reasons.push('5일↑20일 골든크로스 (3일 내)'); }
-  if (isAligned) { buy1Score += 10; buy1Reasons.push('정배열 (5>20>60)'); }
-  if (ma20Rising) { buy1Score += 5; buy1Reasons.push('20일선 우상향'); }
-  if (ma60Rising) { buy1Score += 5; buy1Reasons.push('60일선 우상향'); }
-  if (volSurge) { buy1Score += 5; buy1Reasons.push('거래량 1.0x↑ (평균 이상)'); }
-  if (nearHigh60) { buy1Score += 3; buy1Reasons.push('60일 고가 5% 이내'); }
+  if (isGoldenCrossNow) { buy1Score += 10; buy1Reasons.push('5일↑20일 골든크로스 (방금)'); buy1Contribs.push({label: '골든크로스', pts: 10}); }
+  else if (isGoldenCrossRecent) { buy1Score += 7; buy1Reasons.push('5일↑20일 골든크로스 (3일 내)'); buy1Contribs.push({label: '골든크로스(3일)', pts: 7}); }
+  if (isAligned) { buy1Score += 10; buy1Reasons.push('정배열 (5>20>60)'); buy1Contribs.push({label: '정배열', pts: 10}); }
+  if (ma20Rising) { buy1Score += 5; buy1Reasons.push('20일선 우상향'); buy1Contribs.push({label: 'ma20↑', pts: 5}); }
+  if (ma60Rising) { buy1Score += 5; buy1Reasons.push('60일선 우상향'); buy1Contribs.push({label: 'ma60↑', pts: 5}); }
+  if (volSurge) { buy1Score += 5; buy1Reasons.push('거래량 1.0x↑ (평균 이상)'); buy1Contribs.push({label: '거래량↑', pts: 5}); }
+  if (nearHigh60) { buy1Score += 3; buy1Reasons.push('60일 고가 5% 이내'); buy1Contribs.push({label: '60일고가', pts: 3}); }
   // 매물대 (POC/지지선)
-  if (nearPoc) { buy1Score += 7; buy1Reasons.push(`POC(${vpEarly.poc.price.toLocaleString(undefined,{maximumFractionDigits:0})}원) 부근 (지지선)`); }
-  if (nearSupport) { buy1Score += 5; buy1Reasons.push('지지선 부근 (반등 기대)'); }
+  if (nearPoc) { buy1Score += 7; buy1Reasons.push(`POC(${vpEarly.poc.price.toLocaleString(undefined,{maximumFractionDigits:0})}원) 부근 (지지선)`); buy1Contribs.push({label: 'POC', pts: 7}); }
+  if (nearSupport) { buy1Score += 5; buy1Reasons.push('지지선 부근 (반등 기대)'); buy1Contribs.push({label: '지지선', pts: 5}); }
   // ADX (상향)
-  if (adxStrong && adxUpTrend) { buy1Score += 7; buy1Reasons.push(`ADX ${adxValue.toFixed(1)} 강한 상승 추세`); }
-  else if (adxStrong && adxDownTrend) { buy1Score -= 3; buy1Reasons.push(`ADX ${adxValue.toFixed(1)} 강한 하락 추세 (역행)`); }
+  if (adxStrong && adxUpTrend) { buy1Score += 7; buy1Reasons.push(`ADX ${adxValue.toFixed(1)} 강한 상승 추세`); buy1Contribs.push({label: 'ADX↑', pts: 7}); }
+  else if (adxStrong && adxDownTrend) { buy1Score -= 3; buy1Reasons.push(`ADX ${adxValue.toFixed(1)} 강한 하락 추세 (역행)`); buy1Contribs.push({label: 'ADX↓', pts: -3}); }
   else if (adxWeak) { buy1Reasons.push(`ADX ${adxValue.toFixed(1)} 약한 추세 (관망)`); }
   // 캔들
-  if (hasStrongBullish) { buy1Score += 10; buy1Reasons.push(`강한 상승 반전 캔들: ${bullishPatterns.find((p) => p.strength === 'STRONG').name}`); }
-  else if (hasBullishPattern) { buy1Score += 5; buy1Reasons.push(`상승 반전 캔들: ${bullishPatterns[0].name}`); }
-  if (hasStrongBearish) { buy1Score -= 7; buy1Reasons.push(`강한 하락 반전 캔들 (매수 자제): ${bearishPatterns.find((p) => p.strength === 'STRONG').name}`); }
+  if (hasStrongBullish) { buy1Score += 10; buy1Reasons.push(`강한 상승 반전 캔들: ${bullishPatterns.find((p) => p.strength === 'STRONG').name}`); buy1Contribs.push({label: '캔들↑', pts: 10}); }
+  else if (hasBullishPattern) { buy1Score += 5; buy1Reasons.push(`상승 반전 캔들: ${bullishPatterns[0].name}`); buy1Contribs.push({label: '캔들', pts: 5}); }
+  if (hasStrongBearish) { buy1Score -= 7; buy1Reasons.push(`강한 하락 반전 캔들 (매수 자제): ${bearishPatterns.find((p) => p.strength === 'STRONG').name}`); buy1Contribs.push({label: '캔들↓↓', pts: -7}); }
   // OBV
-  if (obvUp) { buy1Score += 5; buy1Reasons.push('OBV 상승 (수급 유입)'); }
-  if (obvBullishDiv) { buy1Score += 7; buy1Reasons.push('OBV 강세 다이버전스'); }
-  if (obvDown) { buy1Score -= 3; buy1Reasons.push('OBV 하락 (수급 이탈)'); }
+  if (obvUp) { buy1Score += 5; buy1Reasons.push('OBV 상승 (수급 유입)'); buy1Contribs.push({label: 'OBV↑', pts: 5}); }
+  if (obvBullishDiv) { buy1Score += 7; buy1Reasons.push('OBV 강세 다이버전스'); buy1Contribs.push({label: 'OBV다이', pts: 7}); }
+  if (obvDown) { buy1Score -= 3; buy1Reasons.push('OBV 하락 (수급 이탈)'); buy1Contribs.push({label: 'OBV↓', pts: -3}); }
   // 스윙
-  if (nearRecentLow) { buy1Score += 5; buy1Reasons.push(`최근 스윙 로우(${swing.recentLow.toLocaleString()}) 부근`); }
-  if (nearRecentHigh) { buy1Score -= 3; buy1Reasons.push(`최근 스윙 하이(${swing.recentHigh.toLocaleString()}) 부근 (저항)`); }
+  if (nearRecentLow) { buy1Score += 5; buy1Reasons.push(`최근 스윙 로우(${swing.recentLow.toLocaleString()}) 부근`); buy1Contribs.push({label: '스윙로우', pts: 5}); }
+  if (nearRecentHigh) { buy1Score -= 3; buy1Reasons.push(`최근 스윙 하이(${swing.recentHigh.toLocaleString()}) 부근 (저항)`); buy1Contribs.push({label: '스윙하이', pts: -3}); }
   // Polarity
-  if (hasFlippedSupport) { buy1Score += 5; buy1Reasons.push(`지지선 역할 전환: ${polarity.flippedSupport.toLocaleString()} (구 고점)`); }
+  if (hasFlippedSupport) { buy1Score += 5; buy1Reasons.push(`지지선 역할 전환: ${polarity.flippedSupport.toLocaleString()} (구 고점)`); buy1Contribs.push({label: 'Polarity', pts: 5}); }
   // 라운드
-  if (nearRoundLower) { buy1Score += 5; buy1Reasons.push(`라운드 넘버 ${round.lower.toLocaleString()} (심리적 지지)`); }
+  if (nearRoundLower) { buy1Score += 5; buy1Reasons.push(`라운드 넘버 ${round.lower.toLocaleString()} (심리적 지지)`); buy1Contribs.push({label: '라운드', pts: 5}); }
   // === 활성 조건 다중화 (4가지 신호) ===
   // 1안: MA/정배열 추세 진입 (기존, 약화)
   const buy1ByMa = isGoldenCrossNow || (isAligned && volSurge && ma20Rising);
@@ -172,11 +173,13 @@ function calculateSignals(prices, technical) {
   // 3안: 심리적 지지 반등 (지지선/라운드 2개 이상 + OBV UP) — MA 무관
   const buy1SupportCount = (nearPoc ? 1 : 0) + (nearSupport ? 1 : 0) + (nearRoundLower ? 1 : 0);
   const buy1BySupport = buy1SupportCount >= 2 && obvUp;
-  // 4안: 구조적 반등 (Polarity 지지전환 + 캔들반전) — MA 무관
-  const buy1ByStructure = hasFlippedSupport && hasBullishPattern;
+  // 1안+3안 동시 만족 (정배열 + 지지선 둘 다)
+  const buy1ByMaSupport = (buy1ByMa || isAligned) && buy1BySupport;
+  // 4안 강화: 구조적 반등 (Polarity 지지전환 + 캔들반전 + ADX STRONG + OBV UP) — MA 무관
+  const buy1ByStructure = hasFlippedSupport && hasBullishPattern && adxStrong && obvUp;
   // 강한 하락 캔들 + 강한 하락 추세면 매수 비활성
   const buy1Suppressed = hasStrongBearish && adxStrong && adxDownTrend;
-  const buy1Active = !buy1Suppressed && (buy1ByMa || buy1ByMomentum || buy1BySupport || buy1ByStructure);
+  const buy1Active = !buy1Suppressed && (buy1ByMaSupport || buy1ByMomentum || buy1ByStructure);
 
   // === 2차매수 (눌림목: 5일선 근처 + 양봉 + 거래량 감소 + 20일선 우상향) — 조건 완화 ===
   const nearMa5 = last >= ma5 * 0.98 && last <= ma5 * 1.02; // 5일선 ±2%
@@ -188,30 +191,31 @@ function calculateSignals(prices, technical) {
 
   let buy2Score = 0;
   const buy2Reasons = [];
+  const buy2Contribs = []; // 점수 기여도
   // === 가산 점수 균등화 ===
   // 눌림목 (기존 30+25+20+15+10 = 100점 → 축소)
-  if (nearMa5) { buy2Score += 7; buy2Reasons.push('5일선 ±2% 눌림'); }
-  else if (nearMa20) { buy2Score += 5; buy2Reasons.push('20일선 위 -5% 눌림'); }
-  if (isBullishCandle) { buy2Score += 5; buy2Reasons.push('당일 양봉'); }
-  if (volDecline) { buy2Score += 5; buy2Reasons.push('거래량 0.9x↓ (건강한 조정)'); }
-  if (ma20RisingFor2) { buy2Score += 5; buy2Reasons.push('20일선 우상향 (추세 유지)'); }
-  if (aboveMa60) { buy2Score += 5; buy2Reasons.push('60일선 위 (장기 추세)'); }
+  if (nearMa5) { buy2Score += 7; buy2Reasons.push('5일선 ±2% 눌림'); buy2Contribs.push({label: '눌림(5일)', pts: 7}); }
+  else if (nearMa20) { buy2Score += 5; buy2Reasons.push('20일선 위 -5% 눌림'); buy2Contribs.push({label: '눌림(20일)', pts: 5}); }
+  if (isBullishCandle) { buy2Score += 5; buy2Reasons.push('당일 양봉'); buy2Contribs.push({label: '양봉', pts: 5}); }
+  if (volDecline) { buy2Score += 5; buy2Reasons.push('거래량 0.9x↓ (건강한 조정)'); buy2Contribs.push({label: '거래량↓', pts: 5}); }
+  if (ma20RisingFor2) { buy2Score += 5; buy2Reasons.push('20일선 우상향 (추세 유지)'); buy2Contribs.push({label: 'ma20↑', pts: 5}); }
+  if (aboveMa60) { buy2Score += 5; buy2Reasons.push('60일선 위 (장기 추세)'); buy2Contribs.push({label: 'ma60위', pts: 5}); }
   // 매물대 (2차매수가 ma60 ≈ POC/지지선)
   if (vpEarly) {
-    if (vpEarly.poc && Math.abs(ma60 - vpEarly.poc.price) / ma60 <= 0.10) { buy2Score += 7; buy2Reasons.push(`POC 부근 2차매수가`); }
-    if (vpEarly.supportLines && vpEarly.supportLines.some((p) => Math.abs(ma60 - p) / ma60 <= 0.10)) { buy2Score += 5; buy2Reasons.push('지지선 부근 2차매수가'); }
+    if (vpEarly.poc && Math.abs(ma60 - vpEarly.poc.price) / ma60 <= 0.10) { buy2Score += 7; buy2Reasons.push(`POC 부근 2차매수가`); buy2Contribs.push({label: 'POC', pts: 7}); }
+    if (vpEarly.supportLines && vpEarly.supportLines.some((p) => Math.abs(ma60 - p) / ma60 <= 0.10)) { buy2Score += 5; buy2Reasons.push('지지선 부근 2차매수가'); buy2Contribs.push({label: '지지선', pts: 5}); }
   }
   // ADX
-  if (adxStrong && adxUpTrend) { buy2Score += 5; buy2Reasons.push(`ADX 강한 상승 추세 (눌림 적지)`); }
-  if (hasStrongBullish) { buy2Score += 10; buy2Reasons.push(`강한 상승 반전 캔들: ${bullishPatterns.find((p) => p.strength === 'STRONG').name}`); }
-  else if (hasBullishPattern) { buy2Score += 5; buy2Reasons.push(`상승 반전 캔들: ${bullishPatterns[0].name}`); }
-  if (hasStrongBearish) { buy2Score -= 5; buy2Reasons.push(`하락 반전 캔들 (매수 자제)`); }
+  if (adxStrong && adxUpTrend) { buy2Score += 5; buy2Reasons.push(`ADX 강한 상승 추세 (눌림 적지)`); buy2Contribs.push({label: 'ADX↑', pts: 5}); }
+  if (hasStrongBullish) { buy2Score += 10; buy2Reasons.push(`강한 상승 반전 캔들: ${bullishPatterns.find((p) => p.strength === 'STRONG').name}`); buy2Contribs.push({label: '캔들↑', pts: 10}); }
+  else if (hasBullishPattern) { buy2Score += 5; buy2Reasons.push(`상승 반전 캔들: ${bullishPatterns[0].name}`); buy2Contribs.push({label: '캔들', pts: 5}); }
+  if (hasStrongBearish) { buy2Score -= 5; buy2Reasons.push(`하락 반전 캔들 (매수 자제)`); buy2Contribs.push({label: '캔들↓', pts: -5}); }
   // OBV / 스윙 / Polarity / 라운드
-  if (obvUp) { buy2Score += 5; buy2Reasons.push('OBV 상승 (눌림 매수 적지)'); }
-  if (obvBullishDiv) { buy2Score += 7; buy2Reasons.push('OBV 강세 다이버전스'); }
-  if (nearRecentLow) { buy2Score += 5; buy2Reasons.push(`최근 스윙 로우 부근 (지지)`); }
-  if (hasFlippedSupport) { buy2Score += 5; buy2Reasons.push(`지지선 역할 전환 (${polarity.flippedSupport.toLocaleString()})`); }
-  if (nearRoundLower) { buy2Score += 5; buy2Reasons.push(`라운드 넘버 ${round.lower.toLocaleString()}`); }
+  if (obvUp) { buy2Score += 5; buy2Reasons.push('OBV 상승 (눌림 매수 적지)'); buy2Contribs.push({label: 'OBV↑', pts: 5}); }
+  if (obvBullishDiv) { buy2Score += 7; buy2Reasons.push('OBV 강세 다이버전스'); buy2Contribs.push({label: 'OBV다이', pts: 7}); }
+  if (nearRecentLow) { buy2Score += 5; buy2Reasons.push(`최근 스윙 로우 부근 (지지)`); buy2Contribs.push({label: '스윙로우', pts: 5}); }
+  if (hasFlippedSupport) { buy2Score += 5; buy2Reasons.push(`지지선 역할 전환 (${polarity.flippedSupport.toLocaleString()})`); buy2Contribs.push({label: 'Polarity', pts: 5}); }
+  if (nearRoundLower) { buy2Score += 5; buy2Reasons.push(`라운드 넘버 ${round.lower.toLocaleString()}`); buy2Contribs.push({label: '라운드', pts: 5}); }
   // === 활성 조건 다중화 (2가지 신호) ===
   // 1안: 기존 눌림목 (5일선/20일선 근처 + 양봉 + 거래량감소 + ma20우상향 + 60일선 위)
   const buy2ByPullback = (nearMa5 || nearMa20) && isBullishCandle && volDecline && ma20RisingFor2 && aboveMa60;
@@ -384,6 +388,7 @@ function calculateSignals(prices, technical) {
       score: Math.min(100, buy1Score),
       price: Math.round(buy1Price),
       reasons: buy1Reasons,
+      contribs: buy1Contribs, // 점수 기여도 [{label, pts}]
       action: buy1Active ? 'BUY' : 'WAIT',
       description: '5일↑20일 골든크로스 + 정배열 (5>20>60) + 20일선 우상향 + 거래량 1.5x↑',
     },
@@ -392,6 +397,7 @@ function calculateSignals(prices, technical) {
       score: Math.min(100, buy2Score),
       price: Math.round(buy2Price),
       reasons: buy2Reasons,
+      contribs: buy2Contribs,
       action: buy2Active ? 'BUY' : 'WAIT',
       description: '5일선/20일선 눌림 + 양봉 + 거래량 0.8x↓ + 20일선 우상향 + 60일선 위',
     },

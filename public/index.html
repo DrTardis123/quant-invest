@@ -942,8 +942,13 @@
                       <strong class="small">1차매수 (골든/정배열)</strong>
                       <div class="fs-5 fw-bold" x-text="(stockDetail?.signals?.buy1?.score || 0) + ' / 100'"></div>
                       <div class="small" x-text="stockDetail?.signals?.buy1?.active ? '✅ 활성' : '⚪ 대기'"></div>
-                      <div class="small mt-1" style="line-height:1.3">
-                        <template x-for="r in (stockDetail?.signals?.buy1?.reasons || [])"><div>• <span x-text="r"></span></div></template>
+                      <div class="d-flex flex-wrap gap-1 mt-1" style="font-size:0.7rem">
+                        <template x-for="c in (stockDetail?.signals?.buy1?.contribs || [])" :key="c.label + c.pts">
+                          <span class="px-2 py-1 rounded" :class="c.pts > 0 ? 'bg-success bg-opacity-25' : 'bg-danger bg-opacity-25'">
+                            <span x-text="c.label"></span>
+                            <strong :class="c.pts > 0 ? 'text-success' : 'text-danger'" x-text="(c.pts > 0 ? '+' : '') + c.pts"></strong>
+                          </span>
+                        </template>
                       </div>
                     </div>
                   </div>
@@ -954,8 +959,13 @@
                       <strong class="small">2차매수 (눌림목)</strong>
                       <div class="fs-5 fw-bold" x-text="(stockDetail?.signals?.buy2?.score || 0) + ' / 100'"></div>
                       <div class="small" x-text="stockDetail?.signals?.buy2?.active ? '✅ 활성' : '⚪ 대기'"></div>
-                      <div class="small mt-1" style="line-height:1.3">
-                        <template x-for="r in (stockDetail?.signals?.buy2?.reasons || [])"><div>• <span x-text="r"></span></div></template>
+                      <div class="d-flex flex-wrap gap-1 mt-1" style="font-size:0.7rem">
+                        <template x-for="c in (stockDetail?.signals?.buy2?.contribs || [])" :key="c.label + c.pts">
+                          <span class="px-2 py-1 rounded" :class="c.pts > 0 ? 'bg-success bg-opacity-25' : 'bg-danger bg-opacity-25'">
+                            <span x-text="c.label"></span>
+                            <strong :class="c.pts > 0 ? 'text-success' : 'text-danger'" x-text="(c.pts > 0 ? '+' : '') + c.pts"></strong>
+                          </span>
+                        </template>
                       </div>
                     </div>
                   </div>

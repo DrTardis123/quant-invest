@@ -1,0 +1,71 @@
+chore: A→E 순차 작업 (ETF 자동제외 + 매트릭스 강화 + 점수 기여도 + KOSDAQ export)
+
+=== A. ETF/ETN/리츠/인버스/레버리지/SPAC/우선주 자동 제외 ===
+src/data/filters.js 신규: lightIsExcludedProduct (정확한 패턴)
+- \bETN\b, 인버스, 레버리지, 2X/3X
+- SPAC (스팩, 기업인수목적)
+- 우선주 (끝 글자 '우')
+- 리츠
+- 명확한 ETF prefix (KODEX, TIGER, KBSTAR, ARIRANG, KINDEX, SOL, ACE, RISE, HANARO, TIMEFOLIO, 마이티, TREX, KIWOOM, PLUS, TIME, 에셋플러스 등)
+- 합성/액티브/원유/금/채권 키워드
+
+적용:
+- verify-matrix-200.js: 200개 중 156개 제외 (78%) → 44개
+- export-top200.js: KOSPI/KOSDAQ 통합 200개 중 84개 제외
+- backfill-signal-performance.js: 2,154개 중 1,192개 제외 (55%) → 962개
+
+=== B. 4안 강화 (Polarity + 캔들 + ADX + OBV) ===
+signals.js buy1ByStructure:
+  - 이전: hasFlippedSupport && hasBullishPattern
+  - 변경: hasFlippedSupport && hasBullishPattern && adxStrong && obvUp
+  - 더 강한 신호만 활성
+
+=== C. 1안 AND 3안 동시 만족 (정배열 + 지지선 둘 다) ===
+signals.js 활성 조건:
+  - 1안 (MA/정배열) AND 3안 (지지 2개 + OBV) 동시 만족해야 활성
+  - 1안 + 3안 OR 2안(모멘텀반전) OR 4안(구조적반전)
+  - buy1ByMaSupport = (buy1ByMa || isAligned) && buy1BySupport
+
+매트릭스 4개 활성 조건 중 1안+3안 동시 만족이 가장 강한 신호
+
+=== D. KOSDAQ 200개 stock/*.json export ===
+export-top200.js에 --market 옵션 추가
+KOSDAQ 200개 export (lightIsExcludedProduct 적용)
+
+=== E. 매트릭스 탭 점수 기여도 배지 (contribs) ===
+signals.js: buy1Contribs, buy2Contribs 배열 추가
+- 각 가산 요소: {label, points} 형태로 점수 추적
+- 양수: 초록 배경, 음수: 빨강 배경
+- 매트릭스 탭의 신호 점수 카드 4개에 contribs 배지 표시
+
+index.html: buy1/buy2 카드에 contribs 배지 추가
+- 각 요소의 +점수 시각화
+- 어떤 요소가 매트릭스에 기여했는지 한눈에 파악
+
+=== 백필 결과 (B+C 적용 + lightIsExcludedProduct) ===
+대상 종목: 962개 (1,192개 제외)
+신호 계산: 15,180건, 활성 신호: 16,352건
+
+KPI:
+- buy1: 1,166건, +10d -0.68% (이전 -1.22%에서 개선)
+- buy2: 3,642건, +10d -2.23% (변동 없음)
+- sell1: 8,565건, +10d -18.98%
+- sell2: 2,979건, +10d -17.50%
+- max20d: 43.02% (이전 295.49% → 극단값 ETF 제외)
+
+=== 시뮬레이션 결과 (8/14 종가) ===
+한미반도체 042700: 1차매수 10점 ❌ 비활성 (정배열 미달)
+셀트리온 068270: 1차매수 50점 ✅ 활성 (정배열+지지+OBV+라운드)
+삼성전자 005930: 1차매수 9점 ❌ 비활성 (ADX DOWN+OBV DOWN)
+
+=== 파일 변경 ===
+- src/data/filters.js (신규)
+- src/data/signals.js (B+C+E)
+- public/index.html (E: 매트릭스 탭 contribs)
+- scripts/backfill-signal-performance.js (A)
+- scratch/verify-matrix-200.js (A)
+- scratch/export-top200.js (A+D: --market 옵션)
+- public/data/signal-performance.json (갱신)
+- public/data/matrix-verify-top200.json (갱신)
+- public/data/stock/*.json (200개 갱신, KOSPI+KOSDAQ mix)
+- public/data/stock/*.json (200개 KOSDAQ 추가)

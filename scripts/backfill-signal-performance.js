@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../src/db/connection');
 const { calculateSignals } = require('../src/data/signals');
+const { lightIsExcludedProduct } = require('../src/data/filters');
 
 const HORIZONS = [5, 10, 20];
 const args = process.argv.slice(2);
@@ -31,10 +32,12 @@ function mean(arr) {
   const t0 = Date.now();
   console.log(`[signal-tracker] 시작 (lookback=${LOOKBACK_DAYS}일, markets=${MARKETS.join(',')})`);
 
-  // 1) 대상 종목 (KOSPI ~800개)
+  // 1) 대상 종목 (KOSPI ~800개, ETF/ETN/리츠/우선주/SPAC 자동 제외)
   const marketClause = MARKETS.map((m) => `'${m}'`).join(',');
-  const stocks = await db.all(`SELECT code, name, market FROM stocks WHERE market IN (${marketClause})`);
-  console.log(`  대상 종목: ${stocks.length}개`);
+  const stocksAll = await db.all(`SELECT code, name, market FROM stocks WHERE market IN (${marketClause})`);
+  const stocks = stocksAll.filter((s) => !lightIsExcludedProduct(s.name));
+  const excludedCount = stocksAll.length - stocks.length;
+  console.log(`  대상 종목: ${stocks.length}개 (제외: ${excludedCount}개)`);
 
   // 2) daily_prices 마지막 LOOKBACK_DAYS + 25 (20일 후 평가용 마진) 일
   const priceRows = await db.all(`
