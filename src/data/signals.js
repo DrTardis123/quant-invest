@@ -169,8 +169,9 @@ function calculateSignals(prices, technical) {
   const buy1ByMa = isGoldenCrossNow || (isAligned && volSurge && ma20Rising);
   // 2안: 모멘텀 반전 (강한상승캔들 + ADX STRONG + OBV UP) — MA 무관
   const buy1ByMomentum = hasStrongBullish && adxStrong && adxUpTrend && obvUp;
-  // 3안: 심리적 지지 반등 (지지선/라운드 + OBV UP) — MA 무관
-  const buy1BySupport = (nearPoc || nearSupport || nearRoundLower) && obvUp;
+  // 3안: 심리적 지지 반등 (지지선/라운드 2개 이상 + OBV UP) — MA 무관
+  const buy1SupportCount = (nearPoc ? 1 : 0) + (nearSupport ? 1 : 0) + (nearRoundLower ? 1 : 0);
+  const buy1BySupport = buy1SupportCount >= 2 && obvUp;
   // 4안: 구조적 반등 (Polarity 지지전환 + 캔들반전) — MA 무관
   const buy1ByStructure = hasFlippedSupport && hasBullishPattern;
   // 강한 하락 캔들 + 강한 하락 추세면 매수 비활성
