@@ -77,14 +77,26 @@ function calculateSignals(prices, technical) {
   }
   const vol20 = rets.length > 0 ? Math.sqrt(rets.reduce((a, b) => a + b * b, 0) / rets.length) : 0;
 
-  // === 1차매수 (골든크로스 + 정배열 + 거래량 + 20일선 우상향) ===
+  // === 1차매수 (골든크로스 OR 정배열 + 거래량 + 20일선 우상향) — 조건 완화 ===
   const isGoldenCrossNow = ma5 > ma20 && ma5Prev <= ma20Prev; // 방금 발생
   const isGoldenCrossRecent = ma5 > ma20 && ma5Arr.length >= 3 && ma5Arr[ma5Arr.length - 3] <= ma20Arr[ma20Arr.length - 3]; // 3일 내
-  const isAligned = ma5 > ma20 && ma20 > ma60;
+  const isAligned = ma5 > ma20 && ma20 > ma60; // 정배열 (필수)
   const ma20Rising = ma20 > ma20FiveAgo;
   const ma60Rising = ma60 > ma60FiveAgo;
-  const volSurge = volLast > volMa20 * 1.5;
+  const volSurge = volLast > volMa20 * 1.0; // 1.0x↑로 완화 (이전 1.5x, 너무 strict)
   const nearHigh60 = last >= high60 * 0.95; // 60일 고가 5% 이내
+
+  // === POC/지지선 가산 점수 (매물대 분석) ===
+  // 매수가(ma20) ≈ POC/지지선 = 매수 적지 → 점수 +15/+10
+  // calculateVolumeProfile에서 호출되므로 미리 계산 필요
+  const vpEarly = calculateVolumeProfile(prices);
+  let nearPoc = false, nearSupport = false;
+  if (vpEarly) {
+    // ma20이 POC ±5% 이내
+    if (vpEarly.poc && Math.abs(ma20 - vpEarly.poc.price) / ma20 <= 0.05) nearPoc = true;
+    // ma20이 지지선 ±5% 이내
+    if (vpEarly.supportLines && vpEarly.supportLines.some((p) => Math.abs(ma20 - p) / ma20 <= 0.05)) nearSupport = true;
+  }
 
   let buy1Score = 0;
   const buy1Reasons = [];
@@ -93,15 +105,23 @@ function calculateSignals(prices, technical) {
   if (isAligned) { buy1Score += 25; buy1Reasons.push('정배열 (5>20>60)'); }
   if (ma20Rising) { buy1Score += 15; buy1Reasons.push('20일선 우상향'); }
   if (ma60Rising) { buy1Score += 10; buy1Reasons.push('60일선 우상향'); }
-  if (volSurge) { buy1Score += 15; buy1Reasons.push('거래량 1.5x↑'); }
+  if (volSurge) { buy1Score += 15; buy1Reasons.push('거래량 1.0x↑ (평균 이상)'); }
   if (nearHigh60) { buy1Score += 5; buy1Reasons.push('60일 고가 5% 이내'); }
-  const buy1Active = (isGoldenCrossNow || isGoldenCrossRecent) && isAligned && ma20Rising && volSurge;
+  // POC/지지선 가산 (매물대 분석)
+  if (nearPoc) { buy1Score += 15; buy1Reasons.push(`POC(${vpEarly.poc.price.toLocaleString(undefined,{maximumFractionDigits:0})}원) 부근 매수가 (지지선)`); }
+  if (nearSupport) { buy1Score += 10; buy1Reasons.push('지지선 부근 매수가 (반등 기대)'); }
+  // 활성 조건: 골든크로스(방금) OR (정배열 + 거래량 평균 + 20일선 우상향)
+  // 골든크로스 3일 내는 너무 느슨 (가짜 신호) → 방금만
+  // 정배열만으로는 부족 → 거래량 + 20일선 우상향 필수
+  const buy1ByGolden = isGoldenCrossNow;
+  const buy1ByAligned = isAligned && volSurge && ma20Rising;
+  const buy1Active = buy1ByGolden || buy1ByAligned;
 
-  // === 2차매수 (눌림목: 5일선 근처 + 양봉 + 거래량 감소 + 20일선 우상향) ===
+  // === 2차매수 (눌림목: 5일선 근처 + 양봉 + 거래량 감소 + 20일선 우상향) — 조건 완화 ===
   const nearMa5 = last >= ma5 * 0.98 && last <= ma5 * 1.02; // 5일선 ±2%
   const nearMa20 = last >= ma20 * 0.95 && last <= ma20 * 1.02; // 20일선 위 ~5% 이내
   const isBullishCandle = last > closePrev; // 양봉
-  const volDecline = volLast < volMa5 * 0.8; // 거래량 5일 평균보다 20%+ 감소
+  const volDecline = volLast < volMa5 * 0.9; // 거래량 5일 평균보다 10%+ 감소 (완화, 0.8x→0.9x)
   const ma20RisingFor2 = ma20 > ma20FiveAgo;
   const aboveMa60 = last > ma60; // 60일선 위
 
@@ -110,9 +130,16 @@ function calculateSignals(prices, technical) {
   if (nearMa5) { buy2Score += 30; buy2Reasons.push('5일선 ±2% 눌림'); }
   else if (nearMa20) { buy2Score += 20; buy2Reasons.push('20일선 위 -5% 눌림'); }
   if (isBullishCandle) { buy2Score += 25; buy2Reasons.push('당일 양봉'); }
-  if (volDecline) { buy2Score += 20; buy2Reasons.push('거래량 0.8x↓ (건강한 조정)'); }
+  if (volDecline) { buy2Score += 20; buy2Reasons.push('거래량 0.9x↓ (건강한 조정)'); }
   if (ma20RisingFor2) { buy2Score += 15; buy2Reasons.push('20일선 우상향 (추세 유지)'); }
   if (aboveMa60) { buy2Score += 10; buy2Reasons.push('60일선 위 (장기 추세)'); }
+  // POC/지지선 가산 (2차매수가 ma60 ≈ POC/지지선)
+  if (vpEarly) {
+    if (vpEarly.poc && Math.abs(ma60 - vpEarly.poc.price) / ma60 <= 0.10) { buy2Score += 10; buy2Reasons.push(`POC 부근 2차매수가`); }
+    if (vpEarly.supportLines && vpEarly.supportLines.some((p) => Math.abs(ma60 - p) / ma60 <= 0.10)) { buy2Score += 5; buy2Reasons.push('지지선 부근 2차매수가'); }
+  }
+  // 활성 조건: 눌림목(nearMa5 OR nearMa20) + 양봉 + 거래량감소 + 20일선 우상향 + 60일선 위
+  // (60일선 위는 추세의 기본 조건, 유지)
   const buy2Active = (nearMa5 || nearMa20) && isBullishCandle && volDecline && ma20RisingFor2 && aboveMa60;
 
   // === 매수가/매도가 (스윙 투자, 분할 매수/매도) ===
