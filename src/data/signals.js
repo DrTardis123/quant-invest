@@ -115,6 +115,22 @@ function calculateSignals(prices, technical) {
   const hasStrongBullish = bullishPatterns.some((p) => p.strength === 'STRONG');
   const hasStrongBearish = bearishPatterns.some((p) => p.strength === 'STRONG');
 
+  // === OBV / 스윙 / Polarity / 라운드 (수급·심리 보조) ===
+  const obv = calculateOBV(prices, 20);
+  const swing = findSwingPoints(prices, 5);
+  const polarity = detectPolarityFlip(prices, 60);
+  const round = findRoundNumberLevels(last);
+  const obvUp = obv && obv.trend === 'UP';
+  const obvDown = obv && obv.trend === 'DOWN';
+  const obvBullishDiv = obv && obv.bullishDivergence; // 가격↓ OBV↑ = 매수세 유입
+  const obvBearishDiv = obv && obv.bearishDivergence; // 가격↑ OBV↓ = 매도 압력
+  const nearRecentLow = swing && swing.recentLow && Math.abs(last - swing.recentLow) / last <= 0.05; // 5% 이내
+  const nearRecentHigh = swing && swing.recentHigh && Math.abs(last - swing.recentHigh) / last <= 0.05;
+  const hasFlippedResistance = polarity && polarity.brokenBelow; // 저항선으로 전환
+  const hasFlippedSupport = polarity && polarity.brokenAbove; // 지지선으로 전환
+  const nearRoundLower = round && round.distanceToLower / last <= 0.03; // 3% 이내
+  const nearRoundUpper = round && round.distanceToUpper / last <= 0.03;
+
   let buy1Score = 0;
   const buy1Reasons = [];
   if (isGoldenCrossNow) { buy1Score += 30; buy1Reasons.push('5일↑20일 골든크로스 (방금)'); }
@@ -135,6 +151,17 @@ function calculateSignals(prices, technical) {
   if (hasStrongBullish) { buy1Score += 20; buy1Reasons.push(`강한 상승 반전 캔들: ${bullishPatterns.find((p) => p.strength === 'STRONG').name}`); }
   else if (hasBullishPattern) { buy1Score += 10; buy1Reasons.push(`상승 반전 캔들: ${bullishPatterns[0].name}`); }
   if (hasStrongBearish) { buy1Score -= 15; buy1Reasons.push(`강한 하락 반전 캔들 (매수 자제): ${bearishPatterns.find((p) => p.strength === 'STRONG').name}`); }
+  // OBV 수급 가산
+  if (obvUp) { buy1Score += 8; buy1Reasons.push('OBV 상승 (수급 유입)'); }
+  if (obvBullishDiv) { buy1Score += 12; buy1Reasons.push('OBV 강세 다이버전스 (가격↓ 거래량↑)'); }
+  if (obvDown) { buy1Score -= 5; buy1Reasons.push('OBV 하락 (수급 이탈)'); }
+  // 스윙 로우/하이
+  if (nearRecentLow) { buy1Score += 5; buy1Reasons.push(`최근 스윙 로우(${swing.recentLow.toLocaleString()}) 부근`); }
+  if (nearRecentHigh) { buy1Score -= 3; buy1Reasons.push(`최근 스윙 하이(${swing.recentHigh.toLocaleString()}) 부근 (저항)`); }
+  // Polarity Flip (지지↔저항 역할 전환)
+  if (hasFlippedSupport) { buy1Score += 5; buy1Reasons.push(`지지선 역할 전환: ${polarity.flippedSupport.toLocaleString()} (구 고점)`); }
+  // 라운드 넘버
+  if (nearRoundLower) { buy1Score += 5; buy1Reasons.push(`라운드 넘버 ${round.lower.toLocaleString()} (심리적 지지)`); }
   // 활성 조건: 골든크로스(방금) OR (정배열 + 거래량 평균 + 20일선 우상향)
   // 강한 하락 캔들 + 강한 하락 추세면 매수 비활성
   const buy1ByGolden = isGoldenCrossNow;
@@ -168,6 +195,12 @@ function calculateSignals(prices, technical) {
   if (hasStrongBullish) { buy2Score += 15; buy2Reasons.push(`강한 상승 반전 캔들: ${bullishPatterns.find((p) => p.strength === 'STRONG').name}`); }
   else if (hasBullishPattern) { buy2Score += 8; buy2Reasons.push(`상승 반전 캔들: ${bullishPatterns[0].name}`); }
   if (hasStrongBearish) { buy2Score -= 10; buy2Reasons.push(`하락 반전 캔들 (매수 자제)`); }
+  // OBV / 스윙 / Polarity / 라운드 (2차매수가 보조)
+  if (obvUp) { buy2Score += 5; buy2Reasons.push('OBV 상승 (눌림 매수 적지)'); }
+  if (obvBullishDiv) { buy2Score += 8; buy2Reasons.push('OBV 강세 다이버전스'); }
+  if (nearRecentLow) { buy2Score += 5; buy2Reasons.push(`최근 스윙 로우 부근 (지지)`); }
+  if (hasFlippedSupport) { buy2Score += 5; buy2Reasons.push(`지지선 역할 전환 (${polarity.flippedSupport.toLocaleString()})`); }
+  if (nearRoundLower) { buy2Score += 5; buy2Reasons.push(`라운드 넘버 ${round.lower.toLocaleString()}`); }
   // 활성 조건: 눌림목(nearMa5 OR nearMa20) + 양봉 + 거래량감소 + 20일선 우상향 + 60일선 위
   // (60일선 위는 추세의 기본 조건, 유지)
   const buy2Suppressed = hasStrongBearish && adxStrong && adxDownTrend;
@@ -262,7 +295,18 @@ function calculateSignals(prices, technical) {
   if (adxStrong && adxDownTrend) { sell1Score += 10; sell1Reasons.push(`ADX ${adxValue.toFixed(1)} 강한 하락 추세 (손절 권고)`); }
   if (hasStrongBearish) { sell1Score += 20; sell1Reasons.push(`강한 하락 반전 캔들: ${bearishPatterns.find((p) => p.strength === 'STRONG').name}`); }
   else if (hasBearishPattern) { sell1Score += 10; sell1Reasons.push(`하락 반전 캔들: ${bearishPatterns[0].name}`); }
-  const sell1Active = profitPctFromBuy1 >= 15 || belowMa20 || lossPctFromBuy1 <= -8 || rsiOverbought || macdCrossDown || (adxStrong && adxDownTrend) || hasStrongBearish;
+  // OBV 약세 다이버전스 / 수급 이탈
+  if (obvBearishDiv) { sell1Score += 15; sell1Reasons.push('OBV 약세 다이버전스 (가격↑ 거래량↓)'); }
+  if (obvDown && profitPctFromBuy1 > 5) { sell1Score += 8; sell1Reasons.push('OBV 하락 + 수익 중 (매도 적지)'); }
+  // 스윙 하이 부근 (저항 매도)
+  if (nearRecentHigh) { sell1Score += 8; sell1Reasons.push(`최근 스윙 하이(${swing.recentHigh.toLocaleString()}) 부근 (저항)`); }
+  // Polarity: 지지→저항 역할 전환된 가격 근처
+  if (hasFlippedResistance && Math.abs(last - polarity.flippedResistance) / last <= 0.05) {
+    sell1Score += 8; sell1Reasons.push(`저항선 역할 전환 (${polarity.flippedResistance.toLocaleString()}, 구 저점)`);
+  }
+  // 라운드 넘버 (저항)
+  if (nearRoundUpper) { sell1Score += 5; sell1Reasons.push(`라운드 넘버 ${round.upper.toLocaleString()} (심리적 저항)`); }
+  const sell1Active = profitPctFromBuy1 >= 15 || belowMa20 || lossPctFromBuy1 <= -8 || rsiOverbought || macdCrossDown || (adxStrong && adxDownTrend) || hasStrongBearish || obvBearishDiv;
 
   // === 2차매도 (2차 익절) — 4개 요소 종합: ma20+30% / 52주고가-1% / 피보나치 23.6% / 120일선 터치 중 보수적 ===
   const ma120 = ma120Arr[ma120Arr.length - 1] || ma60;
@@ -415,6 +459,37 @@ function calculateSignals(prices, technical) {
         hasStrongBullish,
         hasStrongBearish,
       },
+      obv: obv ? {
+        trend: obv.trend,
+        bullishDivergence: obv.bullishDivergence,
+        bearishDivergence: obv.bearishDivergence,
+        delta: obv.delta,
+      } : null,
+      swing: swing ? {
+        recentLow: swing.recentLow,
+        recentHigh: swing.recentHigh,
+        lowCount: swing.lowCount,
+        highCount: swing.highCount,
+        nearRecentLow,
+        nearRecentHigh,
+      } : null,
+      polarity: polarity ? {
+        recentHigh: polarity.recentHigh,
+        recentLow: polarity.recentLow,
+        brokenBelow: polarity.brokenBelow,
+        brokenAbove: polarity.brokenAbove,
+        flippedResistance: polarity.flippedResistance,
+        flippedSupport: polarity.flippedSupport,
+      } : null,
+      round: round ? {
+        unit: round.unit,
+        lower: round.lower,
+        upper: round.upper,
+        distanceToLower: round.distanceToLower,
+        distanceToUpper: round.distanceToUpper,
+        nearLower: nearRoundLower,
+        nearUpper: nearRoundUpper,
+      } : null,
     },
     // === 매트릭스 (5개 요소 종합 — UI 표시용) ===
     matrix: {
@@ -821,4 +896,134 @@ function detectCandlePatterns(prices) {
   return patterns;
 }
 
-module.exports = { calculateSignals, calculateVolumeProfile, calculateATR, calculateBollingerBands, calculate52Week, calculateRSI, calculateMACD, calculateFibonacci, calculateADX, detectCandlePatterns };
+// === OBV (On Balance Volume) ===
+// 거래량 누적 흐름: 종가 상승 시 +volume, 하락 시 -volume
+// OBV 추세 = 가격 추세 확인 / OBV 다이버전스 = 추세 전환 신호
+function calculateOBV(prices, smaPeriod = 20) {
+  if (!prices || prices.length < smaPeriod + 1) return null;
+  const closes = prices.map((p) => Number(p.close) || 0);
+  const volumes = prices.map((p) => Number(p.volume) || 0);
+  // 1) OBV 계산
+  const obv = [0];
+  for (let i = 1; i < closes.length; i++) {
+    if (closes[i] > closes[i - 1]) obv.push(obv[i - 1] + volumes[i]);
+    else if (closes[i] < closes[i - 1]) obv.push(obv[i - 1] - volumes[i]);
+    else obv.push(obv[i - 1]);
+  }
+  // 2) OBV SMA 5/20
+  const obvSma = (n) => {
+    if (obv.length < n) return 0;
+    const slice = obv.slice(-n);
+    return slice.reduce((s, v) => s + v, 0) / n;
+  };
+  const obvSma5 = obvSma(5);
+  const obvSma20 = obvSma(20);
+  const obvLast = obv[obv.length - 1];
+  // 3) 추세: SMA5 > SMA20 → 상승, 반대 → 하락
+  const trend = obvSma5 > obvSma20 ? 'UP' : obvSma5 < obvSma20 ? 'DOWN' : 'NEUTRAL';
+  // 4) 가격-OBV 다이버전스: 가격 신저 vs OBV 신저 (강세 다이버전스) or 가격 신고 vs OBV 신고 (약세)
+  const closesLast20 = closes.slice(-20);
+  const obvLast20 = obv.slice(-20);
+  const priceTrend20 = closesLast20[closesLast20.length - 1] - closesLast20[0];
+  const obvTrend20 = obvLast20[obvLast20.length - 1] - obvLast20[0];
+  const bullishDiv = priceTrend20 < 0 && obvTrend20 > 0; // 가격 하락 + OBV 상승 = 매수세 유입
+  const bearishDiv = priceTrend20 > 0 && obvTrend20 < 0; // 가격 상승 + OBV 하락 = 매도 압력
+  return {
+    value: obvLast,
+    sma5: obvSma5,
+    sma20: obvSma20,
+    trend,
+    bullishDivergence: bullishDiv,
+    bearishDivergence: bearishDiv,
+    delta: obvSma5 - obvSma20,
+  };
+}
+
+// === 스윙 로우/하이 (Swing Low/High) 자동 감지 ===
+// 좌우 lookback 봉보다 낮은 저점 = 스윙 로우, 높은 고점 = 스윙 하이
+// 추세선/지지저항 자동 생성에 활용
+function findSwingPoints(prices, lookback = 5) {
+  if (!prices || prices.length < lookback * 2 + 1) return null;
+  const ohlc = prices.map((p) => ({
+    high: Number(p.high) || Number(p.close) || 0,
+    low: Number(p.low) || Number(p.close) || 0,
+  }));
+  const swingLows = [];
+  const swingHighs = [];
+  for (let i = lookback; i < ohlc.length - lookback; i++) {
+    const cur = ohlc[i];
+    // 스윙 로우: 좌우 lookback 봉 모두보다 낮음
+    let isLow = true;
+    for (let j = 1; j <= lookback; j++) {
+      if (ohlc[i - j].low <= cur.low || ohlc[i + j].low <= cur.low) {
+        isLow = false; break;
+      }
+    }
+    if (isLow) swingLows.push({ idx: i, price: cur.low });
+    // 스윙 하이
+    let isHigh = true;
+    for (let j = 1; j <= lookback; j++) {
+      if (ohlc[i - j].high >= cur.high || ohlc[i + j].high >= cur.high) {
+        isHigh = false; break;
+      }
+    }
+    if (isHigh) swingHighs.push({ idx: i, price: cur.high });
+  }
+  return {
+    lows: swingLows.map((s) => s.price),
+    highs: swingHighs.map((s) => s.price),
+    recentLow: swingLows.length > 0 ? swingLows[swingLows.length - 1].price : null,
+    recentHigh: swingHighs.length > 0 ? swingHighs[swingHighs.length - 1].price : null,
+    lowCount: swingLows.length,
+    highCount: swingHighs.length,
+  };
+}
+
+// === Polarity Flip (지지↔저항 역할 전환) ===
+// 최근 N일 저점을 종가가 이탈 → 그 저점이 저항선으로 전환
+// 최근 N일 고점을 종가가 돌파 → 그 고점이 지지선으로 전환
+function detectPolarityFlip(prices, lookback = 60) {
+  if (!prices || prices.length < lookback + 1) return null;
+  const closes = prices.map((p) => Number(p.close) || 0);
+  const last = closes[closes.length - 1];
+  const recent = prices.slice(-lookback).map((p, i, arr) => ({
+    high: Number(p.high) || Number(p.close) || 0,
+    low: Number(p.low) || Number(p.close) || 0,
+  }));
+  const recentHigh = Math.max(...recent.map((r) => r.high));
+  const recentLow = Math.min(...recent.map((r) => r.low));
+  // 역할 전환 감지: 최근 가격이 저점을 깨고 내려갔는지 / 고점을 돌파했는지
+  const brokenBelow = recentLow > last; // 저점 아래로 내려감 → 그 저점이 저항선으로 전환
+  const brokenAbove = recentHigh < last; // 고점 위로 올라감 → 그 고점이 지지선으로 전환
+  return {
+    recentHigh,
+    recentLow,
+    brokenBelow, // true면 recentLow가 저항선으로 전환됨
+    brokenAbove, // true면 recentHigh가 지지선으로 전환됨
+    flippedResistance: brokenBelow ? recentLow : null,
+    flippedSupport: brokenAbove ? recentHigh : null,
+  };
+}
+
+// === 라운드 넘버 (Round Number, 심리적 지지/저항) ===
+// 1,000원, 5,000원, 10,000원 단위 (가격대별 자동)
+// 1,000원 미만: 100원 단위 / 1,000~10,000: 1,000원 / 1만원~10만원: 5,000원 / 10만원~: 10,000원
+function findRoundNumberLevels(currentPrice) {
+  if (currentPrice <= 0) return null;
+  let unit;
+  if (currentPrice < 1000) unit = 100;
+  else if (currentPrice < 10000) unit = 1000;
+  else if (currentPrice < 100000) unit = 5000;
+  else unit = 10000;
+  const lower = Math.floor(currentPrice / unit) * unit;
+  const upper = lower + unit;
+  return {
+    unit,
+    lower, // 현재가 아래 라운드 넘버 (지지 후보)
+    upper, // 현재가 위 라운드 넘버 (저항 후보)
+    distanceToLower: currentPrice - lower, // 0이면 정확히 라운드
+    distanceToUpper: upper - currentPrice,
+  };
+}
+
+module.exports = { calculateSignals, calculateVolumeProfile, calculateATR, calculateBollingerBands, calculate52Week, calculateRSI, calculateMACD, calculateFibonacci, calculateADX, detectCandlePatterns, calculateOBV, findSwingPoints, detectPolarityFlip, findRoundNumberLevels };
