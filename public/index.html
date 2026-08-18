@@ -252,8 +252,10 @@
                         <strong x-text="r.name"></strong>
                         <small class="text-muted" x-text="r.code"></small>
                         <span class="badge bg-danger ms-1" x-show="r.status === 'halt'" title="거래정지">🚫</span>
-                        <span class="badge bg-warning text-dark ms-1" x-show="r.status === 'caution'" title="거래주의 (유동성 부족)">⚠️</span>
-                        <span class="badge bg-secondary ms-1" x-show="r.status === 'low_liquidity'" title="소형주 (거래대금 1억 미만)">💧</span>
+                        <span class="badge bg-warning text-dark ms-1" x-show="r.status === 'caution'" title="거래주의 (5일 평균 거래대금 1억 미만)">⚠️</span>
+                        <span class="badge bg-danger ms-1" x-show="r.status === 'very_low_liquidity'" title="초저유동성 (거래대금 1억 미만)">💧💧</span>
+                        <span class="badge bg-secondary ms-1" x-show="r.status === 'low_liquidity'" title="저유동성 (거래대금 1~5억)">💧</span>
+                        <span class="badge bg-light text-dark ms-1" x-show="r.status === 'caution_liquidity'" title="낮은 유동성 (거래대금 5~10억)">💧</span>
                       </td>
                       <td><span class="badge" :class="r.market === 'KOSPI' ? 'bg-primary' : 'bg-info'" x-text="r.market"></span></td>
                       <td class="text-end fw-bold" x-text="r.close ? r.close.toLocaleString() + '원' : '—'"></td>

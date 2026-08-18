@@ -273,7 +273,7 @@ function app() {
     factorStatsTotal() {
       const s = this.meta?.factor_stats;
       if (!s) return '—';
-      return (s.halt || 0) + (s.zeroVolume || 0) + (s.caution || 0) + (s.lowLiquidity || 0);
+      return (s.halt || 0) + (s.zeroVolume || 0) + (s.caution || 0) + (s.veryLowLiq || 0) + (s.lowLiquidity || 0) + (s.cautionLiq || 0);
     },
     factorStatsBreakdown() {
       const s = this.meta?.factor_stats;
@@ -282,7 +282,9 @@ function app() {
       if (s.halt) parts.push(`🚫${s.halt}`);
       if (s.zeroVolume) parts.push(`0vol ${s.zeroVolume}`);
       if (s.caution) parts.push(`⚠️${s.caution}`);
-      if (s.lowLiquidity) parts.push(`💧${s.lowLiquidity}`);
+      if (s.veryLowLiq) parts.push(`💧💧${s.veryLowLiq}(<1억)`);
+      if (s.lowLiquidity) parts.push(`💧${s.lowLiquidity}(1~5억)`);
+      if (s.cautionLiq) parts.push(`💧${s.cautionLiq}(5~10억)`);
       return parts.length > 0 ? parts.join(' / ') : '정상';
     },
 
@@ -1333,8 +1335,10 @@ function app() {
       // ★ 거래정지/유동성 0 → 최우선
       if (s.status === 'halt') return '🚫 [거래정지] 매매 불가. 즉시 제외 대상. 가격 동일·거래량 0 — 절대 매수 금지. 메인 대시보드 0점 처리.';
       if (s.status === 'zero_volume') return '⛔ [거래량 0] 최근 20일 평균 거래대금 0원. 사실상 거래정지. 매매 불가. 0점 처리.';
-      if (s.status === 'caution') return '⚠️ [거래주의] 최근 5일 거래량 60일 평균의 5% 미만. 유동성 부족. 회피 권장.';
-      if (s.status === 'low_liquidity') return '💧 [소형주] 20일 평균 거래대금 1억 미만. 슬리피지·호가 스프레드 리스크.';
+      if (s.status === 'caution') return '⚠️ [거래주의] 최근 5일 평균 거래대금 1억 미만. 단기 유동성 부족. 회피 권장.';
+      if (s.status === 'very_low_liquidity') return '💧💧 [초저유동성] 20일 평균 거래대금 1억 미만 (KRX 저유동성 종목). 슬리피지·호가 스프레드 리스크 큼. -30점 페널티. 투자 부적합.';
+      if (s.status === 'low_liquidity') return '💧 [저유동성] 20일 평균 거래대금 1~5억. 실전 매매 어려움. -20점 페널티.';
+      if (s.status === 'caution_liquidity') return '💧 [낮은 유동성] 20일 평균 거래대금 5~10억. 스윙 매매 가능하지만 주의. -10점 페널티.';
       if (s.status === 'excluded_kosdaq') return '📊 [KOSDAQ] 메인 대시보드 제외. ?market=KOSDAQ 으로 확인 가능.';
 
       // === 상세 한줄평 (5~7 segments) ===

@@ -275,16 +275,17 @@ function calcLowVol(prices) {
 // ---------- 거래정지/거래주의 감지 ----------
 
 async function fetchTradingStatus() {
-  // 거래정지/거래주의 감지:
+  // 거래정지/거래주의 감지 (모두 거래대금 기준):
   //   - halt: 최근 5일 종가 변동 없거나 거래량 0
-  //   - caution: 최근 5일 평균 거래량 < 60일 평균의 5%
+  //   - caution: 최근 5일 평균 거래대금 < 1억 (단기 유동성 부족, 거래량 급감)
   //   - zero_volume: 최근 20일 평균 거래대금 0 (거래정지 의심)
-  //   - low_liquidity: 최근 20일 평균 거래대금 < 1억 (소형주)
+  //   - veryLowLiq (< 1억): KRX 저유동성, -30점 (장기 20일 평균 거래대금)
+  //   - lowLiq (1~5억):  실전 매매 어려움, -20점
+  //   - cautionLiq (5~10억): 낮은 유동성, -10점
   return all(`
     WITH recent AS (
       SELECT code, date, close, volume,
-             ROW_NUMBER() OVER (PARTITION BY code ORDER BY date DESC) AS rn,
-             AVG(volume) OVER (PARTITION BY code ORDER BY date ROWS BETWEEN 60 PRECEDING AND CURRENT ROW) AS avg_vol_60d
+             ROW_NUMBER() OVER (PARTITION BY code ORDER BY date DESC) AS rn
       FROM daily_prices
     )
     SELECT code,
@@ -292,7 +293,7 @@ async function fetchTradingStatus() {
            MIN(close) FILTER (WHERE rn <= 5) AS min_close,
            SUM(volume) FILTER (WHERE rn <= 5) AS vol5,
            AVG(volume) FILTER (WHERE rn <= 5) AS avg_vol5,
-           AVG(avg_vol_60d) AS avg_vol_60d,
+           AVG(volume * close) FILTER (WHERE rn <= 5) / 1 AS turnover_5d,
            AVG(volume * close) FILTER (WHERE rn <= 20) AS turnover_20d
     FROM recent
     GROUP BY code
@@ -300,18 +301,25 @@ async function fetchTradingStatus() {
 }
 
 // 거래정지/거래주의 분류
-// 반환: { halt: Set, caution: Set, zeroVolume: Set, lowLiquidity: Set }
+// 반환: { halt, caution, zeroVolume, veryLowLiq, lowLiq, cautionLiq }
+// 유동성 3단계 (웹서칭 기준 — KRX 저유동성 + 실전 매매 유동성):
+//   veryLowLiq (< 1억): KRX 저유동성, -30점 (투자 부적합)
+//   lowLiq     (1~5억):  실전 매매 어려움, -20점
+//   cautionLiq (5~10억): 낮은 유동성, -10점
+//   10억+      : 정상, 페널티 없음 (단, percentile 점수는 그대로 적용)
 function classifyStatus(statusRows) {
   const halt = new Set();
   const caution = new Set();
   const zeroVolume = new Set();
-  const lowLiquidity = new Set();
+  const veryLowLiq = new Set();
+  const lowLiq = new Set();
+  const cautionLiq = new Set();
   for (const s of statusRows) {
     const maxC = s.max_close;
     const minC = s.min_close;
     const vol5 = Number(s.vol5) || 0;
     const avgVol5 = Number(s.avg_vol5) || 0;
-    const avgVol60 = Number(s.avg_vol_60d) || 0;
+    const turnover5d = Number(s.turnover_5d) || 0;
     const turnover = Number(s.turnover_20d) || 0;
 
     // 거래량 0: 최근 20일 평균 거래대금 0 → 완전 제외
@@ -324,26 +332,29 @@ function classifyStatus(statusRows) {
       halt.add(s.code);
       continue;
     }
-    // 거래주의: 최근 5일 평균 거래량이 60일 평균의 5% 미만
-    if (avgVol60 > 0 && avgVol5 < avgVol60 * 0.05) {
+    // 거래주의: 최근 5일 평균 거래대금 < 1억 (단기 유동성 부족)
+    if (turnover5d < 100_000_000) {
       caution.add(s.code);
       continue;
     }
-    // 소형주: 최근 20일 평균 거래대금 1억 미만
-    if (turnover < 100_000_000) {
-      lowLiquidity.add(s.code);
-    }
+    // 유동성 3단계 (20일 평균 거래대금 기준)
+    if (turnover < 100_000_000) veryLowLiq.add(s.code);          // < 1억
+    else if (turnover < 500_000_000) lowLiq.add(s.code);         // 1~5억
+    else if (turnover < 1_000_000_000) cautionLiq.add(s.code);  // 5~10억
   }
-  return { halt, caution, zeroVolume, lowLiquidity };
+  return { halt, caution, zeroVolume, veryLowLiq, lowLiq, cautionLiq };
 }
 
 function applyStatusPenalty(rows, statusMap, options = {}) {
   // 거래정지/거래량 0: 완전 제외 (0점 처리, top.json에서 빠짐)
   // 거래주의: -50점 (실질적으로 B 등급 이하로 강제)
-  // 소형주: -5점 (작은 페널티, 참고용)
+  // 유동성 페널티 (웹서칭 기반, KRX 저유동성 + 실전 매매 유동성):
+  //   veryLowLiq (< 1억):    -30점 (투자 부적합, KRX 저유동성)
+  //   lowLiq     (1~5억):     -20점 (저유동성, 실전 매매 어려움)
+  //   cautionLiq (5~10억):   -10점 (낮은 유동성, 참고용)
   // 코스닥: -5점 (서버 부하 줄이기 위한 약한 페널티)
   // excludeKosdaq=true: 코스닥을 아예 제외
-  const { halt, caution, zeroVolume, lowLiquidity } = statusMap;
+  const { halt, caution, zeroVolume, veryLowLiq, lowLiq, cautionLiq } = statusMap;
   const excludeKosdaq = !!options.excludeKosdaq;
   for (const r of rows) {
     let penalized = false;
@@ -363,10 +374,20 @@ function applyStatusPenalty(rows, statusMap, options = {}) {
       r.total_score = Math.max(0, r.total_score - 50);
       r.status = 'caution';
       penalized = true;
-    } else if (lowLiquidity && lowLiquidity.has(r.code)) {
-      // 소형주 → -5점
-      r.total_score = Math.max(0, r.total_score - 5);
+    } else if (veryLowLiq && veryLowLiq.has(r.code)) {
+      // 매우 낮은 유동성 (< 1억, KRX 저유동성) → -30점 (투자 부적합)
+      r.total_score = Math.max(0, r.total_score - 30);
+      r.status = 'very_low_liquidity';
+      penalized = true;
+    } else if (lowLiq && lowLiq.has(r.code)) {
+      // 저유동성 (1~5억, 실전 매매 어려움) → -20점
+      r.total_score = Math.max(0, r.total_score - 20);
       r.status = 'low_liquidity';
+      penalized = true;
+    } else if (cautionLiq && cautionLiq.has(r.code)) {
+      // 낮은 유동성 (5~10억, 참고용) → -10점
+      r.total_score = Math.max(0, r.total_score - 10);
+      r.status = 'caution_liquidity';
       penalized = true;
     } else if (excludeKosdaq && r.market === 'KOSDAQ') {
       // KOSDAQ 완전 제외 (메인 대시보드)
@@ -579,7 +600,9 @@ async function calculateAll(weights = null, options = {}) {
       halt: rows.filter((r) => r.status === 'halt').length,
       caution: rows.filter((r) => r.status === 'caution').length,
       zeroVolume: rows.filter((r) => r.status === 'zero_volume').length,
+      veryLowLiq: rows.filter((r) => r.status === 'very_low_liquidity').length,
       lowLiquidity: rows.filter((r) => r.status === 'low_liquidity').length,
+      cautionLiq: rows.filter((r) => r.status === 'caution_liquidity').length,
       kosdaq: rows.filter((r) => r.status === 'kosdaq' || r.status === 'excluded_kosdaq').length,
     },
   };
