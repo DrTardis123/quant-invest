@@ -1,0 +1,55 @@
+feat(ui): 종목 상세 모달에 🎯 매트릭스 탭 추가 (12번째)
+
+종목 상세정보 클릭 시 매수/매도/손절가 + 매트릭스 5개 요소 후보 + 보조지표 14개를 한 화면에 표시
+
+=== 매트릭스 탭 구성 ===
+
+1. 매수·매도 가격 매트릭스 (사용자 순서 시각화)
+   - 5개 가격 좌→우: 2차매수 | 1차매수 | 현재가 | 1차매도 | 2차매도
+   - 손절가 + 손익비 + 리스크/리워드
+   - 2차매수 ≤ 1차매수 ≤ 현재가 ≤ 1차매도 ≤ 2차매도 검증
+
+2. 매트릭스 5개 요소 후보 (4개 카드)
+   - 1차매수가 후보: MA20(메인) + BB하단 + 52주신저
+   - 2차매수가 후보: MA60(메인) + BB하단 + 52주신저 + 피보 78.6%
+   - 1차매도가 후보: MA20+15% / BB상단 / 52주고-3% / 피보 38.2% / 피보 61.8%
+   - 2차매도가 후보: MA20+30% / 52주고-1% / 피보 23.6%
+   - ⚠️ MA20+10%/+20% floor 보정 표시
+   - 🟢 선택된 후보 = 진하게 하이라이트
+
+3. 손절가 매트릭스 (ATR 기반 동적)
+   - MA20-10% vs MA20-2×ATR 중 큰 값
+   - 둘 중 더 큰 값 = 손실 적은 손절
+
+4. 보조지표 14개 요소 (MA·매물대 외)
+   - ATR(14) 변동성
+   - BB(20,2σ) 상단/하단
+   - 52주 고/저
+   - RSI(14) + 과매수/과매도
+   - MACD + 0선 위/아래
+   - 피보나치(60일) 23.6% / 61.8%
+   - 이격도 MA20 + 과열/침체
+   - ADX(14) + 추세 강도 + 방향
+   - 캔들 ↑/↓ 개수 + 강한 패턴
+   - OBV UP/DOWN + 다이버전스
+   - 스윙 L/H
+   - Polarity 역할 전환
+   - 라운드 넘버 지지/저항
+   - 매물대 (POC + Value Area + 지지/저항선)
+
+5. 신호 점수 카드 (4개)
+   - 1차매수 / 2차매수 / 1차매도 / 2차매도
+   - 점수 0-100 + 활성/대기 + 이유(reasons) 모두 표시
+
+=== UI/UX ===
+- 모달 12개 탭: 개요 / 🎯 매트릭스 / 밸류에이션 / 모멘텀 / 퀄리티 / 성장 / 수급 / 기술 / 회귀 / 차트 / 레이더 / 이력
+- 차트 없음 → Chart.js lazy load 불필요
+- 선택된 후보 = list-group-item-{color} + fw-bold
+- 매트릭스 5개 요소 = 4개 카드 (col-md-6 col-lg-3) 그리드
+- 보조지표 14개 = card 안 row/col 그리드
+
+=== 데이터 소스 ===
+- stockDetail.signals.matrix (5개 카테고리: buy1/buy2/sell1/sell2/stopLoss)
+- stockDetail.signals.indicators (14개 요소: atr/bbUpper/bbLower/high52/low52/rsi/macd/fib/disparity/adx/candles/obv/swing/polarity/round)
+- stockDetail.signals.volumeProfile (poc, valueArea, supportLines, resistanceLines)
+- stockDetail.signals.riskReward (ratio, risk, reward, stopLoss, takeProfit)
