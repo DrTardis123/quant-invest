@@ -98,6 +98,23 @@ function calculateSignals(prices, technical) {
     if (vpEarly.supportLines && vpEarly.supportLines.some((p) => Math.abs(ma20 - p) / ma20 <= 0.05)) nearSupport = true;
   }
 
+  // === ADX + 캔들 패턴 (buy1/buy2 매트릭스 가산용, buy1Score보다 먼저 계산) ===
+  const adx = calculateADX(prices, 14);
+  const candlePatterns = detectCandlePatterns(prices);
+  const adxValue = adx ? adx.adx : 0;
+  const adxTrend = adx ? adx.trend : 'UNKNOWN';
+  const adxDirection = adx ? adx.direction : 'NEUTRAL';
+  const adxStrong = adxValue >= 25;
+  const adxWeak = adxValue < 20;
+  const adxUpTrend = adxDirection === 'UP';
+  const adxDownTrend = adxDirection === 'DOWN';
+  const bullishPatterns = candlePatterns.filter((p) => p.type === 'BULLISH');
+  const bearishPatterns = candlePatterns.filter((p) => p.type === 'BEARISH');
+  const hasBullishPattern = bullishPatterns.length > 0;
+  const hasBearishPattern = bearishPatterns.length > 0;
+  const hasStrongBullish = bullishPatterns.some((p) => p.strength === 'STRONG');
+  const hasStrongBearish = bearishPatterns.some((p) => p.strength === 'STRONG');
+
   let buy1Score = 0;
   const buy1Reasons = [];
   if (isGoldenCrossNow) { buy1Score += 30; buy1Reasons.push('5일↑20일 골든크로스 (방금)'); }
@@ -110,12 +127,20 @@ function calculateSignals(prices, technical) {
   // POC/지지선 가산 (매물대 분석)
   if (nearPoc) { buy1Score += 15; buy1Reasons.push(`POC(${vpEarly.poc.price.toLocaleString(undefined,{maximumFractionDigits:0})}원) 부근 매수가 (지지선)`); }
   if (nearSupport) { buy1Score += 10; buy1Reasons.push('지지선 부근 매수가 (반등 기대)'); }
+  // ADX 추세 강도 가산
+  if (adxStrong && adxUpTrend) { buy1Score += 10; buy1Reasons.push(`ADX ${adxValue.toFixed(1)} 강한 상승 추세`); }
+  else if (adxStrong && adxDownTrend) { buy1Score -= 5; buy1Reasons.push(`ADX ${adxValue.toFixed(1)} 강한 하락 추세 (역행)`); }
+  else if (adxWeak) { buy1Reasons.push(`ADX ${adxValue.toFixed(1)} 약한 추세 (관망)`); }
+  // 캔들 패턴 가산
+  if (hasStrongBullish) { buy1Score += 20; buy1Reasons.push(`강한 상승 반전 캔들: ${bullishPatterns.find((p) => p.strength === 'STRONG').name}`); }
+  else if (hasBullishPattern) { buy1Score += 10; buy1Reasons.push(`상승 반전 캔들: ${bullishPatterns[0].name}`); }
+  if (hasStrongBearish) { buy1Score -= 15; buy1Reasons.push(`강한 하락 반전 캔들 (매수 자제): ${bearishPatterns.find((p) => p.strength === 'STRONG').name}`); }
   // 활성 조건: 골든크로스(방금) OR (정배열 + 거래량 평균 + 20일선 우상향)
-  // 골든크로스 3일 내는 너무 느슨 (가짜 신호) → 방금만
-  // 정배열만으로는 부족 → 거래량 + 20일선 우상향 필수
+  // 강한 하락 캔들 + 강한 하락 추세면 매수 비활성
   const buy1ByGolden = isGoldenCrossNow;
   const buy1ByAligned = isAligned && volSurge && ma20Rising;
-  const buy1Active = buy1ByGolden || buy1ByAligned;
+  const buy1Suppressed = hasStrongBearish && adxStrong && adxDownTrend;
+  const buy1Active = !buy1Suppressed && (buy1ByGolden || buy1ByAligned);
 
   // === 2차매수 (눌림목: 5일선 근처 + 양봉 + 거래량 감소 + 20일선 우상향) — 조건 완화 ===
   const nearMa5 = last >= ma5 * 0.98 && last <= ma5 * 1.02; // 5일선 ±2%
@@ -138,9 +163,15 @@ function calculateSignals(prices, technical) {
     if (vpEarly.poc && Math.abs(ma60 - vpEarly.poc.price) / ma60 <= 0.10) { buy2Score += 10; buy2Reasons.push(`POC 부근 2차매수가`); }
     if (vpEarly.supportLines && vpEarly.supportLines.some((p) => Math.abs(ma60 - p) / ma60 <= 0.10)) { buy2Score += 5; buy2Reasons.push('지지선 부근 2차매수가'); }
   }
+  // ADX + 캔들 가산 (2차매수)
+  if (adxStrong && adxUpTrend) { buy2Score += 5; buy2Reasons.push(`ADX 강한 상승 추세 (눌림 적지)`); }
+  if (hasStrongBullish) { buy2Score += 15; buy2Reasons.push(`강한 상승 반전 캔들: ${bullishPatterns.find((p) => p.strength === 'STRONG').name}`); }
+  else if (hasBullishPattern) { buy2Score += 8; buy2Reasons.push(`상승 반전 캔들: ${bullishPatterns[0].name}`); }
+  if (hasStrongBearish) { buy2Score -= 10; buy2Reasons.push(`하락 반전 캔들 (매수 자제)`); }
   // 활성 조건: 눌림목(nearMa5 OR nearMa20) + 양봉 + 거래량감소 + 20일선 우상향 + 60일선 위
   // (60일선 위는 추세의 기본 조건, 유지)
-  const buy2Active = (nearMa5 || nearMa20) && isBullishCandle && volDecline && ma20RisingFor2 && aboveMa60;
+  const buy2Suppressed = hasStrongBearish && adxStrong && adxDownTrend;
+  const buy2Active = !buy2Suppressed && (nearMa5 || nearMa20) && isBullishCandle && volDecline && ma20RisingFor2 && aboveMa60;
 
   // === 추가 기술 지표 (ATR/볼린저/52주/RSI/MACD/피보나치/이격도) ===
   // ATR(14): 변동성 → 손절폭 조정
@@ -150,6 +181,7 @@ function calculateSignals(prices, technical) {
   // MACD(12,26,9): Signal선 교차 + 0선 위 = 모멘텀
   // 피보나치 되돌림: 23.6%, 38.2%, 61.8% = 지지/저항
   // 이격도: 현재가 vs MA 괴리율 = 과매수/과매도
+  // ADX/캔들 패턴은 위에서 이미 계산됨 (buy1/buy2 가산용)
   const atr = calculateATR(prices, 14);
   const bb = calculateBollingerBands(prices, 20, 2);
   const year52 = calculate52Week(prices);
@@ -226,7 +258,11 @@ function calculateSignals(prices, technical) {
   if (rsiOverbought) { sell1Score += 15; sell1Reasons.push(`RSI ${rsiValue.toFixed(1)} (과매수 ≥70)`); }
   if (macdCrossDown) { sell1Score += 15; sell1Reasons.push('MACD 데드크로스 (모멘텀 약화)'); }
   if (isOverheated) { sell1Score += 10; sell1Reasons.push(`이격도 +${disparityMa20.toFixed(1)}% (20일선 과열)`); }
-  const sell1Active = profitPctFromBuy1 >= 15 || belowMa20 || lossPctFromBuy1 <= -8 || rsiOverbought || macdCrossDown;
+  // ADX + 캔들 가산
+  if (adxStrong && adxDownTrend) { sell1Score += 10; sell1Reasons.push(`ADX ${adxValue.toFixed(1)} 강한 하락 추세 (손절 권고)`); }
+  if (hasStrongBearish) { sell1Score += 20; sell1Reasons.push(`강한 하락 반전 캔들: ${bearishPatterns.find((p) => p.strength === 'STRONG').name}`); }
+  else if (hasBearishPattern) { sell1Score += 10; sell1Reasons.push(`하락 반전 캔들: ${bearishPatterns[0].name}`); }
+  const sell1Active = profitPctFromBuy1 >= 15 || belowMa20 || lossPctFromBuy1 <= -8 || rsiOverbought || macdCrossDown || (adxStrong && adxDownTrend) || hasStrongBearish;
 
   // === 2차매도 (2차 익절) — 4개 요소 종합: ma20+30% / 52주고가-1% / 피보나치 23.6% / 120일선 터치 중 보수적 ===
   const ma120 = ma120Arr[ma120Arr.length - 1] || ma60;
@@ -362,6 +398,22 @@ function calculateSignals(prices, technical) {
         ma60: round2(disparityMa60),
         overheated: isOverheated,
         oversold: isOversold,
+      },
+      adx: {
+        value: round2(adxValue),
+        plusDI: adx ? round2(adx.plusDI) : 0,
+        minusDI: adx ? round2(adx.minusDI) : 0,
+        trend: adxTrend, // STRONG / BUILDING / WEAK
+        direction: adxDirection, // UP / DOWN
+        strong: adxStrong,
+        weak: adxWeak,
+      },
+      candles: {
+        patterns: candlePatterns,
+        bullishCount: bullishPatterns.length,
+        bearishCount: bearishPatterns.length,
+        hasStrongBullish,
+        hasStrongBearish,
       },
     },
     // === 매트릭스 (5개 요소 종합 — UI 표시용) ===
@@ -630,4 +682,143 @@ function calculateFibonacci(prices, period = 60) {
   };
 }
 
-module.exports = { calculateSignals, calculateVolumeProfile, calculateATR, calculateBollingerBands, calculate52Week, calculateRSI, calculateMACD, calculateFibonacci };
+// === ADX (Average Directional Index, 14기간) ===
+// 추세 강도 측정: 0~25 약한 추세, 25~50 강한 추세, 50~75 매우 강한, 75+ 극강
+// ADX만으로 매수/매도 판단 X → 추세 존재 여부 확인
+// +DI > -DI: 상승 추세 우세, -DI > +DI: 하락 추세 우세
+function calculateADX(prices, period = 14) {
+  if (!prices || prices.length < period * 2 + 1) return null;
+  const ohlc = prices.map((p) => ({
+    high: Number(p.high) || 0,
+    low: Number(p.low) || 0,
+    close: Number(p.close) || 0,
+  }));
+  // 1) +DM, -DM, TR 계산
+  const plusDM = [0];
+  const minusDM = [0];
+  const tr = [0];
+  for (let i = 1; i < ohlc.length; i++) {
+    const upMove = ohlc[i].high - ohlc[i - 1].high;
+    const downMove = ohlc[i - 1].low - ohlc[i].low;
+    plusDM.push(upMove > downMove && upMove > 0 ? upMove : 0);
+    minusDM.push(downMove > upMove && downMove > 0 ? downMove : 0);
+    const trVal = Math.max(
+      ohlc[i].high - ohlc[i].low,
+      Math.abs(ohlc[i].high - ohlc[i - 1].close),
+      Math.abs(ohlc[i].low - ohlc[i - 1].close)
+    );
+    tr.push(trVal);
+  }
+  // 2) Wilder's smoothing
+  const smooth = (arr) => {
+    let sum = arr.slice(1, period + 1).reduce((s, v) => s + v, 0);
+    const out = [sum];
+    for (let i = period + 1; i < arr.length; i++) {
+      sum = sum - sum / period + arr[i];
+      out.push(sum);
+    }
+    return out;
+  };
+  const trSmooth = smooth(tr);
+  const plusDMSmooth = smooth(plusDM);
+  const minusDMSmooth = smooth(minusDM);
+  if (trSmooth.length === 0) return null;
+  // 3) +DI, -DI
+  const plusDI = plusDMSmooth.map((v, i) => trSmooth[i] > 0 ? 100 * v / trSmooth[i] : 0);
+  const minusDI = minusDMSmooth.map((v, i) => trSmooth[i] > 0 ? 100 * v / trSmooth[i] : 0);
+  // 4) DX
+  const dx = plusDI.map((p, i) => {
+    const sum = p + minusDI[i];
+    return sum > 0 ? 100 * Math.abs(p - minusDI[i]) / sum : 0;
+  });
+  if (dx.length < period) return null;
+  // 5) ADX = DX의 period EMA
+  let adx = dx.slice(0, period).reduce((s, v) => s + v, 0) / period;
+  const adxArr = [adx];
+  for (let i = period; i < dx.length; i++) {
+    adx = (adx * (period - 1) + dx[i]) / period;
+    adxArr.push(adx);
+  }
+  const lastIdx = adxArr.length - 1;
+  return {
+    adx: adxArr[lastIdx],
+    plusDI: plusDI[plusDI.length - 1],
+    minusDI: minusDI[minusDI.length - 1],
+    trend: adxArr[lastIdx] >= 25 ? 'STRONG' : adxArr[lastIdx] >= 20 ? 'BUILDING' : 'WEAK',
+    direction: plusDI[plusDI.length - 1] > minusDI[minusDI.length - 1] ? 'UP' : 'DOWN',
+  };
+}
+
+// === 캔들 패턴 감지 (Candle Pattern Detection) ===
+// 1) Bullish Engulfing: 전일 음봉 + 당일 양봉이 전일 몸통 포함
+// 2) Bearish Engulfing: 전일 양봉 + 당일 음봉이 전일 몸통 포함
+// 3) Hammer (망치형): 긴 아래 그림자 + 작은 몸통 위쪽 + 짧은 위 그림자
+// 4) Hanging Man (교수형): 망치형과 같지만 상승 추세 끝 (당일 양봉)
+// 5) Dragonfly Doji (용아치): 시가=종가, 긴 아래 그림자 → 강한 반등 신호
+// 6) Morning Star (샛별): 큰 음봉 + 작은 도지 + 큰 양봉 (3일)
+// 7) Evening Star (어두운 샛별): 큰 양봉 + 작은 도지 + 큰 음봉 (3일)
+function detectCandlePatterns(prices) {
+  if (!prices || prices.length < 3) return [];
+  const patterns = [];
+  const ohlc = prices.map((p) => ({
+    open: Number(p.open) || Number(p.close) || 0,
+    high: Number(p.high) || Number(p.close) || 0,
+    low: Number(p.low) || Number(p.close) || 0,
+    close: Number(p.close) || 0,
+  }));
+  const last = ohlc[ohlc.length - 1];
+  const prev = ohlc[ohlc.length - 2];
+  const prev2 = ohlc[ohlc.length - 3];
+
+  // 몸통/그림자 계산
+  const bodySize = (c) => Math.abs(c.close - c.open);
+  const upperShadow = (c) => c.high - Math.max(c.open, c.close);
+  const lowerShadow = (c) => Math.min(c.open, c.close) - c.low;
+  const range = (c) => c.high - c.low;
+  const isBullish = (c) => c.close > c.open;
+  const isBearish = (c) => c.close < c.open;
+  const isDoji = (c) => bodySize(c) <= range(c) * 0.1;
+
+  // 1) Bullish Engulfing (당일이 전일 몸통을 완전히 감싸는 양봉)
+  if (isBearish(prev) && isBullish(last) &&
+      last.open < prev.close && last.close > prev.open) {
+    patterns.push({ name: 'Bullish Engulfing', type: 'BULLISH', strength: 'STRONG',
+      desc: '전일 음봉을 당일 양봉이 완전 장악 → 상승 반전 신호' });
+  }
+  // 2) Bearish Engulfing
+  if (isBullish(prev) && isBearish(last) &&
+      last.open > prev.close && last.close < prev.open) {
+    patterns.push({ name: 'Bearish Engulfing', type: 'BEARISH', strength: 'STRONG',
+      desc: '전일 양봉을 당일 음봉이 완전 장악 → 하락 반전 신호' });
+  }
+  // 3) Hammer (당일): 긴 아래 그림자 (몸통 2배 이상) + 짧은 위 그림자
+  if (isBullish(last) && lowerShadow(last) >= bodySize(last) * 2 && upperShadow(last) <= bodySize(last) * 0.5 && range(last) > 0) {
+    patterns.push({ name: 'Hammer (망치형)', type: 'BULLISH', strength: 'MEDIUM',
+      desc: '긴 아래 그림자 → 매수세 유입, 하락 추세 끝 신호' });
+  }
+  // 4) Hanging Man (당일 양봉 + 망치형) — 상승 추세 끝
+  if (isBullish(last) && lowerShadow(last) >= bodySize(last) * 2 && upperShadow(last) <= bodySize(last) * 0.5) {
+    // Hammer와 동일하지만 컨텍스트로 구분 (이름만 다름)
+    // patterns.push은 중복 안 되게 위에서 이미 추가
+  }
+  // 5) Dragonfly Doji: 시가=종가, 긴 아래 그림자
+  if (isDoji(last) && lowerShadow(last) >= range(last) * 0.6) {
+    patterns.push({ name: 'Dragonfly Doji (용아치)', type: 'BULLISH', strength: 'STRONG',
+      desc: '시종가 동일 + 긴 아래 그림자 → 강한 반등 신호' });
+  }
+  // 6) Morning Star (3일): 큰 음봉 + 작은 도지 + 큰 양봉
+  if (isBearish(prev2) && isDoji(prev) && isBullish(last) &&
+      bodySize(prev2) > range(prev2) * 0.5 && bodySize(last) > range(last) * 0.5) {
+    patterns.push({ name: 'Morning Star (샛별)', type: 'BULLISH', strength: 'STRONG',
+      desc: '큰 음봉 + 작은 도지 + 큰 양봉 → 강한 상승 반전' });
+  }
+  // 7) Evening Star (3일)
+  if (isBullish(prev2) && isDoji(prev) && isBearish(last) &&
+      bodySize(prev2) > range(prev2) * 0.5 && bodySize(last) > range(last) * 0.5) {
+    patterns.push({ name: 'Evening Star (어두운 샛별)', type: 'BEARISH', strength: 'STRONG',
+      desc: '큰 양봉 + 작은 도지 + 큰 음봉 → 강한 하락 반전' });
+  }
+  return patterns;
+}
+
+module.exports = { calculateSignals, calculateVolumeProfile, calculateATR, calculateBollingerBands, calculate52Week, calculateRSI, calculateMACD, calculateFibonacci, calculateADX, detectCandlePatterns };

@@ -1,0 +1,58 @@
+feat(signal): ADX(추세 강도) + 캔들 패턴(반전 신호) 매트릭스 통합
+
+매수/매도가 결정에 MA·매물대 외 활용 요소 7개 → 9개로 확장:
+
+1. **ADX (Average Directional Index, 14)**
+   - +DM, -DM, TR → Wilder's smoothing → +DI, -DI, DX → ADX
+   - 추세 강도: 0~25 WEAK, 25~50 STRONG, 50+ EXTREME
+   - 추세 방향: +DI > -DI = UP, 반대 = DOWN
+   - buy1: ADX ≥25 + UP 추세 → +10점 / ADX ≥25 + DOWN → -5점
+   - buy2: ADX 강한 상승 → +5점
+   - sell1: ADX 강한 하락 → +10점 (손절 권고)
+   - ADX ≥25 + 강한 하락 캔들 → 매수 비활성 (suppress)
+
+2. **캔들 패턴 (Candlestick Patterns)** - 7가지 감지
+   - Bullish Engulfing: 전일 음봉 + 당일 양봉 완전 장악 → 강한 상승 반전
+   - Bearish Engulfing: 강한 하락 반전
+   - Hammer (망치형): 긴 아래 그림자 + 작은 몸통 → 매수세 유입
+   - Dragonfly Doji (용아치): 시종가 동일 + 긴 아래 그림자 → 강한 반등
+   - Morning Star (샛별): 큰 음봉 + 도지 + 큰 양봉 → 강한 상승 반전
+   - Evening Star (어두운 샛별): 강한 하락 반전
+
+   - buy1: 강한 상승 캔들 +20 / 일반 상승 +10 / 강한 하락 -15
+   - buy2: 강한 상승 +15 / 일반 +8 / 강한 하락 -10
+   - sell1: 강한 하락 +20 / 일반 +10
+
+시뮬레이션 결과 (8/14 종가):
+
+한미반도체 (042700, 데드크로스)
+  - ADX 9.83 (WEAK) +DI 23.66 / -DI 24.91 DOWN
+  - 캔들 0개 (약세 → 반전 신호 없음)
+  - 1차매수 0/100 (변화 없음, 정배열 깨짐 + 약한 추세)
+  - 2차매수 45/100 (POC/지지선 가산만)
+
+셀트리온 (068270, 정배열 + 골든크로스)
+  - ADX 25.01 (STRONG) +DI 34.39 / -DI 9.27 UP ⭐
+  - 캔들 0개 (이미 +14.9% 과열)
+  - 1차매수 80 → 90점 (+10점, ADX 강한 상승 추세)
+  - 2차매수 65 → 70점 (+5점, ADX)
+
+삼성전자 (005930)
+  - ADX 26.34 (STRONG) +DI 19.49 / -DI 31.04 DOWN
+  - 캔들: Bullish Engulfing 감지 (강한 상승 반전) ⭐
+  - 1차매수 0 → 15점 (ADX -5 + 캔들 +20)
+  - 2차매수 55 → 70점 (캔들 +15)
+  - sell1 활성 (10점, ADX 강한 하락 손절 권고)
+
+매트릭스 통합:
+- calculateADX(prices, 14) → { adx, plusDI, minusDI, trend, direction }
+- detectCandlePatterns(prices) → [{ name, type, strength, desc }, ...]
+- module.exports에 두 함수 추가
+- indicators.adx, indicators.candles 필드 추가
+
+남은 미구현 5개:
+- OBV (On Balance Volume)
+- 스윙 로우/하이 직접 계산
+- 지지↔저항 역할 전환 (Polarity Flip)
+- 라운드 넘버 (심리적 지지/저항)
+- 외인/기관 순매수 (수급)
