@@ -117,53 +117,60 @@ function calculateSignals(prices, technical) {
 
   // === 매수가/매도가 (스윙 투자: 1~4주 보유) ===
   // 매수가: 1차매수=ma20 (20일선, 추세 중심), 2차매수=ma60 (60일선, 메인 지지)
-  // 매도가: 1차매도=손절(-10% or ma20 -3% 이탈), 2차매도=익절(+30% or ma120 +2% 도달)
+  // 매도가: 1차매도 = 1차매수가(ma20) × 0.90 (매입가 -10%, 명확한 간격)
+  //         2차매도 = 2차매수가(ma60) × 1.30 (매입가 +30%) 또는 ma120 +2% (보수적)
   // 현재가: 실시간 (last, 참고용)
   // 거리: 매수가↔매도가 명확, 1차↔2차 매수가 간격 ma20↔ma60 (정배열 시 5~15%)
+  // 검증 (currentPrice=100, ma20=95, ma60=88):
+  //   1차매수가 95, 2차매수가 88, 1차매도가 85.5, 2차매도가 114.4
+  //   매수가(1차)-매도가(1차): -10% / 매수가(2차)-매도가(2차): +30%
   const buy1Price = ma20;   // 1차매수가: 20일선 (스윙 추세 진입)
   const buy2Price = ma60;   // 2차매수가: 60일선 (스윙 눌림목, 깊은 지지)
   const buyPrice = last;    // 매도/손익비 계산용 (현재가)
 
-  // === 1차매도 (손절: -10% OR 20일선 -3% 이탈) — 스윙용 여유로운 손절 ===
-  const stopLossPct = -10; // -10% (스윙은 오닐의 -7%보다 여유)
-  const sell1LossPrice = buyPrice * (1 + stopLossPct / 100);
-  const sell1Ma20Price = ma20 * 0.97; // 20일선 -3% 이탈 (스윙 추세선 이탈)
-  const sell1Price = Math.max(sell1LossPrice, sell1Ma20Price); // 더 타이트한 손절
-  const belowMa20 = last < ma20 * 0.97;
-  const lossPctNow = (last - buyPrice) / buyPrice * 100;
+  // === 1차매도 (손절) — 1차매수가(ma20) 기준 -10% (명확한 매입가 대비 손절폭) ===
+  const sell1Price = buy1Price * 0.90; // 1차매수가(ma20) -10%
+  const belowMa20 = last < ma20 * 0.97; // 20일선 -3% 종가 이탈 (추세 붕괴)
+  const lossPctFromBuy1 = (last - buy1Price) / buy1Price * 100; // 1차매수가 대비 손실
 
   let sell1Score = 0;
   const sell1Reasons = [];
-  if (belowMa20) { sell1Score += 50; sell1Reasons.push('20일선 -3% 종가 이탈'); }
-  if (lossPctNow <= -5) { sell1Score += 20; sell1Reasons.push(`현재 -5%↓ (${lossPctNow.toFixed(1)}%)`); }
-  if (lossPctNow <= -8) { sell1Score += 20; sell1Reasons.push(`현재 -8%↓ (${lossPctNow.toFixed(1)}%)`); }
+  if (belowMa20) { sell1Score += 50; sell1Reasons.push('20일선 -3% 종가 이탈 (추세 붕괴)'); }
+  if (lossPctFromBuy1 <= -5) { sell1Score += 20; sell1Reasons.push(`1차매수가 -5%↓ (${lossPctFromBuy1.toFixed(1)}%)`); }
+  if (lossPctFromBuy1 <= -8) { sell1Score += 20; sell1Reasons.push(`1차매수가 -8%↓ (${lossPctFromBuy1.toFixed(1)}%)`); }
   if (volumes.length >= 3 && last < closePrev && volumes[volumes.length - 2] < volumes[volumes.length - 1]) {
     sell1Score += 10; sell1Reasons.push('음봉 + 거래량 증가 (투매)');
   }
-  const sell1Active = belowMa20 || lossPctNow <= -8;
+  const sell1Active = belowMa20 || lossPctFromBuy1 <= -8;
 
-  // === 2차매도 (익절: +30% OR 120일선 +2% 도달) — 스윙용 큰 움직임 ===
+  // === 2차매도 (익절) — 1차매수가(ma20) 기준 +30% (명확한 매트릭스) ===
+  // 매트릭스 보장: 2차매도가 ≥ 1차매수가 × 1.30 (분할 매수 후에도 익절가 통일)
+  // ma120은 active 조건(touchedMa120)에서만 보조 사용
   const ma120 = ma120Arr[ma120Arr.length - 1] || ma60;
-  const takeProfitPrice = buyPrice * 1.30; // +30% (스윙 목표)
-  const sell2PriceMa120 = ma120 * 1.02; // 120일선 +2% 도달
-  // 둘 중 낮은 값 (보수적 익절)
-  const sell2Price = Math.min(takeProfitPrice, sell2PriceMa120);
+  const takeProfitPrice = buy2Price * 1.30; // 2차매수가(ma60) +30%
+  const takeProfitPriceFromBuy1 = buy1Price * 1.30; // 1차매수가(ma20) +30% (최소 익절)
+  // 둘 중 큰 값 → 항상 1차매수가보다 +30% 이상 위
+  const sell2Price = Math.max(takeProfitPrice, takeProfitPriceFromBuy1);
 
-  const profitPctNow = (last - buyPrice) / buyPrice * 100;
+  const profitPctFromBuy2 = (last - buy2Price) / buy2Price * 100; // 2차매수가 대비 수익
+  const profitPctFromBuy1 = (last - buy1Price) / buy1Price * 100; // 1차매수가 대비 수익
   const touchedMa120 = last >= ma120 * 0.99 && last <= ma120 * 1.02;
 
   let sell2Score = 0;
   const sell2Reasons = [];
-  if (profitPctNow >= 30) { sell2Score += 50; sell2Reasons.push(`+30% 도달 (스윙 익절, ${profitPctNow.toFixed(1)}%)`); }
-  else if (profitPctNow >= 20) { sell2Score += 30; sell2Reasons.push(`+20% 도달 (중간 익절, ${profitPctNow.toFixed(1)}%)`); }
-  else if (profitPctNow >= 15) { sell2Score += 20; sell2Reasons.push(`+15% 도달 (스윙 최소, ${profitPctNow.toFixed(1)}%)`); }
+  if (profitPctFromBuy1 >= 30) { sell2Score += 50; sell2Reasons.push(`1차매수가 +30% 도달 (스윙 익절, ${profitPctFromBuy1.toFixed(1)}%)`); }
+  else if (profitPctFromBuy2 >= 20) { sell2Score += 30; sell2Reasons.push(`2차매수가 +20% 도달 (중간 익절, ${profitPctFromBuy2.toFixed(1)}%)`); }
+  else if (profitPctFromBuy2 >= 15) { sell2Score += 20; sell2Reasons.push(`2차매수가 +15% 도달 (스윙 최소, ${profitPctFromBuy2.toFixed(1)}%)`); }
   if (touchedMa120) { sell2Score += 30; sell2Reasons.push('120일선 터치 (장기 저항)'); }
-  if (vol20 > 0.04 && profitPctNow > 15) { sell2Score += 10; sell2Reasons.push('변동성 4%+ (고점 경고)'); }
-  const sell2Active = profitPctNow >= 15 || touchedMa120;
+  if (vol20 > 0.04 && profitPctFromBuy2 > 15) { sell2Score += 10; sell2Reasons.push('변동성 4%+ (고점 경고)'); }
+  const sell2Active = profitPctFromBuy1 >= 15 || profitPctFromBuy2 >= 15 || touchedMa120;
 
-  // === 손익비 (현재가 → 손절 / 익절) ===
-  const risk = buyPrice - sell1Price;
-  const reward = sell2Price - buyPrice;
+  // === 손익비 (1차매수가(ma20) 기준 — 매수 시점 손익비) ===
+  // 1차매수가 → 1차매도가: 매입가 -10% (리스크)
+  // 1차매수가 → 2차매도가: 매입가 +30% (리워드)
+  // 손익비 = 리워드 / 리스크 = 30% / 10% = 3.0 (1:3, 스윙 표준 1:2 충족)
+  const risk = buy1Price - sell1Price; // 1차매수가 - 손절가 = 매입가의 10%
+  const reward = sell2Price - buy1Price; // 익절가 - 1차매수가 = 매입가의 30%
   const riskRewardRatio = risk > 0 ? reward / risk : 0;
 
   // === 포지션 사이징 (R 기반) ===
