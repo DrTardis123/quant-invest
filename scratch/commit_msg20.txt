@@ -1,0 +1,64 @@
+chore(data): 매트릭스 검증 200개 + 신호 추적 KPI + stock 200개 export
+
+매트릭스 다중화 + 균등화 + 활성 조건 3안 강화 반영
+
+=== 1. 매트릭스 검증 TOP 200 (KOSPI) ===
+verify-matrix-200.js: 200개 종목 매트릭스 계산 → 강신호 top 30 추출
+
+시간: 45초
+통계:
+- 정배열: 33/200 (16.5%)
+- 1차매수 활성: 52/200 (26.0%)
+- 2차매수 활성: 13/200 (6.5%)
+- 1차+2차 동시 활성: 6/200 (3.0%)
+
+Top 5 강신호:
+1. DSR제강 (069730) 54점 🟢🟡 정배열 + 1차+2차 동시활성
+2. 메리츠 인버스 3X 국채30년 ETN (610062) 47점
+3. PLUS 글로벌MSCI 합성 H (189400) 47점
+4. 코람코더원리츠 (417310) 44점
+5. 삼성 S&P500 TR ETN (530112) 44점
+
+저장: public/data/matrix-verify-top200.json
+
+=== 2. 신호 추적 백필 KPI 갱신 ===
+KOSPI 100일 × 2,154개 종목 (활성 신호 18,867건 추출)
+
+시간: 40초
+KPI:
+- buy1: 3,681건, +10d -1.22% (이전 +2.06% 대비 3.3%p 하락)
+- buy2: 3,642건, +10d -2.23%
+- sell1: 8,565건, +10d -18.98%
+- sell2: 2,979건, +10d -17.50%
+
+매트릭스 다중화로 신호 늘었지만 +10d 평균 마이너스 (트레이드오프)
+분석 페이지 신호 추적 탭에 반영됨
+
+저장: public/data/signal-performance.json
+
+=== 3. stock/*.json export 200개 ===
+export-top200.js: TOP 200 종목 stock/*.json 새로 생성
+- 매트릭스 (calculateSignals) 포함
+- indicators 14개 요소 (RSI/MACD/ADX/캔들/OBV/스윙/Polarity/라운드/이격도/피보/BB/ATR)
+- volumeProfile (POC/지지/저항)
+- matrix 5개 요소 종합 (buy1/buy2/sell1/sell2/stopLoss)
+
+시간: 41초 (200개)
+200/200 성공
+
+Vercel 모달 🎯 매트릭스 탭에서 사용 가능 (GitHub raw fetch)
+- 종목 행 클릭 → 모달 → 매트릭스 탭
+- 5개 가격 사용자 순서 시각화
+- 매트릭스 5개 요소 후보 가격
+- 보조지표 14개 요소 상태
+- 매물대 (POC/지지/저항선)
+
+=== 4. 분석 페이지 신호 추적 탭 ===
+KPI 갱신으로 분석 페이지 📈 신호 추적 탭 자동 갱신
+- 매트릭스 다중화 + 균등화 + 3안 강화 적용된 결과
+- buy1/buy2/sell1/sell2 4개 신호 + 활성 이유
+
+=== .gitignore 처리 ===
+public/data/stock/*.json은 Vercel deploy에서 제외 (.vercelignore)
+GitHub raw fetch + Vercel API (/api/stock/[code]) 조합으로 사용
+이번 commit은 강제 add (-f) 사용
