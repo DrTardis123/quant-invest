@@ -3,8 +3,10 @@ import Link from "next/link";
 const items = [
   { href: "/", label: "Home" },
   { href: "/stocks", label: "Stocks" },
+  { href: "/screener", label: "Screener" },
   { href: "/factors", label: "Factors" },
   { href: "/backtest", label: "Backtest" },
+  { href: "/sector-neutral", label: "Sector-N" },
   { href: "/signals", label: "Signals" },
 ];
 

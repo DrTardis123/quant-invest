@@ -1,116 +1,248 @@
+import fs from "node:fs";
+import path from "node:path";
+
 export const dynamic = "force-static";
 export const metadata = { title: "Signals · KOSPI 200" };
 
+interface SignalRow {
+  code: string;
+  name: string;
+  closePrice: number;
+  changeRate: number;
+  changePrice: number;
+  openPrice: number;
+  highPrice: number;
+  lowPrice: number;
+  volume: number;
+  tradingValue: number; // 억원 단위
+  marketStatus: string;
+  isUpperLimit: boolean;
+  isLowerLimit: boolean;
+}
+
+interface Signals {
+  fetched_at: string;
+  n_total: number;
+  n_valid: number;
+  market_open: boolean;
+  upper_limit: SignalRow[];
+  lower_limit: SignalRow[];
+  top_turnover: SignalRow[];
+  top_gainers: SignalRow[];
+  top_losers: SignalRow[];
+}
+
+function loadSignals(): Signals | null {
+  const p = path.join(process.cwd(), "data", "signals.json");
+  if (!fs.existsSync(p)) return null;
+  return JSON.parse(fs.readFileSync(p, "utf-8")) as Signals;
+}
+
+const KRW0 = (n: number) => `${n.toLocaleString("ko-KR")}원`;
+const KRW1 = (n: number) => `${n.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}억`;
+const PCT = (n: number) => `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
+
 export default function SignalsPage() {
+  const s = loadSignals();
+
   return (
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold">Signals</h1>
-        <p className="text-sm text-ink-dim">일별 라이브 시그널 (상한가 / 거래대금 / 외국인 순매수)</p>
+        <p className="text-sm text-ink-dim">
+          일별 라이브 시그널 (상한가 / 거래대금 / 등락률) · Naver Finance polling API
+        </p>
       </header>
 
-      <section className="rounded-lg border border-gray-800 bg-bg-card p-5">
-        <h2 className="mb-3 text-lg font-semibold text-amber-400">⏳ 데이터 파이프라인 미연결</h2>
-        <p className="mb-4 text-sm text-ink-dim">
-          이 페이지는 정적 placeholder입니다. 일별 시그널을 추가하려면 아래 데이터 소스 중 하나를 선택해
-          파이프라인을 구성해야 합니다.
+      {!s ? (
+        <NoData />
+      ) : (
+        <>
+          {/* 메타 */}
+          <section className="rounded-lg border border-gray-800 bg-bg-card p-4">
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <div>
+                <span className="text-ink-faint">수집 시각: </span>
+                <span className="num text-ink">
+                  {new Date(s.fetched_at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}
+                </span>
+              </div>
+              <div>
+                <span className="text-ink-faint">응답: </span>
+                <span className="num text-ink">{s.n_valid} / {s.n_total}</span>
+              </div>
+              <div>
+                <span className="text-ink-faint">시장: </span>
+                <span className={s.market_open ? "up" : "text-ink-dim"}>
+                  {s.market_open ? "OPEN" : "CLOSE"}
+                </span>
+              </div>
+              <div className="ml-auto text-xs text-ink-faint">
+                갱신: <code>node scripts/fetch-signals.mjs</code>
+              </div>
+            </div>
+          </section>
+
+          {/* 상한가 / 하한가 */}
+          <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <LimitPanel title="상한가 (Upper Limit)" emoji="🚀" rows={s.upper_limit} />
+            <LimitPanel title="하한가 (Lower Limit)" emoji="💥" rows={s.lower_limit} />
+          </section>
+
+          {/* 거래대금 top 30 */}
+          <Section title="거래대금 상위 30" emoji="💰">
+            <Table
+              cols={["ticker", "name", "changeRate", "tradingValue", "closePrice", "volume"]}
+              rows={s.top_turnover}
+            />
+          </Section>
+
+          {/* 등락률 top 20 */}
+          <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Section title="상위 20 (등락률 ↑)" emoji="📈">
+              <Table
+                cols={["ticker", "name", "changeRate", "closePrice", "tradingValue"]}
+                rows={s.top_gainers}
+              />
+            </Section>
+            <Section title="하위 20 (등락률 ↓)" emoji="📉">
+              <Table
+                cols={["ticker", "name", "changeRate", "closePrice", "tradingValue"]}
+                rows={s.top_losers}
+              />
+            </Section>
+          </section>
+        </>
+      )}
+
+      <section className="rounded-lg border border-gray-800 bg-bg-card p-5 text-sm">
+        <h3 className="mb-2 font-semibold">데이터 파이프라인</h3>
+        <p className="mb-2 text-ink-dim">
+          <code>scripts/fetch-signals.mjs</code> — 199개 KOSPI 종목을 Naver polling API로 일괄 조회.
+          배치 20개씩, 약 10-15초 소요.
         </p>
+        <pre className="overflow-x-auto rounded bg-bg-elev p-3 text-xs text-ink-dim">
+          {`# 로컬 실행
+cd kospi-dashboard
+node scripts/fetch-signals.mjs
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <DataSource
-            name="Naver Finance 일봉 (polling.finance.naver.com)"
-            pros={["무료, API 키 불필요", "상한가/하한가 즉시 확인 가능", "Rate limit 0.3s safe"]}
-            cons={["약간의 스크래핑 필요", "Service 약관 주의"]}
-            effort="M (1-2시간)"
-          />
-          <DataSource
-            name="KRX 정보데이터시스템 (data.krx.co.kr)"
-            pros={["공식 데이터", "전 종목 일봉/수급"]}
-            cons={["JavaScript-heavy 페이지, scrap 어려움", "Download 버튼 POST 필요"]}
-            effort="L (반나절)"
-          />
-          <DataSource
-            name="OpenDart (opendart.fss.or.kr)"
-            pros={["DART 공식, 재무제표"]}
-            cons={["API 키 필요 (무료 발급)", "재무제표는 분기별"]}
-            effort="S (30분)"
-          />
-          <DataSource
-            name="Vercel Cron + GitHub Actions"
-            pros={["매일 자정 자동 갱신", "JSON으로 빌드 시점에 포함 가능"]}
-            cons={["Hobby: 일 1회 cron만 무료", "캐시 설정 필요"]}
-            effort="S (30분)"
-          />
-        </div>
-      </section>
-
-      <section className="rounded-lg border border-gray-800 bg-bg-card p-5">
-        <h2 className="mb-3 text-lg font-semibold">다음 단계</h2>
-        <ol className="ml-5 list-decimal space-y-2 text-sm text-ink-dim">
-          <li>데이터 소스 선택 (Naver 추천)</li>
-          <li>
-            <span className="font-mono text-ink">scripts/fetch-signals.mjs</span> 작성 — 일 1회 실행
-          </li>
-          <li>
-            <span className="font-mono text-ink">data/signals.json</span> 커밋 (GitHub Actions 자동화)
-          </li>
-          <li>이 페이지에서 <code>fetch(&apos;/data/signals.json&apos;)</code>로 로드 + 테이블 표시</li>
-          <li>Vercel Cron으로 매일 09:00 자동 갱신</li>
-        </ol>
-      </section>
-
-      <section className="rounded-lg border border-gray-800 bg-bg-card p-5">
-        <h2 className="mb-3 text-lg font-semibold">예상 화면 (mockup)</h2>
-        <div className="overflow-x-auto">
-          <table>
-            <thead>
-              <tr>
-                <th>날짜</th>
-                <th>종목</th>
-                <th>이름</th>
-                <th className="text-right">상한가</th>
-                <th className="text-right">종가</th>
-                <th className="text-right">등락률</th>
-                <th className="text-right">거래량</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="text-ink-faint">
-                <td>2026-08-15</td>
-                <td>005930</td>
-                <td>—</td>
-                <td className="num text-right">—</td>
-                <td className="num text-right">—</td>
-                <td className="num text-right">—</td>
-                <td className="num text-right">—</td>
-              </tr>
-              <tr className="text-ink-faint">
-                <td>2026-08-14</td>
-                <td>000660</td>
-                <td>—</td>
-                <td className="num text-right">—</td>
-                <td className="num text-right">—</td>
-                <td className="num text-right">—</td>
-                <td className="num text-right">—</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p className="mt-3 text-xs text-ink-faint">위 데이터는 placeholder. 실제 데이터 fetch 후 채워짐.</p>
+# 자동 갱신 (GitHub Actions, 매일 16:00 KST)
+- name: Fetch signals
+  run: node scripts/fetch-signals.mjs
+  working-directory: kospi-dashboard
+- name: Commit & push
+  run: |
+    git add kospi-dashboard/data/signals.json
+    git commit -m "data(signals): $(date +%H:%M) KST 갱신" || exit 0
+    git push`}
+        </pre>
       </section>
     </div>
   );
 }
 
-function DataSource({ name, pros, cons, effort }: { name: string; pros: string[]; cons: string[]; effort: string }) {
+function NoData() {
   return (
-    <div className="rounded border border-gray-800 bg-bg-elev p-4">
-      <div className="font-mono text-sm text-ink">{name}</div>
-      <div className="mt-2 text-xs">
-        <div className="up">+ {pros.join(" / ")}</div>
-        <div className="down">- {cons.join(" / ")}</div>
-        <div className="mt-1 text-ink-faint">작업량: {effort}</div>
-      </div>
+    <section className="rounded-lg border border-gray-800 bg-bg-card p-5">
+      <h2 className="mb-3 text-lg font-semibold text-amber-400">⏳ 시그널 데이터 없음</h2>
+      <p className="mb-3 text-sm text-ink-dim">
+        <code>data/signals.json</code>이 아직 생성되지 않았습니다. 로컬에서 실행:
+      </p>
+      <pre className="rounded bg-bg-elev p-3 text-xs text-ink">cd kospi-dashboard && node scripts/fetch-signals.mjs</pre>
+    </section>
+  );
+}
+
+function Section({ title, emoji, children }: { title: string; emoji: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-lg border border-gray-800 bg-bg-card p-5">
+      <h2 className="mb-3 text-lg font-semibold">
+        {emoji} {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function LimitPanel({ title, emoji, rows }: { title: string; emoji: string; rows: SignalRow[] }) {
+  return (
+    <section className="rounded-lg border border-gray-800 bg-bg-card p-5">
+      <h2 className="mb-3 text-lg font-semibold">
+        {emoji} {title}{" "}
+        <span className="text-sm font-normal text-ink-faint">({rows.length}개)</span>
+      </h2>
+      {rows.length === 0 ? (
+        <div className="py-6 text-center text-sm text-ink-faint">해당 종목 없음 (오늘 ±30% 종목 0개)</div>
+      ) : (
+        <Table
+          cols={["ticker", "name", "changeRate", "closePrice", "tradingValue"]}
+          rows={rows}
+        />
+      )}
+    </section>
+  );
+}
+
+function Table({ cols, rows }: { cols: string[]; rows: SignalRow[] }) {
+  return (
+    <div className="overflow-x-auto">
+      <table>
+        <thead>
+          <tr>
+            {cols.map((c) => (
+              <th key={c} className={["changeRate", "tradingValue", "closePrice", "volume"].includes(c) ? "text-right" : ""}>
+                {COL_LABEL[c] || c}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.code}>
+              {cols.map((c) => (
+                <td
+                  key={c}
+                  className={
+                    "num " +
+                    (c === "changeRate" ? "text-right " + (r.changeRate > 0 ? "up" : r.changeRate < 0 ? "down" : "") : "") +
+                    (["tradingValue", "closePrice", "volume"].includes(c) ? "text-right" : "")
+                  }
+                >
+                  {renderCell(c, r)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
+}
+
+const COL_LABEL: Record<string, string> = {
+  ticker: "Ticker",
+  name: "이름",
+  changeRate: "등락률",
+  tradingValue: "거래대금",
+  closePrice: "현재가",
+  volume: "거래량",
+};
+
+function renderCell(col: string, r: SignalRow): React.ReactNode {
+  switch (col) {
+    case "ticker":
+      return r.code;
+    case "name":
+      return r.name;
+    case "changeRate":
+      return PCT(r.changeRate);
+    case "tradingValue":
+      return KRW1(r.tradingValue);
+    case "closePrice":
+      return KRW0(r.closePrice);
+    case "volume":
+      return r.volume.toLocaleString("ko-KR");
+    default:
+      return "—";
+  }
 }

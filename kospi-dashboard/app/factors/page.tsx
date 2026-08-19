@@ -1,4 +1,5 @@
-import { getAllBetas, ALL_FACTORS, FACTOR_DESCRIPTIONS, fmtNum, fmtSharpe } from "@/lib/data";
+import { getAllBetas, ALL_FACTORS, FACTOR_DESCRIPTIONS } from "@/lib/data";
+import FactorRow from "@/components/FactorRow";
 import BetaTimeSeries from "@/components/BetaTimeSeries";
 
 export const dynamic = "force-static";
@@ -8,29 +9,36 @@ export default function FactorsPage() {
   const betas = getAllBetas();
   const n = betas.length;
 
-  // 평균 가중치 + t 통계
+  // 팩터별 통계
   const stats = ALL_FACTORS.map((c) => {
     const betaKey = `beta_${c}` as const;
     const tKey = `t_${c}` as const;
     const mean_beta = betas.reduce((a, b) => a + ((b as any)[betaKey] || 0), 0) / n;
     const mean_t = betas.reduce((a, b) => a + ((b as any)[tKey] || 0), 0) / n;
-    // 부호 안정성 (% months where beta sign matches mean)
     const positiveMonths = betas.filter((b) => ((b as any)[betaKey] || 0) * mean_beta > 0).length;
     return {
       factor: c,
       description: FACTOR_DESCRIPTIONS[c],
-      mean_beta: mean_beta,
-      mean_t: mean_t,
+      mean_beta,
+      mean_t,
       sign_agreement: positiveMonths / n,
     };
   });
 
-  // 시계열 (월별) — 베타 추이 차트용
+  // 팩터별 시계열
+  const seriesByFactor: Record<string, { ym: string; beta: number }[]> = {};
+  for (const c of ALL_FACTORS) {
+    const betaKey = `beta_${c}` as const;
+    seriesByFactor[c] = betas.map((b) => ({
+      ym: b.YearMonth,
+      beta: (b as any)[betaKey] || 0,
+    }));
+  }
+
+  // 전체 시계열 차트용
   const ts = betas.map((b) => {
     const obj: any = { ym: b.YearMonth };
-    for (const c of ALL_FACTORS) {
-      obj[c] = (b as any)[`beta_${c}`];
-    }
+    for (const c of ALL_FACTORS) obj[c] = (b as any)[`beta_${c}`];
     return obj;
   });
 
@@ -39,13 +47,12 @@ export default function FactorsPage() {
       <header>
         <h1 className="text-2xl font-semibold">Factors</h1>
         <p className="text-sm text-ink-dim">
-          13팩터 (가격 5 + 펀더멘털 8) · {n}개월 cross-section 회귀
+          13팩터 (가격 5 + 펀더멘털 8) · {n}개월 cross-section 회귀 · <span className="text-amber-400">팩터 행 클릭 시 상세 차트 펼쳐짐</span>
         </p>
       </header>
 
-      {/* 가중치 테이블 */}
       <section className="rounded-lg border border-gray-800 bg-bg-card p-5">
-        <h2 className="mb-3 text-lg font-semibold">평균 가중치 + 안정성</h2>
+        <h2 className="mb-3 text-lg font-semibold">팩터별 평균 가중치 + 안정성</h2>
         <div className="overflow-x-auto">
           <table>
             <thead>
@@ -59,38 +66,30 @@ export default function FactorsPage() {
               </tr>
             </thead>
             <tbody>
-              {stats.map((s) => {
-                const cls = s.mean_beta > 0 ? "up" : s.mean_beta < 0 ? "down" : "muted";
-                const sign = s.sign_agreement > 0.7 ? "안정" : s.sign_agreement > 0.5 ? "보통" : "불안정";
-                return (
-                  <tr key={s.factor}>
-                    <td className="font-mono text-sm">{s.factor}</td>
-                    <td className="text-ink-dim text-xs">{s.description}</td>
-                    <td className={`num text-right ${cls}`}>
-                      {s.mean_beta >= 0 ? "+" : ""}
-                      {s.mean_beta.toFixed(4)}
-                    </td>
-                    <td className="num text-right text-ink-dim">{s.mean_t.toFixed(2)}</td>
-                    <td className="num text-right">{(s.sign_agreement * 100).toFixed(0)}%</td>
-                    <td className="text-xs text-ink-dim">{sign}</td>
-                  </tr>
-                );
-              })}
+              {stats.map((s) => (
+                <FactorRow
+                  key={s.factor}
+                  factor={s.factor}
+                  description={s.description}
+                  data={seriesByFactor[s.factor]}
+                  meanBeta={s.mean_beta}
+                  meanT={s.mean_t}
+                  signAgreement={s.sign_agreement}
+                />
+              ))}
             </tbody>
           </table>
         </div>
+        <p className="mt-3 text-xs text-ink-faint">
+          팩터 행 클릭 → 그 팩터만 따로 본 월별 β 시계열 + 분포 통계
+        </p>
       </section>
 
-      {/* 시계열 차트 */}
       <section className="rounded-lg border border-gray-800 bg-bg-card p-5">
-        <h2 className="mb-3 text-lg font-semibold">월별 β 시계열</h2>
-        <p className="mb-3 text-xs text-ink-faint">
-          시간에 따라 β가 어떻게 변하는지. 안정적 = 한 방향 유지, 불안정 = 진동.
-        </p>
+        <h2 className="mb-3 text-lg font-semibold">전체 팩터 β 시계열 (오버레이)</h2>
         <BetaTimeSeries data={ts} />
       </section>
 
-      {/* 카테고리별 집계 */}
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <FactorGroup title="가격 팩터 (5)" factors={["momentum_12_1", "log_size", "volatility_60d", "liquidity", "mean_reversion"]} stats={stats} />
         <FactorGroup
