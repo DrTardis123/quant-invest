@@ -940,7 +940,10 @@
                   <div class="card border-0 shadow-sm" :class="stockDetail?.signals?.buy1?.active ? 'bg-danger text-white' : 'bg-light'">
                     <div class="card-body p-2">
                       <strong class="small">1차매수 (골든/정배열)</strong>
-                      <div class="fs-5 fw-bold" x-text="(stockDetail?.signals?.buy1?.score || 0) + ' / 100'"></div>
+                      <div class="fs-5 fw-bold">
+                        <span x-text="(stockDetail?.signals?.buy1?.score || 0) + ' / 100'"></span>
+                        <span class="ms-2 badge" :class="(stockDetail?.signals?.buy1?.score || 0) >= 90 ? 'bg-danger' : (stockDetail?.signals?.buy1?.score || 0) >= 75 ? 'bg-warning text-dark' : (stockDetail?.signals?.buy1?.score || 0) >= 60 ? 'bg-info' : (stockDetail?.signals?.buy1?.score || 0) >= 40 ? 'bg-secondary' : 'bg-light text-dark'" x-text="(stockDetail?.signals?.buy1?.score || 0) >= 90 ? 'A' : (stockDetail?.signals?.buy1?.score || 0) >= 75 ? 'B' : (stockDetail?.signals?.buy1?.score || 0) >= 60 ? 'C' : (stockDetail?.signals?.buy1?.score || 0) >= 40 ? 'D' : 'F'"></span>
+                      </div>
                       <div class="small" x-text="stockDetail?.signals?.buy1?.active ? '✅ 활성' : '⚪ 대기'"></div>
                       <!-- 📊 누적 점수 막대 (양수/음수 분할) -->
                       <div class="mt-2 pt-2 border-top" x-data="{
@@ -979,7 +982,10 @@
                   <div class="card border-0 shadow-sm" :class="stockDetail?.signals?.buy2?.active ? 'bg-warning text-dark' : 'bg-light'">
                     <div class="card-body p-2">
                       <strong class="small">2차매수 (눌림목)</strong>
-                      <div class="fs-5 fw-bold" x-text="(stockDetail?.signals?.buy2?.score || 0) + ' / 100'"></div>
+                      <div class="fs-5 fw-bold">
+                        <span x-text="(stockDetail?.signals?.buy2?.score || 0) + ' / 100'"></span>
+                        <span class="ms-2 badge" :class="(stockDetail?.signals?.buy2?.score || 0) >= 90 ? 'bg-danger' : (stockDetail?.signals?.buy2?.score || 0) >= 75 ? 'bg-warning text-dark' : (stockDetail?.signals?.buy2?.score || 0) >= 60 ? 'bg-info' : (stockDetail?.signals?.buy2?.score || 0) >= 40 ? 'bg-secondary' : 'bg-light text-dark'" x-text="(stockDetail?.signals?.buy2?.score || 0) >= 90 ? 'A' : (stockDetail?.signals?.buy2?.score || 0) >= 75 ? 'B' : (stockDetail?.signals?.buy2?.score || 0) >= 60 ? 'C' : (stockDetail?.signals?.buy2?.score || 0) >= 40 ? 'D' : 'F'"></span>
+                      </div>
                       <div class="small" x-text="stockDetail?.signals?.buy2?.active ? '✅ 활성' : '⚪ 대기'"></div>
                       <div class="mt-2 pt-2 border-top" x-data="{
                         get contribs() { return stockDetail?.signals?.buy2?.contribs || []; },

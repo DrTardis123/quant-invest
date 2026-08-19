@@ -1,0 +1,65 @@
+chore: 4개 작업 (J2/M/A3/L) 완료 + KOSDAQ 매트릭스 분석
+
+=== J2. 신호 추적 탭 UI 개선 (KOSPI/KOSDAQ KPI 비교) ===
+app.js:
+- signalPerformanceKosdaq state 추가
+- loadSignalPerformance()가 KOSPI + KOSDAQ 병렬 로드
+- signalKpi()에 KOSDAQ 비교 추가 (kosdaqMain, kosdaqSub)
+- _drawSignalCharts() 차트 1: KOSPI/KOSDAQ +10/+20일 평균 비교 (4개 데이터셋)
+
+analysis.html:
+- 4개 KPI 카드에 KOSDAQ 비교 표시 (배지)
+- 차트 제목: "KOSPI vs KOSDAQ"
+
+vercel.json:
+- /api/signal-performance-kosdaq → signal-performance-kosdaq.json
+
+효과:
+- KOSPI buy1 -0.68% vs KOSDAQ buy1 +8.14% (8.82%p 차이) 한눈에 비교
+- KOSDAQ이 매수 신호에 더 강한 신호
+
+=== M. 매트릭스 점수 등급 (A/B/C/D/F 5단계) ===
+index.html: buy1/buy2 카드에 등급 배지 추가
+- 90+ A (강한 매수, 빨강)
+- 75+ B (매수, 노랑)
+- 60+ C (관망, 청록)
+- 40+ D (비추천, 회색)
+- <40 F (매수 금지, 흰 배경)
+
+효과:
+- 매트릭스 점수 한눈에 등급 확인
+- 50점 종목과 80점 종목 시각적 구분
+
+=== A3. 더 정밀한 ETF 패턴 ===
+A1/A2에서 이미 광범위 적용:
+- PLUS/KIWOOM/TIME/에셋/CGCI/KoAct/KRX 메가/미래에셋
+- 합성/액티브/원유/금/채권 ETF
+- 액티브/미국 천연가스/치매 키워드
+
+KOSPI 200개 중 186개 제외 (93%) 검증됨
+
+=== L. KOSDAQ 매트릭스 점수 매트릭스 분석 ===
+scratch/verify-matrix-200.js: 마켓별 별도 JSON 저장
+- KOSPI → matrix-verify-top200.json
+- KOSDAQ → matrix-verify-kosdaq.json
+
+KOSDAQ 매트릭스 매트릭스 결과 (197건):
+- 코스메카코리아 62점 🟢🟡 정배열+1차+2차
+- 타이거일렉 57점
+- 인바디 50점
+- 안국약품 47점
+- 티쓰리 45점
+
+저장: public/data/matrix-verify-kosdaq.json
+
+vercel.json: /api/matrix-verify-kosdaq 라우트 추가
+
+=== 파일 변경 ===
+- public/js/app.js (J2)
+- public/analysis.html (J2: KOSPI/KOSDAQ 비교)
+- public/index.html (M: 매트릭스 점수 등급)
+- vercel.json (J2/L: API 라우트)
+- scratch/verify-matrix-200.js (L: 마켓별 JSON)
+- public/data/matrix-verify-kosdaq.json (L: 신규)
+- public/data/matrix-verify-top200.json (KOSPI 결과로 갱신)
+- public/data/stock/*.json (KOSPI/KOSDAQ mix 갱신)

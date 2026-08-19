@@ -142,11 +142,9 @@ function dateToStr(d) {
     stats: { aligned, buy1Active, buy2Active, bothActive },
     top: results.slice(0, 30),
   };
-  require('fs').writeFileSync(
-    'public/data/matrix-verify-top200.json',
-    JSON.stringify(out, null, 2)
-  );
-  console.log(`\n[저장] public/data/matrix-verify-top200.json (${results.length}건)`);
+  const outFile = MARKET === 'KOSPI' ? 'public/data/matrix-verify-top200.json' : 'public/data/matrix-verify-kosdaq.json';
+  require('fs').writeFileSync(outFile, JSON.stringify(out, null, 2));
+  console.log(`\n[저장] ${outFile} (${results.length}건)`);
   console.log(`[완료] ${Date.now() - t0}ms`);
 
   await db.close();

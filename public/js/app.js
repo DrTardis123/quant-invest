@@ -59,7 +59,8 @@ function app() {
     strongSell: [],
     portfolio: null,
     portfolioLoading: false,
-    signalPerformance: null,  // 1차/2차 매수·매도 신호 추적 (백필 결과)
+    signalPerformance: null,  // KOSPI 신호 추적 (백필 결과)
+    signalPerformanceKosdaq: null,  // KOSDAQ 신호 추적 (별도 JSON)
     analytics: null,
     analyticsLoading: false,
     _analyticsCharts: {},
@@ -2133,8 +2134,13 @@ function app() {
     async loadSignalPerformance(force = false) {
       if (this.signalPerformance && !force) return this.signalPerformance;
       try {
-        const r = await window.apiGet('/api/signal-performance');
-        if (r && !r.__error) this.signalPerformance = r;
+        // KOSPI + KOSDAQ 둘 다 로드 (병렬)
+        const [kospi, kosdaq] = await Promise.all([
+          window.apiGet('/api/signal-performance').catch(() => null),
+          window.apiGet('/api/signal-performance-kosdaq').catch(() => null),
+        ]);
+        if (kospi && !kospi.__error) this.signalPerformance = kospi;
+        if (kosdaq && !kosdaq.__error) this.signalPerformanceKosdaq = kosdaq;
       } catch (e) { console.error('[signal-performance]', e); }
       return this.signalPerformance;
     },
@@ -2150,22 +2156,27 @@ function app() {
         if (this._charts[k]) { try { this._charts[k].destroy(); } catch (_) {} this._charts[k] = null; }
       }
 
-      // 차트 1: 신호 종류별 +10일 후 평균 수익률
+      // 차트 1: 신호 종류별 +10일 후 평균 수익률 (KOSPI vs KOSDAQ)
       setTimeout(() => {
         try {
           const c1 = document.getElementById('signalAvgReturnChart');
           if (!c1 || c1.clientWidth === 0) return;
           const types = ['buy1', 'buy2', 'sell1', 'sell2'];
           const labels = types.map((t) => this.signalTypeLabel(t));
-          const data10d = types.map((t) => (s.summary?.[t]?.avgReturn10d || 0));
-          const data20d = types.map((t) => (s.summary?.[t]?.avgReturn20d || 0));
+          const kospi10d = types.map((t) => (s.summary?.[t]?.avgReturn10d || 0));
+          const kospi20d = types.map((t) => (s.summary?.[t]?.avgReturn20d || 0));
+          const k = this.signalPerformanceKosdaq?.summary || {};
+          const kosdaq10d = types.map((t) => (k[t]?.avgReturn10d || 0));
+          const kosdaq20d = types.map((t) => (k[t]?.avgReturn20d || 0));
           this._charts.avgReturn = new Chart(c1, {
             type: 'bar',
             data: {
               labels,
               datasets: [
-                { label: '+10일 평균', data: data10d, backgroundColor: data10d.map((v) => v >= 0 ? 'rgba(220, 53, 69, 0.7)' : 'rgba(13, 110, 253, 0.7)') },
-                { label: '+20일 평균', data: data20d, backgroundColor: data20d.map((v) => v >= 0 ? 'rgba(220, 53, 69, 0.4)' : 'rgba(13, 110, 253, 0.4)') },
+                { label: 'KOSPI +10일', data: kospi10d, backgroundColor: kospi10d.map((v) => v >= 0 ? 'rgba(220, 53, 69, 0.8)' : 'rgba(13, 110, 253, 0.8)') },
+                { label: 'KOSPI +20일', data: kospi20d, backgroundColor: kospi20d.map((v) => v >= 0 ? 'rgba(220, 53, 69, 0.4)' : 'rgba(13, 110, 253, 0.4)') },
+                { label: 'KOSDAQ +10일', data: kosdaq10d, backgroundColor: kosdaq10d.map((v) => v >= 0 ? 'rgba(255, 99, 71, 0.6)' : 'rgba(70, 130, 180, 0.6)') },
+                { label: 'KOSDAQ +20일', data: kosdaq20d, backgroundColor: kosdaq20d.map((v) => v >= 0 ? 'rgba(255, 99, 71, 0.3)' : 'rgba(70, 130, 180, 0.3)') },
               ],
             },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + '%' } } }, scales: { y: { ticks: { callback: (v) => v + '%' } } } },
@@ -2203,32 +2214,21 @@ function app() {
       const s = this.signalPerformance;
       if (!s) return {};
       const sum = s.summary || {};
+      const k = this.signalPerformanceKosdaq?.summary || {}; // KOSDAQ KPI
       const fmt = (v) => (v === null || v === undefined) ? '—' : (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+      const mkCard = (t, label, sub, color) => ({
+        label,
+        main: fmt(sum[t]?.avgReturn10d),
+        sub: `${sum[t]?.total || 0}건 · KOSPI`,
+        color,
+        kosdaqMain: k[t]?.avgReturn10d !== undefined ? `KOSDAQ ${fmt(k[t].avgReturn10d)}` : 'KOSDAQ —',
+        kosdaqSub: k[t] ? `${k[t].total}건` : '',
+      });
       return {
-        buy1: {
-          label: '🚀 1차매수',
-          main: fmt(sum.buy1?.avgReturn10d),
-          sub: `${sum.buy1?.total || 0}건 · +10일 평균`,
-          color: (sum.buy1?.avgReturn10d || 0) >= 0 ? 'text-danger' : 'text-primary',
-        },
-        buy2: {
-          label: '🛒 2차매수',
-          main: fmt(sum.buy2?.avgReturn10d),
-          sub: `${sum.buy2?.total || 0}건 · +10일 평균`,
-          color: (sum.buy2?.avgReturn10d || 0) >= 0 ? 'text-danger' : 'text-primary',
-        },
-        sell1: {
-          label: '🛑 1차매도 (손절)',
-          main: fmt(sum.sell1?.avgReturn10d),
-          sub: `${sum.sell1?.total || 0}건 · 손절 후 추가하락`,
-          color: 'text-primary', // 손절은 음수 = 좋은 신호
-        },
-        sell2: {
-          label: '💰 2차매도 (익절)',
-          main: fmt(sum.sell2?.avgReturn10d),
-          sub: `${sum.sell2?.total || 0}건 · 익절 후 추가상승`,
-          color: 'text-muted', // 익절 후 추가 상승 거의 없는 게 좋음
-        },
+        buy1: mkCard('buy1', '🚀 1차매수', '+10일 평균', (sum.buy1?.avgReturn10d || 0) >= 0 ? 'text-danger' : 'text-primary'),
+        buy2: mkCard('buy2', '🛒 2차매수', '+10일 평균', (sum.buy2?.avgReturn10d || 0) >= 0 ? 'text-danger' : 'text-primary'),
+        sell1: mkCard('sell1', '🛑 1차매도 (손절)', '손절 후 추가하락', 'text-primary'),
+        sell2: mkCard('sell2', '💰 2차매도 (익절)', '익절 후 추가상승', 'text-muted'),
       };
     },
 

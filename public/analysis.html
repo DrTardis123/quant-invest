@@ -705,30 +705,36 @@
           • <strong>2차매도</strong> (익절 +21%): 익절 신호 후 추가 상승 = 놓친 수익 (양수 = 아쉬운 익절)
         </div>
 
-        <!-- 4개 KPI -->
+        <!-- 4개 KPI (KOSPI/KOSDAQ 비교) -->
         <div class="row g-2 mb-3" x-show="signalPerformance">
           <template x-for="(s, t) in signalKpi()" :key="t">
             <div class="col-md-3">
               <div class="card stat-card"><div class="card-body">
-                <div class="text-muted small" x-text="s.label"></div>
+                <div class="text-muted small d-flex justify-content-between">
+                  <span x-text="s.label"></span>
+                  <span class="badge bg-light text-dark" x-text="s.kosdaqMain || '—'"></span>
+                </div>
                 <div class="fs-4 fw-bold" :class="s.color" x-text="s.main"></div>
-                <small class="text-muted" x-text="s.sub"></small>
+                <small class="text-muted d-flex justify-content-between">
+                  <span x-text="s.sub"></span>
+                  <span class="text-info" x-text="s.kosdaqSub || ''"></span>
+                </small>
               </div></div>
             </div>
           </template>
         </div>
 
-        <!-- 차트 2개 -->
+        <!-- KOSPI/KOSDAQ 비교 차트 -->
         <div class="row g-2 mb-3">
           <div class="col-md-6">
             <div class="card"><div class="card-body">
-              <h6>📊 신호 종류별 +10일 후 평균 수익률 (KOSPI 100일)</h6>
+              <h6>📊 신호 종류별 +10일 후 평균 수익률 (KOSPI vs KOSDAQ)</h6>
               <canvas id="signalAvgReturnChart" height="220"></canvas>
             </div></div>
           </div>
           <div class="col-md-6">
             <div class="card"><div class="card-body">
-              <h6>📈 매수 신호 승률 (BUY: 수익+1%/+2%/+3% 기준)</h6>
+              <h6>📈 매수 신호 승률 (BUY: 수익+1%/+2%/+3% 기준, KOSPI)</h6>
               <canvas id="signalWinRateChart" height="220"></canvas>
             </div></div>
           </div>
