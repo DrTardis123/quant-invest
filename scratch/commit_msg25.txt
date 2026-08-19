@@ -1,0 +1,56 @@
+chore: 4개 작업 + 시장 평가 점수 (CNN Fear & Greed 모델)
+
+✅ R. 시장 평가 점수 (1-100, 5지표 가중치)
+   - 추세 25% (KOSPI 정배열 + 이격도)
+   - 모멘텀 20% (5d/20d 변화율)
+   - Breadth 25% (전 종목 ma20/ma60 위 비율)
+   - 신고가/신저가 15% (52주 기준)
+   - 변동성 15% (연환산, 낮을수록 좋음)
+   - 만점 방지: 95 상한
+   - 점수 매핑: 강한상승(80+)/상승(60+)/중립(40+)/하락(20+)/강한하락(0-20)
+   - src/data/market.js (calculateMarketRegime 헬퍼)
+   - scripts/update.js exportStatic에 통합
+   - public/data/market-regime.json (자동 갱신)
+   - vercel.json: /api/market-regime 라우트 추가
+   - 현재 시장: 38점 📉 하락 (KOSPI 65,300, 8/11 기준)
+
+✅ N. 매트릭스 분석 KOSPI/KOSDAQ 토글/비교 UI
+   - 시그널 추적 탭에 새 카드 추가
+   - KOSPI / KOSDAQ / 비교 3개 토글
+   - 4개 KPI: 정배열 / 1차매수 / 2차매수 / 동시활성
+   - KOSPI(빨강) vs KOSDAQ(파랑) 색상 구분
+   - Top 15 매트릭스 종목 표
+
+✅ O. KOSDAQ 단독 신호 추적 차트
+   - 차트 3: KOSDAQ 신호별 +10d/+20d 평균 + 승률 (라인)
+   - signalKosdaqChart (signalAvgReturnChart 옆)
+   - KOSDAQ 매수 신호가 KOSPI보다 +8.82%p 우수 명시
+
+✅ P. 매트릭스 점수 분포 분석
+   - 차트 1: 등급 분포 (KOSPI vs KOSDAQ 막대)
+   - 차트 2: 점수 히스토그램 (10점 단위 버킷)
+   - 현재 필터(KOSPI/KOSDAQ/비교) 기준 동적 변경
+
+✅ Q. 1차매수 등급별 활성 종목 검증
+   - 등급 A/B/C/D/F 5개 카드
+   - 각 등급: 활성 종목 수 / 전체 종목 수 / 활성 비율
+   - matrixGradeBuy1Stats() 헬퍼
+
+✅ 매트릭스 점수에 시장 평가 반영 (0.8/0.2)
+   - matrixAdjusted(raw) = raw * 0.8 + market * 0.2 (0~100 클램프)
+   - 매트릭스 분석 Top 종목 표에 "조정" 컬럼 추가
+   - 등급도 조정 점수 기준으로 재계산
+   - 시장 평가 카드 하단에 "매트릭스 50점 → 조정 X점" 예시 표시
+
+✅ 메인 페이지 (index.html)에도 시장 평가 카드 추가
+   - 점수 / 라벨 / 5지표 breakdown / 분석 페이지 링크
+
+✅ vercel.json 라우트 추가:
+   - /api/matrix-verify-top200 → /data/matrix-verify-top200.json
+   - /api/market-regime → /data/market-regime.json
+
+CNN Fear & Greed Index 모델 기반:
+- 7개 지표 종합 (Market Momentum, Stock Price Strength, Stock Price Breadth,
+  Put/Call Options, Market Volatility, Safe Haven Demand, Junk Bond Demand)
+- 본 프로젝트는 5지표로 단순화 (KOSPI/KOSDAQ 데이터 가용성):
+  추세 / 모멘텀 / Breadth / 신고저 / 변동성

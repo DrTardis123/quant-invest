@@ -1034,6 +1034,58 @@ async function exportStatic() {
     console.error('[export] 신호 추적 백필 실패:', e.message);
   }
 
+  // === 시장 평가 점수 (1-100, 5지표 종합) ===
+  try {
+    const { calculateMarketRegime } = require('../src/data/market');
+    // KOSPI 일봉
+    const kospiRows = await db.all(
+      "SELECT date, close FROM daily_prices WHERE code IN (SELECT code FROM stocks WHERE market = 'KOSPI' AND (name LIKE '%KOSPI%' OR name LIKE '%코스피%' OR code = 'KS11')) AND date >= (CURRENT_DATE - INTERVAL '400 days') ORDER BY date ASC"
+    );
+    const closes = kospiRows.map((r) => Number(r.close));
+    const lastRow = kospiRows[kospiRows.length - 1];
+    let marketData = { closes, lastClose: lastRow ? Number(lastRow.close) : null, lastDate: lastRow ? String(lastRow.date) : null };
+
+    // KOSPI 지수 데이터 없으면 KOSPI 시장 평균 fallback
+    if (kospiRows.length === 0) {
+      const avgRows = await db.all(`
+        SELECT date, AVG(close) AS close FROM daily_prices
+        WHERE code IN (SELECT code FROM stocks WHERE market = 'KOSPI')
+        GROUP BY date ORDER BY date
+      `);
+      marketData.closes = avgRows.map((r) => Number(r.close));
+      const lastAvg = avgRows[avgRows.length - 1];
+      marketData.lastClose = lastAvg ? Number(lastAvg.close) : null;
+      marketData.lastDate = lastAvg ? String(lastAvg.date) : null;
+    }
+
+    // Breadth: 전 종목 close/ma20/ma60
+    const breadthRows = await db.all(`
+      WITH ranked AS (
+        SELECT code, date, close, high, low,
+          ROW_NUMBER() OVER (PARTITION BY code ORDER BY date DESC) AS rn
+        FROM daily_prices
+        WHERE date >= (SELECT MAX(date) - INTERVAL '400 days' FROM daily_prices)
+      ),
+      latest AS (SELECT code, close, high AS high52, low AS low52 FROM ranked WHERE rn = 1),
+      ma20_data AS (SELECT code, AVG(close) AS ma20 FROM (SELECT code, close FROM ranked WHERE rn <= 20) GROUP BY code),
+      ma60_data AS (SELECT code, AVG(close) AS ma60 FROM (SELECT code, close FROM ranked WHERE rn <= 60) GROUP BY code)
+      SELECT l.code, l.close, l.high52, l.low52, m20.ma20, m60.ma60
+      FROM latest l LEFT JOIN ma20_data m20 USING (code) LEFT JOIN ma60_data m60 USING (code)
+    `);
+    const breadthData = breadthRows.map((r) => ({
+      close: r.close ? Number(r.close) : null,
+      ma20: r.ma20 ? Number(r.ma20) : null,
+      ma60: r.ma60 ? Number(r.ma60) : null,
+      high52: r.high52 ? Number(r.high52) : null,
+      low52: r.low52 ? Number(r.low52) : null,
+    }));
+    const regime = calculateMarketRegime(marketData, breadthData);
+    writeJson('market-regime.json', regime);
+    console.log(`[export] 시장 평가 ${regime.score}점 (${regime.label}) — 추세 ${regime.components.trend.score} / 모멘텀 ${regime.components.momentum.score} / Breadth ${regime.components.breadth.score} / 신고저 ${regime.components.newHighLow.score} / 변동성 ${regime.components.volatility.score}`);
+  } catch (e) {
+    console.error('[export] 시장 평가 실패:', e.message);
+  }
+
   // 분포 (전체 점수, 10점 단위 bin + 등급 분포 + 평균/중앙값)
 
   // 분포 (전체 점수, 10점 단위 bin + 등급 분포 + 평균/중앙값 + 시장/섹터/팩터 평균)

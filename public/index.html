@@ -195,6 +195,41 @@
     </div>
   </div>
 
+  <!-- ===== 시장 평가 점수 카드 (메인) ===== -->
+  <div class="row g-2 mb-3" x-show="marketRegime">
+    <div class="col-md-12">
+      <div class="card shadow-sm" :style="`border-left: 8px solid ${marketRegime?.bgColor || '#9ca3af'}`">
+        <div class="card-body py-2">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-3">
+              <div class="text-center" style="min-width:70px">
+                <div class="fs-2 fw-bold" :style="`color:${marketRegime?.bgColor || '#666'}`" x-text="(marketRegime?.score || 0).toFixed(1)"></div>
+                <small class="text-muted">/ 100</small>
+              </div>
+              <div>
+                <div class="fs-5">
+                  <span x-text="marketRegime?.emoji"></span>
+                  <strong x-text="marketRegime?.label || '—'"></strong>
+                  <span class="badge bg-light text-dark ms-2" x-text="marketRegime?.lastDate || '—'"></span>
+                </div>
+                <div class="text-muted small" x-text="marketRegime?.advice || ''"></div>
+              </div>
+            </div>
+            <div class="d-flex gap-1 flex-wrap" style="min-width:380px">
+              <template x-for="(c, key) in (marketRegime?.components || {})" :key="key">
+                <div class="text-center p-1 border rounded" style="min-width:75px;background:#f8f9fa">
+                  <div class="small text-muted" style="font-size:10px" x-text="({trend:'📈추세',momentum:'🚀모멘텀',breadth:'🌐Breadth',newHighLow:'🔄신고저',volatility:'⚡변동성'})[key] || key"></div>
+                  <div class="fw-bold" :style="`color:${c.score >= 60 ? '#10b981' : c.score <= 40 ? '#dc2626' : '#9ca3af'};font-size:14px`" x-text="c.score.toFixed(0)"></div>
+                </div>
+              </template>
+            </div>
+            <a href="/analysis.html?tab=signals" class="btn btn-sm btn-outline-primary">📊 매트릭스 분석 →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== 탭 ===== -->
   <ul class="nav nav-tabs mb-3 flex-wrap">
     <li class="nav-item"><a class="nav-link" :class="{active: tab==='top'}" href="#" @click.prevent="setTab('top')">🏆 TOP <kbd>T</kbd></a></li>

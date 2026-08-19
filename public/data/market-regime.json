@@ -1,0 +1,33 @@
+{
+  "score": 38,
+  "label": "하락",
+  "emoji": "📉",
+  "bgColor": "#f87171",
+  "advice": "매수 자제, 현금 비중 확대",
+  "components": {
+    "trend": {
+      "score": 25.1,
+      "weight": 0.25
+    },
+    "momentum": {
+      "score": 42.2,
+      "weight": 0.2
+    },
+    "breadth": {
+      "score": 59,
+      "weight": 0.25
+    },
+    "newHighLow": {
+      "score": 55.8,
+      "weight": 0.15
+    },
+    "volatility": {
+      "score": 1,
+      "weight": 0.15
+    }
+  },
+  "lastClose": 65300,
+  "lastDate": "2026-08-11",
+  "breadthSize": 3921,
+  "generatedAt": "2026-08-19T05:02:37.363Z"
+}

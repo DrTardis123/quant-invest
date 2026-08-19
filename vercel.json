@@ -30,6 +30,8 @@
     { "source": "/api/signal-performance", "destination": "/data/signal-performance.json" },
     { "source": "/api/signal-performance-kosdaq", "destination": "/data/signal-performance-kosdaq.json" },
     { "source": "/api/matrix-verify-kosdaq", "destination": "/data/matrix-verify-kosdaq.json" },
+    { "source": "/api/matrix-verify-top200", "destination": "/data/matrix-verify-top200.json" },
+    { "source": "/api/market-regime",        "destination": "/data/market-regime.json" },
     { "source": "/api/single-factor", "destination": "/data/single-factor.json" },
     { "source": "/api/regression-2", "destination": "/data/regression-2.json" },
     { "source": "/api/realtime",   "destination": "/data/realtime.json" }

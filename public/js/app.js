@@ -61,6 +61,11 @@ function app() {
     portfolioLoading: false,
     signalPerformance: null,  // KOSPI 신호 추적 (백필 결과)
     signalPerformanceKosdaq: null,  // KOSDAQ 신호 추적 (별도 JSON)
+    matrixVerifyKospi: null,  // KOSPI 매트릭스 검증 Top 200
+    matrixVerifyKosdaq: null,  // KOSDAQ 매트릭스 검증 Top 200
+    matrixMarketFilter: 'compare',  // 매트릭스 분석 탭 필터: 'KOSPI' | 'KOSDAQ' | 'compare'
+    marketRegime: null,  // 시장 평가 점수 (1-100)
+    marketRegimeLoading: false,
     analytics: null,
     analyticsLoading: false,
     _analyticsCharts: {},
@@ -247,10 +252,13 @@ function app() {
       if (this.page === 'main') {
         fetches.push(this.loadTop());         // 메인: TOP 20 (6KB)
         fetches.push(this.loadRealtime());    // 메인: 실시간 가격
+        fetches.push(this.loadMarketRegime()); // 시장 평가 점수
       } else if (this.page === 'analysis') {
         fetches.push(this.loadLogs());
         fetches.push(this.loadOptimizer());
         fetches.push(this.loadBacktest());
+        fetches.push(this.loadMarketRegime());  // 시장 평가 점수
+        fetches.push(this.loadMatrixVerify());  // 매트릭스 검증 KOSPI/KOSDAQ
       }
       // explore: 첫 탭만 lazy fetch (사용자 클릭 시)
       fetches.push(this.loadNotifications());
@@ -360,7 +368,12 @@ function app() {
           else if (t === 'backtest') { this.loadBacktest(); setTimeout(() => this._drawBacktestCharts(), 100); }
           else if (t === 'portfolio') { this.loadPortfolio(); }
           else if (t === 'analytics') { this.loadAnalytics(); setTimeout(() => this._drawAnalyticsCharts(), 100); }
-          else if (t === 'signals') { this.loadSignalPerformance(); setTimeout(() => this._drawSignalCharts(), 100); }
+          else if (t === 'signals') {
+            this.loadSignalPerformance();
+            this.loadMatrixVerify();
+            this.loadMarketRegime();
+            setTimeout(() => { this._drawSignalCharts(); this._drawMatrixCharts(); }, 100);
+          }
           else if (t === 'top') { this._drawTopCharts(); }
           else if (t === 'movers') { this.loadMovers(); }
           else if (t === 'highlow') { this.loadHighLow(); }
@@ -2208,6 +2221,206 @@ function app() {
           });
         } catch (e) { console.error('[signalWinRateChart]', e); }
       }, 100);
+
+      // 차트 3 (O): KOSDAQ 단독 — 신호별 +10d/+20d 평균 수익률 + 승률
+      setTimeout(() => {
+        try {
+          const c3 = document.getElementById('signalKosdaqChart');
+          if (!c3 || c3.clientWidth === 0) return;
+          if (this._charts.kosdaqSignal) { try { this._charts.kosdaqSignal.destroy(); } catch (_) {} this._charts.kosdaqSignal = null; }
+          const k = this.signalPerformanceKosdaq;
+          if (!k || !k.summary) return;
+          const types = ['buy1', 'buy2', 'sell1', 'sell2'];
+          const labels = types.map((t) => this.signalTypeLabel(t));
+          const avg10 = types.map((t) => (k.summary[t]?.avgReturn10d || 0));
+          const avg20 = types.map((t) => (k.summary[t]?.avgReturn20d || 0));
+          const wr = types.map((t) => ((k.summary[t]?.winRate10d || 0) * 100));
+          this._charts.kosdaqSignal = new Chart(c3, {
+            type: 'bar',
+            data: {
+              labels,
+              datasets: [
+                { type: 'bar',  label: '+10일 평균', data: avg10, backgroundColor: avg10.map((v) => v >= 0 ? 'rgba(220, 53, 69, 0.7)' : 'rgba(13, 110, 253, 0.7)'), yAxisID: 'y' },
+                { type: 'bar',  label: '+20일 평균', data: avg20, backgroundColor: avg20.map((v) => v >= 0 ? 'rgba(220, 53, 69, 0.4)' : 'rgba(13, 110, 253, 0.4)'), yAxisID: 'y' },
+                { type: 'line', label: '+10일 승률 (%)', data: wr, borderColor: '#fbbf24', backgroundColor: '#fbbf24', yAxisID: 'y1', tension: 0.3, pointRadius: 5 },
+              ],
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + (ctx.dataset.label.includes('승률') ? ctx.parsed.y.toFixed(1) + '%' : ctx.parsed.y.toFixed(2) + '%') } } },
+              scales: {
+                y: { type: 'linear', position: 'left', ticks: { callback: (v) => v + '%' }, title: { display: true, text: '평균 수익률' } },
+                y1: { type: 'linear', position: 'right', min: 0, max: 100, ticks: { callback: (v) => v + '%' }, title: { display: true, text: '승률' }, grid: { drawOnChartArea: false } },
+              },
+            },
+          });
+        } catch (e) { console.error('[signalKosdaqChart]', e); }
+      }, 200);
+    },
+
+    // ===== 매트릭스 검증 데이터 로드 =====
+    async loadMatrixVerify(force = false) {
+      if (this.matrixVerifyKospi && this.matrixVerifyKosdaq && !force) return;
+      try {
+        const [kospi, kosdaq] = await Promise.all([
+          window.apiGet('/api/matrix-verify-top200').catch(() => null),
+          window.apiGet('/api/matrix-verify-kosdaq').catch(() => null),
+        ]);
+        if (kospi && !kospi.__error) this.matrixVerifyKospi = kospi;
+        if (kosdaq && !kosdaq.__error) this.matrixVerifyKosdaq = kosdaq;
+      } catch (e) { console.error('[matrix-verify]', e); }
+    },
+
+    // ===== 시장 평가 점수 로드 =====
+    async loadMarketRegime(force = false) {
+      if (this.marketRegime && !force) return;
+      if (this.marketRegimeLoading) return;
+      this.marketRegimeLoading = true;
+      try {
+        const r = await window.apiGet('/api/market-regime').catch(() => null);
+        if (r && !r.__error) this.marketRegime = r;
+      } catch (e) { console.error('[market-regime]', e); }
+      finally { this.marketRegimeLoading = false; }
+    },
+
+    // ===== 매트릭스 등급 (A/B/C/D/F) =====
+    matrixGrade(score) {
+      if (score >= 90) return { grade: 'A', color: 'bg-danger text-white', emoji: '🟥' };
+      if (score >= 75) return { grade: 'B', color: 'bg-warning text-dark', emoji: '🟨' };
+      if (score >= 60) return { grade: 'C', color: 'bg-info text-white', emoji: '🟦' };
+      if (score >= 40) return { grade: 'D', color: 'bg-secondary text-white', emoji: '⬜' };
+      return { grade: 'F', color: 'bg-light text-dark border', emoji: '🟫' };
+    },
+
+    // ===== 매트릭스 점수 + 시장 평가 가중 (0.8/0.2) =====
+    // raw: 매트릭스 점수 (-100~+100 또는 0~100)
+    // marketScore: 시장 평가 점수 (1~95)
+    // 가중 점수 = raw * 0.8 + market * 0.2 (0~100 클램프)
+    matrixAdjusted(raw) {
+      const marketScore = this.marketRegime?.score || 50;
+      if (raw === null || raw === undefined) return null;
+      const adj = raw * 0.8 + marketScore * 0.2;
+      return Math.max(0, Math.min(100, Math.round(adj * 10) / 10));
+    },
+
+    // ===== 매트릭스 점수 분포 (등급별 카운트) =====
+    matrixGradeDistribution(items) {
+      const dist = { A: 0, B: 0, C: 0, D: 0, F: 0 };
+      if (!Array.isArray(items)) return dist;
+      for (const it of items) {
+        const s = it.total_score || it.buy1Score || 0;
+        if (s >= 90) dist.A++;
+        else if (s >= 75) dist.B++;
+        else if (s >= 60) dist.C++;
+        else if (s >= 40) dist.D++;
+        else dist.F++;
+      }
+      return dist;
+    },
+
+    // ===== 매트릭스 분석 — 현재 필터 기준 데이터 =====
+    matrixCurrentData() {
+      if (this.matrixMarketFilter === 'KOSPI') return this.matrixVerifyKospi;
+      if (this.matrixMarketFilter === 'KOSDAQ') return this.matrixVerifyKosdaq;
+      // compare: KOSPI + KOSDAQ 통합
+      const k = this.matrixVerifyKospi;
+      const q = this.matrixVerifyKosdaq;
+      if (!k && !q) return null;
+      const items = [
+        ...((k?.top || []).map((x) => ({ ...x, _market: 'KOSPI' }))),
+        ...((q?.top || []).map((x) => ({ ...x, _market: 'KOSDAQ' }))),
+      ];
+      return {
+        asOf: k?.asOf || q?.asOf,
+        market: 'compare',
+        count: items.length,
+        items,
+        stats: {
+          kospi: k?.stats || {},
+          kosdaq: q?.stats || {},
+        },
+      };
+    },
+
+    // ===== 매트릭스 차트 그리기 =====
+    _drawMatrixCharts() {
+      if (!window.Chart) return;
+      const data = this.matrixCurrentData();
+      if (!data) return;
+
+      // 차트 1: 등급 분포 (KOSPI vs KOSDAQ)
+      try {
+        const c1 = document.getElementById('matrixGradeChart');
+        if (c1 && c1.clientWidth > 0) {
+          if (this._charts.matrixGrade) { try { this._charts.matrixGrade.destroy(); } catch (_) {} }
+          const kItems = this.matrixVerifyKospi?.top || [];
+          const qItems = this.matrixVerifyKosdaq?.top || [];
+          const kDist = this.matrixGradeDistribution(kItems);
+          const qDist = this.matrixGradeDistribution(qItems);
+          const labels = ['A(90+)', 'B(75+)', 'C(60+)', 'D(40+)', 'F(<40)'];
+          this._charts.matrixGrade = new Chart(c1, {
+            type: 'bar',
+            data: {
+              labels,
+              datasets: [
+                { label: 'KOSPI', data: [kDist.A, kDist.B, kDist.C, kDist.D, kDist.F], backgroundColor: 'rgba(220, 53, 69, 0.7)' },
+                { label: 'KOSDAQ', data: [qDist.A, qDist.B, qDist.C, qDist.D, qDist.F], backgroundColor: 'rgba(13, 110, 253, 0.7)' },
+              ],
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              plugins: {
+                legend: { position: 'top' },
+                tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y + '개' } },
+              },
+              scales: { y: { ticks: { stepSize: 1, precision: 0 }, beginAtZero: true } },
+            },
+          });
+        }
+      } catch (e) { console.error('[matrixGradeChart]', e); }
+
+      // 차트 2: 매트릭스 점수 분포 (히스토그램)
+      try {
+        const c2 = document.getElementById('matrixScoreHistChart');
+        if (c2 && c2.clientWidth > 0) {
+          if (this._charts.matrixScoreHist) { try { this._charts.matrixScoreHist.destroy(); } catch (_) {} }
+          const items = this.matrixMarketFilter === 'KOSPI' ? (this.matrixVerifyKospi?.top || [])
+            : this.matrixMarketFilter === 'KOSDAQ' ? (this.matrixVerifyKosdaq?.top || [])
+            : [...(this.matrixVerifyKospi?.top || []), ...(this.matrixVerifyKosdaq?.top || [])];
+          const buckets = Array(10).fill(0); // 0-9, 10-19, ..., 90-99
+          for (const it of items) {
+            const s = Math.max(0, Math.min(99, Math.round(it.total_score || 0)));
+            buckets[Math.floor(s / 10)]++;
+          }
+          const labels = buckets.map((_, i) => `${i*10}-${i*10+9}`);
+          this._charts.matrixScoreHist = new Chart(c2, {
+            type: 'bar',
+            data: { labels, datasets: [{ label: '종목 수', data: buckets, backgroundColor: 'rgba(99, 102, 241, 0.7)' }] },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ctx.parsed.y + '개' } } },
+              scales: { y: { ticks: { stepSize: 1, precision: 0 }, beginAtZero: true } },
+            },
+          });
+        }
+      } catch (e) { console.error('[matrixScoreHistChart]', e); }
+    },
+
+    // ===== 매트릭스 등급별 1차매수 활성 카운트 =====
+    matrixGradeBuy1Stats() {
+      const items = this.matrixCurrentData()?.items || this.matrixCurrentData()?.top || [];
+      const groups = { A: { total: 0, active: 0 }, B: { total: 0, active: 0 }, C: { total: 0, active: 0 }, D: { total: 0, active: 0 }, F: { total: 0, active: 0 } };
+      for (const it of items) {
+        const s = it.total_score || 0;
+        let g = 'F';
+        if (s >= 90) g = 'A';
+        else if (s >= 75) g = 'B';
+        else if (s >= 60) g = 'C';
+        else if (s >= 40) g = 'D';
+        groups[g].total++;
+        if (it.buy1Active) groups[g].active++;
+      }
+      return groups;
     },
 
     signalKpi() {
