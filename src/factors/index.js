@@ -475,27 +475,9 @@ function calcSupply(supply) {
 // ---------- 메인 ----------
 
 // ETF/레버리지/인버스/SPAC/스팩/우선주 제외 패턴
-function isExcludedProduct(name) {
-  if (!name) return false;
-  const n = String(name).trim();
-  const nCompact = n.replace(/\s/g, '');
-  // 1) ETF 브랜드 (브로드)
-  if (/(KODEX|TIGER|KBSTAR|ARIRANG|KINDEX|SOL|MiraeAsset|한투|미래에셋|삼성|KB|신한|한국투자|BNK|히어로즈|TRUE|ACE|RISE|WOORI|KIWOOM|HANARO|하나|대신|교보|KYG|MASEC|Smart|마이티|KActive|타임폴리오|비트코인|이더리움|트래시|파인더|퀀트|PLUS|레버리지|인버스|선물|ETN|합성|액티브|2X|3X|레버|인버|WON|원\s*미국|파워|마이티|SOLACTIVE|인덱스펀드|인덱스\s*펀드|채권\s*ETF|원유\s*ETF|금\s*ETF|원자재|글로벌\s*X|GlobalX)/.test(n)) return true;
-  // 2) 액티브 ETF/ETN (WON 미국S&P500, 파워 고배당저변동성, KB K-미래, 한투 ... 등)
-  if (/WON|파워|액티브|Active|TIMEFOLIO|마이티|Mighty|파워|다올|일임|인덱스펀드|원\s*지수|원\s*인덱스|채권|원유|금\s*선물|합성\s*인덱스/.test(n)) return true;
-  // 3) 레버리지/인버스/2X/3X (브로드)
-  if (/(레버리지|인버스|2X|3X|2x|3x|Lever|Inverse|2\s*배|3\s*배)/.test(n)) return true;
-  // 4) 스팩/기업인수목적
-  if (/(스팩|기업인수목적|제\d+호|호\s*스팩)/.test(n)) return true;
-  // 5) 우선주: '삼성전자우', 'NH투자증권우', 'S-Oil우', 'GS우', '한국금융지주우' 등
-  //    - 끝 글자가 '우' 이면서 그 직전이 한국어/영문/숫자/하이픈
-  if (/[가-힣A-Za-z0-9\-\.]우$/.test(nCompact)) return true;
-  // 6) ETN
-  if (/ETN$/.test(nCompact) || /\(H\)$/.test(nCompact)) return true;
-  // 7) 1X, 인버스, 인버스X 등 추가 안전망
-  if (/1X|1x|인버스X|인버스2X|인버스3X|레버리지2X|레버리지3X/.test(n)) return true;
-  return false;
-}
+// 7팩터 점수 계산 시: lightIsExcludedProduct 사용 (정확한 패턴, 오탐 방지)
+// - '삼성' / 'KB' 같은 일반 prefix는 더 이상 자동 제외 안 됨
+const { lightIsExcludedProduct: isExcludedProduct } = require('../data/filters');
 
 async function calculateAll(weights = null, options = {}) {
   const [fundamentals, prices, prevFundamentals, statusRows, liquidity, supply] = await Promise.all([

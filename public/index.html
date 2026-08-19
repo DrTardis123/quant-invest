@@ -942,17 +942,35 @@
                       <strong class="small">1차매수 (골든/정배열)</strong>
                       <div class="fs-5 fw-bold" x-text="(stockDetail?.signals?.buy1?.score || 0) + ' / 100'"></div>
                       <div class="small" x-text="stockDetail?.signals?.buy1?.active ? '✅ 활성' : '⚪ 대기'"></div>
-                      <!-- 📊 점수 기여도 가로 막대 그래프 -->
-                      <div class="mt-2 pt-2 border-top" style="max-height:160px; overflow-y:auto">
-                        <template x-for="c in (stockDetail?.signals?.buy1?.contribs || []).sort((a,b) => b.pts - a.pts)" :key="c.label + c.pts">
-                          <div class="d-flex align-items-center gap-1 mb-1" style="font-size:0.7rem">
-                            <span class="text-nowrap" style="width:64px" x-text="c.label"></span>
-                            <div class="flex-fill bg-light rounded" style="height:10px; overflow:hidden; border:1px solid #dee2e6">
-                              <div :class="c.pts > 0 ? 'bg-success' : 'bg-danger'" :style="`width: ${Math.min(Math.abs(c.pts) * 5, 100)}%; height:100%; transition: width 0.3s`"></div>
+                      <!-- 📊 누적 점수 막대 (양수/음수 분할) -->
+                      <div class="mt-2 pt-2 border-top" x-data="{
+                        get contribs() { return stockDetail?.signals?.buy1?.contribs || []; },
+                        get posTotal() { return this.contribs.filter(c => c.pts > 0).reduce((s, c) => s + c.pts, 0); },
+                        get negTotal() { return this.contribs.filter(c => c.pts < 0).reduce((s, c) => s + c.pts, 0); }
+                      }">
+                        <!-- 누적 막대: 음수(왼쪽) + 양수(오른쪽) -->
+                        <div style="position:relative; height:14px; background:#e9ecef; border-radius:4px; overflow:hidden" :title="'양수 +' + posTotal + '점 / 음수 ' + negTotal + '점'">
+                          <div class="bg-danger" :style="`position:absolute; left:0; top:0; bottom:0; width: ${Math.min(Math.abs(negTotal), 100)}%;`"></div>
+                          <div class="bg-success" :style="`position:absolute; right:0; top:0; bottom:0; width: ${Math.min(posTotal, 100)}%;`"></div>
+                          <div style="position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background:#495057"></div>
+                        </div>
+                        <div class="d-flex justify-content-between small mt-1">
+                          <span class="text-danger fw-bold" x-text="(negTotal < 0 ? negTotal : 0) + '점'"></span>
+                          <span class="text-muted" x-text="'순점수 ' + (stockDetail?.signals?.buy1?.score || 0)"></span>
+                          <span class="text-success fw-bold" x-text="(posTotal > 0 ? '+' + posTotal : 0) + '점'"></span>
+                        </div>
+                        <!-- 각 contrib 막대 -->
+                        <div class="mt-1" style="max-height:140px; overflow-y:auto">
+                          <template x-for="c in contribs.sort((a,b) => b.pts - a.pts)" :key="c.label + c.pts">
+                            <div class="d-flex align-items-center gap-1 mb-1" style="font-size:0.7rem">
+                              <span class="text-nowrap" style="width:64px" x-text="c.label"></span>
+                              <div class="flex-fill bg-light rounded" style="height:8px; overflow:hidden; border:1px solid #dee2e6">
+                                <div :class="c.pts > 0 ? 'bg-success' : 'bg-danger'" :style="`width: ${Math.min(Math.abs(c.pts) * 5, 100)}%; height:100%`"></div>
+                              </div>
+                              <span class="text-nowrap" style="width:32px" :class="c.pts > 0 ? 'text-success fw-bold' : 'text-danger fw-bold'" x-text="(c.pts > 0 ? '+' : '') + c.pts"></span>
                             </div>
-                            <span class="text-nowrap" style="width:32px" :class="c.pts > 0 ? 'text-success fw-bold' : 'text-danger fw-bold'" x-text="(c.pts > 0 ? '+' : '') + c.pts"></span>
-                          </div>
-                        </template>
+                          </template>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -963,16 +981,32 @@
                       <strong class="small">2차매수 (눌림목)</strong>
                       <div class="fs-5 fw-bold" x-text="(stockDetail?.signals?.buy2?.score || 0) + ' / 100'"></div>
                       <div class="small" x-text="stockDetail?.signals?.buy2?.active ? '✅ 활성' : '⚪ 대기'"></div>
-                      <div class="mt-2 pt-2 border-top" style="max-height:160px; overflow-y:auto">
-                        <template x-for="c in (stockDetail?.signals?.buy2?.contribs || []).sort((a,b) => b.pts - a.pts)" :key="c.label + c.pts">
-                          <div class="d-flex align-items-center gap-1 mb-1" style="font-size:0.7rem">
-                            <span class="text-nowrap" style="width:64px" x-text="c.label"></span>
-                            <div class="flex-fill bg-light rounded" style="height:10px; overflow:hidden; border:1px solid #dee2e6">
-                              <div :class="c.pts > 0 ? 'bg-success' : 'bg-danger'" :style="`width: ${Math.min(Math.abs(c.pts) * 5, 100)}%; height:100%; transition: width 0.3s`"></div>
+                      <div class="mt-2 pt-2 border-top" x-data="{
+                        get contribs() { return stockDetail?.signals?.buy2?.contribs || []; },
+                        get posTotal() { return this.contribs.filter(c => c.pts > 0).reduce((s, c) => s + c.pts, 0); },
+                        get negTotal() { return this.contribs.filter(c => c.pts < 0).reduce((s, c) => s + c.pts, 0); }
+                      }">
+                        <div style="position:relative; height:14px; background:#e9ecef; border-radius:4px; overflow:hidden" :title="'양수 +' + posTotal + '점 / 음수 ' + negTotal + '점'">
+                          <div class="bg-danger" :style="`position:absolute; left:0; top:0; bottom:0; width: ${Math.min(Math.abs(negTotal), 100)}%;`"></div>
+                          <div class="bg-success" :style="`position:absolute; right:0; top:0; bottom:0; width: ${Math.min(posTotal, 100)}%;`"></div>
+                          <div style="position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background:#495057"></div>
+                        </div>
+                        <div class="d-flex justify-content-between small mt-1">
+                          <span class="text-danger fw-bold" x-text="(negTotal < 0 ? negTotal : 0) + '점'"></span>
+                          <span class="text-muted" x-text="'순점수 ' + (stockDetail?.signals?.buy2?.score || 0)"></span>
+                          <span class="text-success fw-bold" x-text="(posTotal > 0 ? '+' + posTotal : 0) + '점'"></span>
+                        </div>
+                        <div class="mt-1" style="max-height:140px; overflow-y:auto">
+                          <template x-for="c in contribs.sort((a,b) => b.pts - a.pts)" :key="c.label + c.pts">
+                            <div class="d-flex align-items-center gap-1 mb-1" style="font-size:0.7rem">
+                              <span class="text-nowrap" style="width:64px" x-text="c.label"></span>
+                              <div class="flex-fill bg-light rounded" style="height:8px; overflow:hidden; border:1px solid #dee2e6">
+                                <div :class="c.pts > 0 ? 'bg-success' : 'bg-danger'" :style="`width: ${Math.min(Math.abs(c.pts) * 5, 100)}%; height:100%`"></div>
+                              </div>
+                              <span class="text-nowrap" style="width:32px" :class="c.pts > 0 ? 'text-success fw-bold' : 'text-danger fw-bold'" x-text="(c.pts > 0 ? '+' : '') + c.pts"></span>
                             </div>
-                            <span class="text-nowrap" style="width:32px" :class="c.pts > 0 ? 'text-success fw-bold' : 'text-danger fw-bold'" x-text="(c.pts > 0 ? '+' : '') + c.pts"></span>
-                          </div>
-                        </template>
+                          </template>
+                        </div>
                       </div>
                     </div>
                   </div>

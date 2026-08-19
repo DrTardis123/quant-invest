@@ -13,7 +13,9 @@ const args = process.argv.slice(2);
 const daysArg = args.find((a) => a.startsWith('--days='));
 const marketArg = args.find((a) => a.startsWith('--market='));
 const LOOKBACK_DAYS = daysArg ? Number(daysArg.split('=')[1]) : 100;
-const MARKETS = marketArg ? [marketArg.split('=')[1]] : ['KOSPI']; // 기본 KOSPI만 (속도)
+const MARKET_ARG = marketArg ? marketArg.split('=')[1] : 'KOSPI';
+// 'all'이면 KOSPI+KOSDAQ 둘 다, 아니면 단일 마켓
+const MARKETS = MARKET_ARG === 'all' ? ['KOSPI', 'KOSDAQ'] : [MARKET_ARG];
 
 function dateToStr(d) {
   if (!d) return null;
@@ -178,9 +180,9 @@ function mean(arr) {
       sell: 'SELL1 손절 신호 후 -5%↓ 추가 하락 비율 (= 회피 성공). SELL2 익절 신호 후 +5%↑ 추가 상승 비율 (= 놓친 수익)',
     },
   };
-  const outPath = path.join(__dirname, '..', 'public', 'data', 'signal-performance.json');
+  const outPath = path.join(__dirname, '..', 'public', 'data', MARKETS.length === 1 ? `signal-performance${MARKETS[0] !== 'KOSPI' ? '-' + MARKETS[0].toLowerCase() : ''}.json` : 'signal-performance.json');
   fs.writeFileSync(outPath, JSON.stringify(out, null, 0));
-  console.log(`\n=== KPI 요약 ===`);
+  console.log(`\n=== KPI 요약 (${MARKETS.join('+')}) ===`);
   for (const t of types) {
     const s = summary[t];
     console.log(`  ${t}: total=${s.total} 5d=${s.evaluated5d} 10d=${s.evaluated10d} 20d=${s.evaluated20d}  avg10d=${s.avgReturn10d?.toFixed(2)}%  max20d=${s.maxProfit?.toFixed(2)}% / ${s.maxLoss?.toFixed(2)}%`);

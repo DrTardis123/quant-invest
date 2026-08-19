@@ -1,0 +1,72 @@
+chore: 4개 작업 (A2/J/K/I) 완료 + 매트릭스 점수 누적 막대
+
+=== A2. lightIsExcludedProduct KCGI/KoAct 등 KOSDAQ ETF 추가 ===
+src/data/filters.js 보강
+- ETF prefix 추가: KCGI, KoAct, KRX 메가, 슈로더, 미래에셋 미국/글로벌
+- ETF 키워드 추가: KCGI 미국/글로벌, KoAct 미국, 미래에셋 인버스/액티브/고배당
+- 액티브 키워드: 미국 천연가스, 미국 치매, 미국 TOP10
+
+KOSPI 200개 검증 결과: 186개 제외 (93%) → 14개 일반 종목
+(이전 17개에서 KCGI/KoAct 3개 더 제외)
+
+=== J. 신호 추적 백필 KOSDAQ 추가 ===
+scripts/backfill-signal-performance.js에 --market=all 옵션 추가
+- 단일 마켓: signal-performance.json
+- KOSPI: signal-performance.json
+- KOSDAQ: signal-performance-kosdaq.json (별도)
+
+KOSDAQ 백필 결과 (KOSPI+KOSDAQ 통합 KPI):
+- 대상 종목: 1,716개 (51개 제외)
+- buy1: 110건, +10d +8.14% ⭐ (KOSPI -0.68%보다 훨씬 좋음)
+- buy2: 834건, +10d +0.91%
+- sell1: 8,046건, +10d -21.12%
+- sell2: 1,256건, +10d -14.10%
+
+KOSPI vs KOSDAQ KPI 비교:
+| 신호 | KOSPI | KOSDAQ | 차이 |
+|---|---:|---:|---:|
+| buy1 | -0.68% | +8.14% | KOSDAQ 우세 |
+| buy2 | -2.23% | +0.91% | KOSDAQ 우세 |
+| sell1 | -18.98% | -21.12% | KOSPI 우세 |
+| sell2 | -17.50% | -14.10% | KOSDAQ 우세 |
+
+저장: public/data/signal-performance-kosdaq.json
+
+=== K. 7팩터 점수 v2 (lightIsExcludedProduct 통일) ===
+src/factors/index.js: isExcludedProduct → lightIsExcludedProduct (정확한 패턴)
+- '삼성' / 'KB' 같은 일반 prefix 더 이상 자동 제외 안 됨
+- cycle 회피: filters.js에 isExcludedProduct 정의를 직접 복사 (factors/index.js에 의존 안 함)
+  - src/data/filters.js가 독립적으로 isExcludedProduct + lightIsExcludedProduct 정의
+  - factors/index.js는 filters.js에서 import
+
+효과:
+- 7팩터 점수 계산: lightIsExcludedProduct 사용 (정확)
+- 매트릭스 검증: lightIsExcludedProduct 사용 (동일)
+- 신호 추적: lightIsExcludedProduct 사용 (동일)
+- stock/*.json export: lightIsExcludedProduct 사용 (동일)
+→ 4개 시스템 통일 (일관성)
+
+=== I. 매트릭스 점수 기여도 누적 막대 (양수/음수 분할) ===
+매트릭스 탭의 buy1/buy2 카드에 누적 막대 추가:
+- 음수 영역 (왼쪽, 빨강)
+- 양수 영역 (오른쪽, 초록)
+- 중앙 점수선 (회색)
+- 양수/음수 합계 + 순점수 표시
+- 각 contrib 막대 그래프는 아래에 유지
+
+Alpine.js x-data getter:
+  posTotal = contribs.filter(c => c.pts > 0).reduce(...)
+  negTotal = contribs.filter(c => c.pts < 0).reduce(...)
+
+효과:
+- 어떤 요소가 양수/음수 기여했는지 한눈에 파악
+- 매트릭스 점수의 구성 (양수+ vs 음수-) 명확
+- 순점수 = 양수합 - 음수합
+
+=== 파일 변경 ===
+- src/data/filters.js (A2 + cycle 회피)
+- src/factors/index.js (K: lightIsExcludedProduct 통합)
+- public/index.html (I: 누적 막대)
+- scripts/backfill-signal-performance.js (J: --market 옵션)
+- public/data/matrix-verify-top200.json (KOSDAQ 결과로 갱신)
+- public/data/signal-performance-kosdaq.json (J: KOSDAQ KPI)
