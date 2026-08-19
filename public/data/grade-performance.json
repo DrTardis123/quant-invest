@@ -1,0 +1,161 @@
+{
+  "asOf": "2026-08-19",
+  "note": "현재 매트릭스 점수 기준 등급 분류 (과거 신호 발생 시점 점수가 아닐 수 있음)",
+  "kospi": {
+    "A": {
+      "signalCount": 0,
+      "byType": {}
+    },
+    "B": {
+      "signalCount": 10,
+      "byType": {
+        "buy1": null,
+        "buy2": null,
+        "sell1": {
+          "total": 9,
+          "avgReturn5d": -27.18,
+          "avgReturn10d": -28.47,
+          "avgReturn20d": -23.24,
+          "winRate5d": 0,
+          "winRate10d": 0,
+          "winRate20d": 0
+        },
+        "sell2": {
+          "total": 1,
+          "avgReturn5d": -16.83,
+          "avgReturn10d": -14.73,
+          "avgReturn20d": -12.62,
+          "winRate5d": 0,
+          "winRate10d": 0,
+          "winRate20d": 0
+        }
+      }
+    },
+    "C": {
+      "signalCount": 9,
+      "byType": {
+        "buy1": null,
+        "buy2": null,
+        "sell1": {
+          "total": 9,
+          "avgReturn5d": -7.79,
+          "avgReturn10d": -3.66,
+          "avgReturn20d": -4.81,
+          "winRate5d": 0,
+          "winRate10d": 0.333,
+          "winRate20d": 0
+        },
+        "sell2": null
+      }
+    },
+    "D": {
+      "signalCount": 5,
+      "byType": {
+        "buy1": null,
+        "buy2": null,
+        "sell1": {
+          "total": 5,
+          "avgReturn5d": -12.17,
+          "avgReturn10d": -16.79,
+          "avgReturn20d": -12.4,
+          "winRate5d": 0,
+          "winRate10d": 0,
+          "winRate20d": 0
+        },
+        "sell2": null
+      }
+    },
+    "F": {
+      "signalCount": 6,
+      "byType": {
+        "buy1": null,
+        "buy2": null,
+        "sell1": {
+          "total": 6,
+          "avgReturn5d": -18.62,
+          "avgReturn10d": -18.04,
+          "avgReturn20d": -10.63,
+          "winRate5d": 0,
+          "winRate10d": 0,
+          "winRate20d": 0
+        },
+        "sell2": null
+      }
+    }
+  },
+  "kosdaq": {
+    "A": {
+      "signalCount": 0,
+      "byType": {}
+    },
+    "B": {
+      "signalCount": 7,
+      "byType": {
+        "buy1": null,
+        "buy2": null,
+        "sell1": null,
+        "sell2": {
+          "total": 7,
+          "avgReturn5d": -16.67,
+          "avgReturn10d": -16.67,
+          "avgReturn20d": -16.67,
+          "winRate5d": 0,
+          "winRate10d": 0,
+          "winRate20d": 0
+        }
+      }
+    },
+    "C": {
+      "signalCount": 7,
+      "byType": {
+        "buy1": null,
+        "buy2": null,
+        "sell1": {
+          "total": 7,
+          "avgReturn5d": -18.99,
+          "avgReturn10d": -4.74,
+          "avgReturn20d": 17.94,
+          "winRate5d": 0,
+          "winRate10d": 0.143,
+          "winRate20d": 1
+        },
+        "sell2": null
+      }
+    },
+    "D": {
+      "signalCount": 2,
+      "byType": {
+        "buy1": null,
+        "buy2": null,
+        "sell1": {
+          "total": 2,
+          "avgReturn5d": -25.84,
+          "avgReturn10d": -25.74,
+          "avgReturn20d": -20.23,
+          "winRate5d": 0,
+          "winRate10d": 0,
+          "winRate20d": 0
+        },
+        "sell2": null
+      }
+    },
+    "F": {
+      "signalCount": 14,
+      "byType": {
+        "buy1": null,
+        "buy2": null,
+        "sell1": {
+          "total": 14,
+          "avgReturn5d": -17.58,
+          "avgReturn10d": -17.04,
+          "avgReturn20d": -14.65,
+          "winRate5d": 0,
+          "winRate10d": 0,
+          "winRate20d": 0
+        },
+        "sell2": null
+      }
+    }
+  },
+  "generatedAt": "2026-08-19T11:48:59.128Z"
+}

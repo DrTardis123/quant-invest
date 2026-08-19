@@ -1,0 +1,38 @@
+chore: 3개 추가 작업 (등급별 수익률 + 시장 평가 시계열)
+
+✅ 1. 등급별 수익률 검증 (Q. 등급별 수익률 진짜 완성)
+   - scripts/grade-performance.js (KOSPI/KOSDAQ 별도)
+   - factor_scores의 매트릭스 점수 quantile 기반 등급 분류
+   - quantile: p90=58.3 p70=54.6 p40=49.1 p20=43.6
+   - public/data/grade-performance.json
+   - vercel.json: /api/grade-performance 라우트
+   - analysis.html: 등급별 신호 수익률 차트 + 표
+     → B sell1 -28.47% > C sell1 -3.66%
+     → 고등급 손절 신호가 더 효과적 ✅
+   - app.js: loadGradePerformance, _drawGradeChart, gradeChartData
+
+✅ 2. 시장 평가 점수 시계열 (60일)
+   - scripts/market-regime-history.js
+   - 매일 KOSPI 일봉 + 그 시점의 breadth로 점수 재계산
+   - DuckDB Window 함수로 일자별 ma20/ma60/high52/low52 추출
+   - public/data/market-regime-history.json (60일치)
+   - vercel.json: /api/market-regime-history 라우트
+   - analysis.html: 시장 평가 카드 아래 라인 차트
+     - 시장 평가 점수 (보라) + 추세 (빨강) + Breadth (초록) + 중립선 (점선)
+   - app.js: loadMarketRegimeHistory, _drawMarketHistoryChart
+   - 현재 추이: 8/5 35.8 → 8/6 35.3 → 8/7 28.5 → 8/10 33.5 → 8/11 33.4 (하락장 지속)
+
+✅ 3. 매트릭스 분석 Top 종목 표에 "조정" 컬럼 추가
+   - 조정 점수 = raw × 0.8 + 시장 × 0.2 (0~100 클램프)
+   - 등급도 조정 점수 기준으로 재계산
+   - 매트릭스 분석 탭에 토글/비교 가능
+
+✅ scripts/update.js exportStatic에 시장 평가 + 시계열 자동 갱신 통합 (이전 커밋)
+   - calculateMarketRegime → market-regime.json
+   - market-regime-history 자동 갱신
+
+✅ 메인 페이지 (index.html)에도 시장 평가 카드
+   - 5지표 breakdown + 분석 페이지 링크
+   - 푸시 후 Vercel 자동 deploy
+
+⏳ 3. 종목 모달에 시장 반영 점수 + 매트릭스 등급 표시 (다음 작업)

@@ -1,0 +1,725 @@
+{
+  "history": [
+    {
+      "date": "2026-05-15",
+      "score": 57.8,
+      "label": "중립",
+      "components": {
+        "trend": 100,
+        "momentum": 63.2,
+        "breadth": 50,
+        "newHighLow": 50,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-05-18",
+      "score": 54,
+      "label": "중립",
+      "components": {
+        "trend": 100,
+        "momentum": 44,
+        "breadth": 50,
+        "newHighLow": 50,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-05-19",
+      "score": 54,
+      "label": "중립",
+      "components": {
+        "trend": 100,
+        "momentum": 44,
+        "breadth": 50,
+        "newHighLow": 50,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-05-20",
+      "score": 43.9,
+      "label": "중립",
+      "components": {
+        "trend": 100,
+        "momentum": 44,
+        "breadth": 30.9,
+        "newHighLow": 15.1,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-05-21",
+      "score": 50.2,
+      "label": "중립",
+      "components": {
+        "trend": 100,
+        "momentum": 52.5,
+        "breadth": 35.7,
+        "newHighLow": 37.4,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-05-22",
+      "score": 61.2,
+      "label": "상승",
+      "components": {
+        "trend": 100,
+        "momentum": 80,
+        "breadth": 41.9,
+        "newHighLow": 63.6,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-05-26",
+      "score": 59.7,
+      "label": "중립",
+      "components": {
+        "trend": 100,
+        "momentum": 80,
+        "breadth": 42,
+        "newHighLow": 53.7,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-05-27",
+      "score": 55.6,
+      "label": "중립",
+      "components": {
+        "trend": 100,
+        "momentum": 80,
+        "breadth": 36.7,
+        "newHighLow": 35.1,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-05-28",
+      "score": 54.3,
+      "label": "중립",
+      "components": {
+        "trend": 100,
+        "momentum": 80,
+        "breadth": 33.7,
+        "newHighLow": 31.5,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-05-29",
+      "score": 54.2,
+      "label": "중립",
+      "components": {
+        "trend": 100,
+        "momentum": 80,
+        "breadth": 32.8,
+        "newHighLow": 32.2,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-01",
+      "score": 52.4,
+      "label": "중립",
+      "components": {
+        "trend": 100,
+        "momentum": 80,
+        "breadth": 31.1,
+        "newHighLow": 23.1,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-02",
+      "score": 52.9,
+      "label": "중립",
+      "components": {
+        "trend": 100,
+        "momentum": 80,
+        "breadth": 30.3,
+        "newHighLow": 28.2,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-04",
+      "score": 52.1,
+      "label": "중립",
+      "components": {
+        "trend": 100,
+        "momentum": 76,
+        "breadth": 30.9,
+        "newHighLow": 26.6,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-05",
+      "score": 44.1,
+      "label": "중립",
+      "components": {
+        "trend": 100,
+        "momentum": 51.5,
+        "breadth": 28.9,
+        "newHighLow": 9.9,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-08",
+      "score": 31.7,
+      "label": "하락",
+      "components": {
+        "trend": 80,
+        "momentum": 31,
+        "breadth": 20.8,
+        "newHighLow": 1,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-09",
+      "score": 37.8,
+      "label": "하락",
+      "components": {
+        "trend": 80,
+        "momentum": 44,
+        "breadth": 23.9,
+        "newHighLow": 18.9,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-10",
+      "score": 32.4,
+      "label": "하락",
+      "components": {
+        "trend": 80,
+        "momentum": 27.4,
+        "breadth": 21.3,
+        "newHighLow": 9.7,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-11",
+      "score": 36.5,
+      "label": "하락",
+      "components": {
+        "trend": 80,
+        "momentum": 30.9,
+        "breadth": 23.4,
+        "newHighLow": 28.5,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-12",
+      "score": 44,
+      "label": "중립",
+      "components": {
+        "trend": 80,
+        "momentum": 44,
+        "breadth": 30.5,
+        "newHighLow": 49.4,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-15",
+      "score": 58.9,
+      "label": "중립",
+      "components": {
+        "trend": 100,
+        "momentum": 76.5,
+        "breadth": 38.1,
+        "newHighLow": 59.6,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-16",
+      "score": 60.6,
+      "label": "상승",
+      "components": {
+        "trend": 100,
+        "momentum": 80,
+        "breadth": 39.9,
+        "newHighLow": 63.5,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-17",
+      "score": 61.3,
+      "label": "상승",
+      "components": {
+        "trend": 100,
+        "momentum": 80,
+        "breadth": 41.5,
+        "newHighLow": 65.1,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-18",
+      "score": 57.6,
+      "label": "중립",
+      "components": {
+        "trend": 100,
+        "momentum": 80,
+        "breadth": 34.8,
+        "newHighLow": 51.4,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-19",
+      "score": 52.7,
+      "label": "중립",
+      "components": {
+        "trend": 100,
+        "momentum": 80,
+        "breadth": 28.9,
+        "newHighLow": 28.5,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-22",
+      "score": 50.4,
+      "label": "중립",
+      "components": {
+        "trend": 100,
+        "momentum": 80,
+        "breadth": 27.3,
+        "newHighLow": 16,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-23",
+      "score": 33.1,
+      "label": "하락",
+      "components": {
+        "trend": 80,
+        "momentum": 37.5,
+        "breadth": 21.3,
+        "newHighLow": 1,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-24",
+      "score": 38.9,
+      "label": "하락",
+      "components": {
+        "trend": 100,
+        "momentum": 38.1,
+        "breadth": 23.8,
+        "newHighLow": 1,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-25",
+      "score": 42.5,
+      "label": "중립",
+      "components": {
+        "trend": 100,
+        "momentum": 54.3,
+        "breadth": 25.4,
+        "newHighLow": 1,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-26",
+      "score": 32.3,
+      "label": "하락",
+      "components": {
+        "trend": 80,
+        "momentum": 32.8,
+        "breadth": 21.7,
+        "newHighLow": 1,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-29",
+      "score": 39.8,
+      "label": "하락",
+      "components": {
+        "trend": 80,
+        "momentum": 26.4,
+        "breadth": 26.6,
+        "newHighLow": 51.7,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-06-30",
+      "score": 50.8,
+      "label": "중립",
+      "components": {
+        "trend": 100,
+        "momentum": 56.5,
+        "breadth": 29.1,
+        "newHighLow": 47.5,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-01",
+      "score": 41.3,
+      "label": "중립",
+      "components": {
+        "trend": 78.7,
+        "momentum": 25.8,
+        "breadth": 32.5,
+        "newHighLow": 54.4,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-02",
+      "score": 33.2,
+      "label": "하락",
+      "components": {
+        "trend": 61.3,
+        "momentum": 20,
+        "breadth": 29.5,
+        "newHighLow": 42.2,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-03",
+      "score": 38.7,
+      "label": "하락",
+      "components": {
+        "trend": 70.8,
+        "momentum": 28.6,
+        "breadth": 30.6,
+        "newHighLow": 50.1,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-06",
+      "score": 40.9,
+      "label": "중립",
+      "components": {
+        "trend": 68,
+        "momentum": 43.3,
+        "breadth": 31.4,
+        "newHighLow": 48.1,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-07",
+      "score": 31.5,
+      "label": "하락",
+      "components": {
+        "trend": 55.9,
+        "momentum": 20,
+        "breadth": 29.7,
+        "newHighLow": 39.8,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-08",
+      "score": 23.8,
+      "label": "하락",
+      "components": {
+        "trend": 46.3,
+        "momentum": 20.5,
+        "breadth": 22.2,
+        "newHighLow": 15.9,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-09",
+      "score": 22.9,
+      "label": "하락",
+      "components": {
+        "trend": 46.2,
+        "momentum": 20.9,
+        "breadth": 20.8,
+        "newHighLow": 12.2,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-10",
+      "score": 30.3,
+      "label": "하락",
+      "components": {
+        "trend": 50.9,
+        "momentum": 20,
+        "breadth": 27.8,
+        "newHighLow": 43.3,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-13",
+      "score": 19.6,
+      "label": "강한 하락",
+      "components": {
+        "trend": 30.4,
+        "momentum": 20,
+        "breadth": 23.1,
+        "newHighLow": 13.9,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-14",
+      "score": 18.3,
+      "label": "강한 하락",
+      "components": {
+        "trend": 30.9,
+        "momentum": 20,
+        "breadth": 21.2,
+        "newHighLow": 7.5,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-15",
+      "score": 29.1,
+      "label": "하락",
+      "components": {
+        "trend": 40.8,
+        "momentum": 33.6,
+        "breadth": 27.5,
+        "newHighLow": 34.3,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-16",
+      "score": 22.5,
+      "label": "하락",
+      "components": {
+        "trend": 29.3,
+        "momentum": 20,
+        "breadth": 27.9,
+        "newHighLow": 26.8,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-20",
+      "score": 15.9,
+      "label": "강한 하락",
+      "components": {
+        "trend": 25.4,
+        "momentum": 20,
+        "breadth": 20.9,
+        "newHighLow": 1,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-21",
+      "score": 19.3,
+      "label": "강한 하락",
+      "components": {
+        "trend": 28.2,
+        "momentum": 32.2,
+        "breadth": 21.7,
+        "newHighLow": 1.5,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-22",
+      "score": 20.2,
+      "label": "하락",
+      "components": {
+        "trend": 28.7,
+        "momentum": 31.8,
+        "breadth": 22.1,
+        "newHighLow": 6.6,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-23",
+      "score": 25.8,
+      "label": "하락",
+      "components": {
+        "trend": 31.7,
+        "momentum": 21.1,
+        "breadth": 32.2,
+        "newHighLow": 36,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-24",
+      "score": 22.3,
+      "label": "하락",
+      "components": {
+        "trend": 26.2,
+        "momentum": 27,
+        "breadth": 27.5,
+        "newHighLow": 21.9,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-27",
+      "score": 28.6,
+      "label": "하락",
+      "components": {
+        "trend": 26.9,
+        "momentum": 51.1,
+        "breadth": 29.2,
+        "newHighLow": 28.4,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-28",
+      "score": 14,
+      "label": "강한 하락",
+      "components": {
+        "trend": 20,
+        "momentum": 20,
+        "breadth": 18.7,
+        "newHighLow": 1,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-29",
+      "score": 12.9,
+      "label": "강한 하락",
+      "components": {
+        "trend": 20,
+        "momentum": 20,
+        "breadth": 14.6,
+        "newHighLow": 1,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-30",
+      "score": 14,
+      "label": "강한 하락",
+      "components": {
+        "trend": 20,
+        "momentum": 20,
+        "breadth": 16.5,
+        "newHighLow": 5,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-07-31",
+      "score": 21.5,
+      "label": "하락",
+      "components": {
+        "trend": 22.8,
+        "momentum": 21.3,
+        "breadth": 23.2,
+        "newHighLow": 37,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-08-03",
+      "score": 21.3,
+      "label": "하락",
+      "components": {
+        "trend": 20,
+        "momentum": 20,
+        "breadth": 26.1,
+        "newHighLow": 37.4,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-08-04",
+      "score": 32,
+      "label": "하락",
+      "components": {
+        "trend": 20,
+        "momentum": 52.7,
+        "breadth": 40,
+        "newHighLow": 41.9,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-08-05",
+      "score": 35.8,
+      "label": "하락",
+      "components": {
+        "trend": 22.5,
+        "momentum": 56,
+        "breadth": 48.9,
+        "newHighLow": 43.7,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-08-06",
+      "score": 35.3,
+      "label": "하락",
+      "components": {
+        "trend": 20,
+        "momentum": 56,
+        "breadth": 49.6,
+        "newHighLow": 43.9,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-08-07",
+      "score": 28.5,
+      "label": "하락",
+      "components": {
+        "trend": 20,
+        "momentum": 20,
+        "breadth": 51,
+        "newHighLow": 43.8,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-08-10",
+      "score": 33.5,
+      "label": "하락",
+      "components": {
+        "trend": 20,
+        "momentum": 34.4,
+        "breadth": 58.1,
+        "newHighLow": 46.3,
+        "volatility": 1
+      }
+    },
+    {
+      "date": "2026-08-11",
+      "score": 33.4,
+      "label": "하락",
+      "components": {
+        "trend": 20,
+        "momentum": 33.1,
+        "breadth": 58.9,
+        "newHighLow": 46,
+        "volatility": 1
+      }
+    }
+  ],
+  "generatedAt": "2026-08-19T12:48:54.047Z"
+}

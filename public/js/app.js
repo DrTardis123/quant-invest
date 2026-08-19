@@ -66,6 +66,9 @@ function app() {
     matrixMarketFilter: 'compare',  // 매트릭스 분석 탭 필터: 'KOSPI' | 'KOSDAQ' | 'compare'
     marketRegime: null,  // 시장 평가 점수 (1-100)
     marketRegimeLoading: false,
+    gradePerformance: null,  // 등급별 신호 수익률 (KOSPI/KOSDAQ)
+    gradePerformanceLoading: false,
+    marketRegimeHistory: null,  // 시장 평가 점수 시계열 (60일)
     analytics: null,
     analyticsLoading: false,
     _analyticsCharts: {},
@@ -372,7 +375,9 @@ function app() {
             this.loadSignalPerformance();
             this.loadMatrixVerify();
             this.loadMarketRegime();
-            setTimeout(() => { this._drawSignalCharts(); this._drawMatrixCharts(); }, 100);
+            this.loadGradePerformance();
+            this.loadMarketRegimeHistory();
+            setTimeout(() => { this._drawSignalCharts(); this._drawMatrixCharts(); this._drawGradeChart(); this._drawMarketHistoryChart(); }, 100);
           }
           else if (t === 'top') { this._drawTopCharts(); }
           else if (t === 'movers') { this.loadMovers(); }
@@ -2303,6 +2308,50 @@ function app() {
       return Math.max(0, Math.min(100, Math.round(adj * 10) / 10));
     },
 
+    // ===== 등급별 신호 수익률 =====
+    async loadGradePerformance(force = false) {
+      if (this.gradePerformance && !force) return;
+      if (this.gradePerformanceLoading) return;
+      this.gradePerformanceLoading = true;
+      try {
+        const r = await window.apiGet('/api/grade-performance').catch(() => null);
+        if (r && !r.__error) this.gradePerformance = r;
+      } catch (e) { console.error('[grade-performance]', e); }
+      finally { this.gradePerformanceLoading = false; }
+    },
+
+    // ===== 시장 평가 점수 시계열 =====
+    async loadMarketRegimeHistory(force = false) {
+      if (this.marketRegimeHistory && !force) return;
+      try {
+        const r = await window.apiGet('/api/market-regime-history').catch(() => null);
+        if (r && r.history && !r.__error) this.marketRegimeHistory = r.history;
+      } catch (e) { console.error('[market-regime-history]', e); }
+    },
+
+    // 등급별 차트 데이터 (현재 필터 시장)
+    gradeChartData() {
+      if (!this.gradePerformance) return null;
+      const market = this.matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi';
+      const data = this.gradePerformance[market] || {};
+      const grades = ['A', 'B', 'C', 'D', 'F'];
+      // sell1 +10d 평균 (손절 후 추가하락 — 음수가 클수록 잘한 손절)
+      const sell1Data = grades.map((g) => {
+        const d = data[g];
+        if (!d || !d.byType || !d.byType.sell1) return 0;
+        return d.byType.sell1.avgReturn10d;
+      });
+      // buy1 +10d 평균 (매수 후 상승 — 양수가 클수록 잘한 매수)
+      const buy1Data = grades.map((g) => {
+        const d = data[g];
+        if (!d || !d.byType || !d.byType.buy1) return 0;
+        return d.byType.buy1.avgReturn10d;
+      });
+      // 등급별 신호 수
+      const countData = grades.map((g) => (data[g]?.signalCount || 0));
+      return { grades, sell1: sell1Data, buy1: buy1Data, count: countData };
+    },
+
     // ===== 매트릭스 점수 분포 (등급별 카운트) =====
     matrixGradeDistribution(items) {
       const dist = { A: 0, B: 0, C: 0, D: 0, F: 0 };
@@ -2421,6 +2470,67 @@ function app() {
         if (it.buy1Active) groups[g].active++;
       }
       return groups;
+    },
+
+    // ===== 등급별 차트 그리기 =====
+    _drawGradeChart() {
+      if (!window.Chart) return;
+      const data = this.gradeChartData();
+      if (!data) return;
+      try {
+        const c = document.getElementById('gradePerformanceChart');
+        if (!c || c.clientWidth === 0) return;
+        if (this._charts.gradePerf) { try { this._charts.gradePerf.destroy(); } catch (_) {} this._charts.gradePerf = null; }
+        this._charts.gradePerf = new Chart(c, {
+          type: 'bar',
+          data: {
+            labels: data.grades,
+            datasets: [
+              { label: '1차매도 +10d (음수=잘한 손절)', data: data.sell1, backgroundColor: data.sell1.map((v) => v <= 0 ? 'rgba(220, 53, 69, 0.7)' : 'rgba(13, 110, 253, 0.7)') },
+              { label: '1차매수 +10d (양수=잘한 매수)', data: data.buy1, backgroundColor: data.buy1.map((v) => v >= 0 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(13, 110, 253, 0.7)') },
+            ],
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + '%' } } },
+            scales: { y: { ticks: { callback: (v) => v + '%' } } },
+          },
+        });
+      } catch (e) { console.error('[gradePerformanceChart]', e); }
+    },
+
+    // ===== 시장 평가 점수 시계열 차트 =====
+    _drawMarketHistoryChart() {
+      if (!window.Chart || !this.marketRegimeHistory) return;
+      try {
+        const c = document.getElementById('marketRegimeHistoryChart');
+        if (!c || c.clientWidth === 0) return;
+        if (this._charts.marketHistory) { try { this._charts.marketHistory.destroy(); } catch (_) {} this._charts.marketHistory = null; }
+        const hist = this.marketRegimeHistory;
+        const labels = hist.map((h) => h.date.slice(5));  // MM-DD
+        const scores = hist.map((h) => h.score);
+        const trends = hist.map((h) => h.components.trend);
+        const breadths = hist.map((h) => h.components.breadth);
+        this._charts.marketHistory = new Chart(c, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              { label: '시장 평가 점수', data: scores, borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.2)', fill: true, tension: 0.3, pointRadius: 2, yAxisID: 'y' },
+              { label: '추세 (25%)', data: trends, borderColor: '#ef4444', tension: 0.3, pointRadius: 0, yAxisID: 'y' },
+              { label: 'Breadth (25%)', data: breadths, borderColor: '#10b981', tension: 0.3, pointRadius: 0, yAxisID: 'y' },
+              { label: '중립 (50)', data: scores.map(() => 50), borderColor: '#9ca3af', borderDash: [5, 5], pointRadius: 0, yAxisID: 'y' },
+            ],
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + (ctx.parsed.y || 0).toFixed(1) } } },
+            scales: {
+              y: { min: 0, max: 100, ticks: { callback: (v) => v + '점' }, title: { display: true, text: '점수' } },
+            },
+          },
+        });
+      } catch (e) { console.error('[marketRegimeHistoryChart]', e); }
     },
 
     signalKpi() {

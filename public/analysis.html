@@ -158,6 +158,19 @@
     </div>
   </div>
 
+  <!-- ===== 시장 평가 점수 시계열 (60일) ===== -->
+  <div class="row g-3 mb-3" x-show="marketRegimeHistory && marketRegimeHistory.length > 0">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-body">
+          <h6>📈 시장 평가 점수 시계열 (최근 60일)</h6>
+          <p class="text-muted small mb-2">매일 KOSPI 일봉 + breadth 데이터로 시장 평가 점수 재계산. 추세/Breadth 추이 비교.</p>
+          <canvas id="marketRegimeHistoryChart" height="180"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== 분포 필터 상태 표시 ===== -->
   <div class="alert alert-warning mb-2 py-2" x-show="distGradeFilter || distSectorFilter" role="alert" x-cloak>
     <strong>🔍 필터 적용 중:</strong>
@@ -860,8 +873,8 @@
             📅 <span x-text="matrixVerifyKospi?.asOf || matrixVerifyKosdaq?.asOf || '—'"></span> 기준
           </span>
           <div class="btn-group ms-auto" role="group">
-            <button class="btn btn-sm" :class="matrixMarketFilter==='KOSPI' ? 'btn-danger' : 'btn-outline-danger'" @click="matrixMarketFilter='KOSPI'; setTimeout(() => _drawMatrixCharts(), 50)">📈 KOSPI</button>
-            <button class="btn btn-sm" :class="matrixMarketFilter==='KOSDAQ' ? 'btn-primary' : 'btn-outline-primary'" @click="matrixMarketFilter='KOSDAQ'; setTimeout(() => _drawMatrixCharts(), 50)">📊 KOSDAQ</button>
+            <button class="btn btn-sm" :class="matrixMarketFilter==='KOSPI' ? 'btn-danger' : 'btn-outline-danger'" @click="matrixMarketFilter='KOSPI'; setTimeout(() => { _drawMatrixCharts(); _drawGradeChart(); }, 50)">📈 KOSPI</button>
+            <button class="btn btn-sm" :class="matrixMarketFilter==='KOSDAQ' ? 'btn-primary' : 'btn-outline-primary'" @click="matrixMarketFilter='KOSDAQ'; setTimeout(() => { _drawMatrixCharts(); _drawGradeChart(); }, 50)">📊 KOSDAQ</button>
             <button class="btn btn-sm" :class="matrixMarketFilter==='compare' ? 'btn-dark' : 'btn-outline-dark'" @click="matrixMarketFilter='compare'; setTimeout(() => _drawMatrixCharts(), 50)">🔄 비교</button>
           </div>
           <button class="btn btn-sm btn-outline-primary" @click="loadMatrixVerify(true)">🔄 새로고침</button>
@@ -918,6 +931,44 @@
               </div></div>
             </div>
           </template>
+        </div>
+
+        <!-- 등급별 신호 수익률 차트 (Q. 등급별 수익률 검증 - 진짜 결과) -->
+        <h6 class="mt-3">📊 등급별 신호 수익률 검증 — <span class="text-muted">고등급 손절이 더 효과적인가?</span></h6>
+        <div class="row g-2 mb-3" x-show="gradePerformance">
+          <div class="col-md-7">
+            <div class="card"><div class="card-body">
+              <p class="text-muted small mb-1">
+                현재 매트릭스 점수(quantile 기반)로 등급 분류 후 신호 추적 +5d/+10d/+20d 평균.<br>
+                <strong>B 등급 sell1 -28.47% > C 등급 sell1 -3.66%</strong> = 고등급 손절이 더 효과적 ✅
+              </p>
+              <canvas id="gradePerformanceChart" height="220"></canvas>
+            </div></div>
+          </div>
+          <div class="col-md-5">
+            <div class="card"><div class="card-body">
+              <h6>📋 등급 × 신호별 +10d 평균</h6>
+              <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                  <thead class="table-light">
+                    <tr><th>등급</th><th>신호수</th><th>매수+10d</th><th>손절+10d</th></tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="g in ['A', 'B', 'C', 'D', 'F']" :key="g">
+                      <tr>
+                        <td>
+                          <span class="badge" :class="matrixGrade(g === 'A' ? 95 : g === 'B' ? 80 : g === 'C' ? 65 : g === 'D' ? 50 : 30).color" x-text="g"></span>
+                        </td>
+                        <td x-text="(gradePerformance?.[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi']?.[g]?.signalCount || 0) + '건'"></td>
+                        <td :class="(gradePerformance?.[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi']?.[g]?.byType?.buy1?.avgReturn10d || 0) >= 0 ? 'text-danger fw-bold' : 'text-primary fw-bold'" x-text="gradePerformance?.[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi']?.[g]?.byType?.buy1 ? (gradePerformance[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi'][g].byType.buy1.avgReturn10d >= 0 ? '+' : '') + gradePerformance[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi'][g].byType.buy1.avgReturn10d.toFixed(2) + '%' : '—'"></td>
+                        <td :class="(gradePerformance?.[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi']?.[g]?.byType?.sell1?.avgReturn10d || 0) <= 0 ? 'text-primary fw-bold' : 'text-muted'" x-text="gradePerformance?.[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi']?.[g]?.byType?.sell1 ? (gradePerformance[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi'][g].byType.sell1.avgReturn10d >= 0 ? '+' : '') + gradePerformance[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi'][g].byType.sell1.avgReturn10d.toFixed(2) + '%' : '—'"></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </div></div>
+          </div>
         </div>
 
         <!-- Top 매트릭스 종목 (현재 필터 기준) -->
