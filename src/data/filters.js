@@ -21,9 +21,11 @@ function lightIsExcludedProduct(name) {
   if (/[가-힣A-Za-z0-9\-\.]우$/.test(n)) return true;
   // 5) 리츠
   if (/(리츠|REITs)/.test(n)) return true;
-  // 6) 명확한 ETF prefix (브랜드)
-  if (/^(KODEX|TIGER|KBSTAR|ARIRANG|KINDEX|SOL|ACE|RISE|HANARO|TIMEFOLIO|마이티|TREX|우리\s*ETF|파워|WON|FOCUS|흥국|Smart|BNK|히어로즈|MASEC|KActive|일임|파인더)/.test(n)) return true;
-  // 7) 합성/액티브 키워드 (ETF 신호)
+  // 6) 명확한 ETF prefix (브랜드) - A1 보강: PLUS/KIWOOM/TIME/에셋/마이티/우리원 등
+  if (/^(KODEX|TIGER|KBSTAR|ARIRANG|KINDEX|SOL|ACE|RISE|HANARO|TIMEFOLIO|마이티|TREX|우리\s*ETF|파워|WON|FOCUS|흥국|Smart|BNK|히어로즈|MASEC|KActive|일임|파인더|KIWOOM|PLUS|TIME|에셋|TIGER\s*미국|TIGER\s*S&P|TIGER\s*글로벌|마이티\s*미국|마이티\s*인버스)/.test(n)) return true;
+  // 7) ETF 일반 키워드 (이름에 포함되면 매트릭스 제외)
+  if (/(에셋\s*플러스|마이티\s*고배당|마이티\s*인버스|KIWOOM\s*미국|PLUS\s*고배당|PLUS\s*미국|PLUS\s*한국|TIME\s*글로벌|TIME\s*미국|TREX\s*펀더멘탈)/.test(n)) return true;
+  // 8) 합성/액티브 키워드 (ETF 신호)
   if (/(합성\s*인덱스|합성\s*H|액티브\s*ETF|인덱스펀드|원유\s*ETF|금\s*ETF|채권\s*ETF)/.test(n)) return true;
   return false;
 }

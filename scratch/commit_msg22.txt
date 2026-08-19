@@ -1,0 +1,61 @@
+chore: 4개 작업 (A1/F/G/H) 완료 + 매트릭스 점수 기여도 막대 그래프
+
+=== A1. lightIsExcludedProduct 패턴 보강 ===
+src/data/filters.js 업데이트
+- ETF prefix 추가: KIWOOM, PLUS, TIME, 에셋, TIGER 미국/S&P/글로벌, 마이티 미국/인버스
+- ETF 키워드 추가: 에셋 플러스, 마이티 고배당/인버스, KIWOOM 미국, PLUS 고배당/미국/한국, TIME 글로벌/미국, TREX 펀더멘탈
+
+KOSPI 200개 검증 결과: 183개 제외 (91.5%) → 17개 일반 종목
+
+=== F. 7팩터 점수 계산에 lightIsExcludedProduct 적용 확인 ===
+src/factors/index.js의 calculateAll()이 이미 isExcludedProduct 사용 중:
+  const filteredFunda = fundamentals.filter((f) => !isExcludedProduct(f.name));
+→ 추가 작업 없음 (이미 적용됨)
+
+7팩터 점수 일관성:
+- 7팩터 점수 (메인): isExcludedProduct (정확한 패턴)
+- 매트릭스 검증: lightIsExcludedProduct (정확한 패턴, 신규)
+- 신호 추적: lightIsExcludedProduct (정확한 패턴, 신규)
+- stock/*.json export: lightIsExcludedProduct (정확한 패턴, 신규)
+
+=== G. KOSDAQ 200개 매트릭스 검증 ===
+KOSDAQ 200개 중 3개만 제외 (1.5%, ETF 적음) → 197개 계산
+시간: 87초
+
+통계:
+- 정배열: 49/197 (24.9%)
+- 1차매수 활성: 15/197 (7.6%)
+- 2차매수 활성: 26/197 (13.2%)
+- 1차+2차 동시 활성: 4/197 (2.0%)
+
+Top 5 강신호 (KOSDAQ):
+1. 코스메카코리아 (241710) 62점 🟢🟡 정배열+1차+2차
+2. 타이거일렉 (219130) 57점 🟢 정배열
+3. 인바디 (041830) 50점 🟢 정배열
+4. 안국약품 (001540) 47점 🟢 정배열
+5. 티쓰리 (204610) 45점 🟢 정배열
+
+저장: public/data/matrix-verify-top200.json
+
+=== H. 매트릭스 점수 기여도 가로 막대 그래프 UI ===
+기존: contribs를 배지 형태 (작은 박스)
+변경: 가로 막대 그래프 (막대 길이 = 점수)
+
+매트릭스 탭의 buy1/buy2 카드:
+- 점수 기여도 영역 (border-top, max-height 160px 스크롤)
+- 각 요소: 라벨(64px) + 막대 + 점수(32px)
+- 양수 = 초록 막대, 음수 = 빨강 막대
+- 점수 큰 순서로 정렬 (.sort((a,b) => b.pts - a.pts))
+- 막대 폭: Math.min(Math.abs(c.pts) * 5, 100)%
+  - 5점 = 25%, 10점 = 50%, 20점 = 100%
+
+효과:
+- 어떤 요소가 매트릭스에 가장 큰 기여했는지 한눈에 파악
+- 음수 기여도(매수 자제 신호)도 빨간 막대로 명확하게 표시
+- 점수 정렬로 가장 중요한 신호가 상단에 표시
+
+=== 파일 변경 ===
+- src/data/filters.js (A1)
+- public/index.html (H: 매트릭스 탭 막대 그래프)
+- public/data/matrix-verify-top200.json (G: KOSDAQ 결과로 갱신)
+- public/data/stock/*.json (KOSDAQ 200개 추가)

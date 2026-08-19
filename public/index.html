@@ -942,12 +942,16 @@
                       <strong class="small">1차매수 (골든/정배열)</strong>
                       <div class="fs-5 fw-bold" x-text="(stockDetail?.signals?.buy1?.score || 0) + ' / 100'"></div>
                       <div class="small" x-text="stockDetail?.signals?.buy1?.active ? '✅ 활성' : '⚪ 대기'"></div>
-                      <div class="d-flex flex-wrap gap-1 mt-1" style="font-size:0.7rem">
-                        <template x-for="c in (stockDetail?.signals?.buy1?.contribs || [])" :key="c.label + c.pts">
-                          <span class="px-2 py-1 rounded" :class="c.pts > 0 ? 'bg-success bg-opacity-25' : 'bg-danger bg-opacity-25'">
-                            <span x-text="c.label"></span>
-                            <strong :class="c.pts > 0 ? 'text-success' : 'text-danger'" x-text="(c.pts > 0 ? '+' : '') + c.pts"></strong>
-                          </span>
+                      <!-- 📊 점수 기여도 가로 막대 그래프 -->
+                      <div class="mt-2 pt-2 border-top" style="max-height:160px; overflow-y:auto">
+                        <template x-for="c in (stockDetail?.signals?.buy1?.contribs || []).sort((a,b) => b.pts - a.pts)" :key="c.label + c.pts">
+                          <div class="d-flex align-items-center gap-1 mb-1" style="font-size:0.7rem">
+                            <span class="text-nowrap" style="width:64px" x-text="c.label"></span>
+                            <div class="flex-fill bg-light rounded" style="height:10px; overflow:hidden; border:1px solid #dee2e6">
+                              <div :class="c.pts > 0 ? 'bg-success' : 'bg-danger'" :style="`width: ${Math.min(Math.abs(c.pts) * 5, 100)}%; height:100%; transition: width 0.3s`"></div>
+                            </div>
+                            <span class="text-nowrap" style="width:32px" :class="c.pts > 0 ? 'text-success fw-bold' : 'text-danger fw-bold'" x-text="(c.pts > 0 ? '+' : '') + c.pts"></span>
+                          </div>
                         </template>
                       </div>
                     </div>
@@ -959,12 +963,15 @@
                       <strong class="small">2차매수 (눌림목)</strong>
                       <div class="fs-5 fw-bold" x-text="(stockDetail?.signals?.buy2?.score || 0) + ' / 100'"></div>
                       <div class="small" x-text="stockDetail?.signals?.buy2?.active ? '✅ 활성' : '⚪ 대기'"></div>
-                      <div class="d-flex flex-wrap gap-1 mt-1" style="font-size:0.7rem">
-                        <template x-for="c in (stockDetail?.signals?.buy2?.contribs || [])" :key="c.label + c.pts">
-                          <span class="px-2 py-1 rounded" :class="c.pts > 0 ? 'bg-success bg-opacity-25' : 'bg-danger bg-opacity-25'">
-                            <span x-text="c.label"></span>
-                            <strong :class="c.pts > 0 ? 'text-success' : 'text-danger'" x-text="(c.pts > 0 ? '+' : '') + c.pts"></strong>
-                          </span>
+                      <div class="mt-2 pt-2 border-top" style="max-height:160px; overflow-y:auto">
+                        <template x-for="c in (stockDetail?.signals?.buy2?.contribs || []).sort((a,b) => b.pts - a.pts)" :key="c.label + c.pts">
+                          <div class="d-flex align-items-center gap-1 mb-1" style="font-size:0.7rem">
+                            <span class="text-nowrap" style="width:64px" x-text="c.label"></span>
+                            <div class="flex-fill bg-light rounded" style="height:10px; overflow:hidden; border:1px solid #dee2e6">
+                              <div :class="c.pts > 0 ? 'bg-success' : 'bg-danger'" :style="`width: ${Math.min(Math.abs(c.pts) * 5, 100)}%; height:100%; transition: width 0.3s`"></div>
+                            </div>
+                            <span class="text-nowrap" style="width:32px" :class="c.pts > 0 ? 'text-success fw-bold' : 'text-danger fw-bold'" x-text="(c.pts > 0 ? '+' : '') + c.pts"></span>
+                          </div>
                         </template>
                       </div>
                     </div>
