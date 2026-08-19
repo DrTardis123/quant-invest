@@ -1,0 +1,128 @@
+{
+  "factors": {
+    "price": [
+      "momentum_12_1",
+      "log_size",
+      "volatility_60d",
+      "liquidity",
+      "mean_reversion"
+    ],
+    "fundamental": [
+      "PER",
+      "PBR",
+      "ROE",
+      "PSR",
+      "DividendYield",
+      "DebtEquity",
+      "ForeignOwnership",
+      "OperatingMargin"
+    ]
+  },
+  "T1_train_test_excess": {
+    "train_excess_cagr": 0.1892,
+    "test_excess_cagr": 0.1866,
+    "overfit_ratio": 1.0139335476956057,
+    "interpretation": "일반화 양호"
+  },
+  "T2_weight_stability": {
+    "sign_agreement": "8/13",
+    "sign_agreement_pct": 61.5
+  },
+  "T3_regularization": {
+    "OLS": {
+      "train_Sharpe": 0.82,
+      "test_Sharpe": 2.3,
+      "test_CAGR": 0.4634
+    },
+    "Ridge": {
+      "train_Sharpe": 0.83,
+      "test_Sharpe": 2.24,
+      "test_CAGR": 0.4563
+    },
+    "LASSO": {
+      "train_Sharpe": 0.82,
+      "test_Sharpe": 2.09,
+      "test_CAGR": 0.4122
+    },
+    "LASSO_zeroed_factors": []
+  },
+  "T4_factor_count": {
+    "5 (price only)": {
+      "train": {
+        "CAGR": 0.1655,
+        "Sharpe": 0.74,
+        "MDD": -0.1764,
+        "Vol": 0.2483,
+        "Years": 3
+      },
+      "test": {
+        "CAGR": 0.4142,
+        "Sharpe": 2.07,
+        "MDD": -0.0877,
+        "Vol": 0.1768,
+        "Years": 2.92
+      }
+    },
+    "8 (fund only)": {
+      "train": {
+        "CAGR": 0.1375,
+        "Sharpe": 0.65,
+        "MDD": -0.1848,
+        "Vol": 0.247,
+        "Years": 3
+      },
+      "test": {
+        "CAGR": 0.4613,
+        "Sharpe": 1.95,
+        "MDD": -0.1423,
+        "Vol": 0.208,
+        "Years": 2.92
+      }
+    },
+    "10 (5+top3 fund)": {
+      "train": {
+        "CAGR": 0.181,
+        "Sharpe": 0.82,
+        "MDD": -0.1743,
+        "Vol": 0.24,
+        "Years": 3
+      },
+      "test": {
+        "CAGR": 0.467,
+        "Sharpe": 2.21,
+        "MDD": -0.0972,
+        "Vol": 0.1831,
+        "Years": 2.92
+      }
+    },
+    "13 (all)": {
+      "train": {
+        "CAGR": 0.1862,
+        "Sharpe": 0.82,
+        "MDD": -0.1766,
+        "Vol": 0.2448,
+        "Years": 3
+      },
+      "test": {
+        "CAGR": 0.4634,
+        "Sharpe": 2.3,
+        "MDD": -0.1013,
+        "Vol": 0.1748,
+        "Years": 2.92
+      }
+    }
+  },
+  "best_test_set": "13 (all)",
+  "1차_vs_2차": {
+    "1차 (5 price)": {
+      "train_excess": 0.1792,
+      "test_excess": 0.0204,
+      "overfit_ratio": 8.78
+    },
+    "2차 (13 factors)": {
+      "train_excess": 0.1892,
+      "test_excess": 0.1866,
+      "overfit_ratio": 1.01
+    }
+  }
+}
