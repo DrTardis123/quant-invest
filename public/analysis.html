@@ -1,11 +1,11 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0d6efd">
-  <meta name="description" content="í€€íŠ¸ ë¶„ì„ â€” ë¶„í¬Â·ìƒê´€Â·ìµœì í™”Â·ë°±í…ŒìŠ¤íŠ¸Â·í¬íŠ¸í´ë¦¬ì˜¤Â·ì§„ë‹¨">
-  <title>í€€íŠ¸ ë¶„ì„ íŽ˜ì´ì§€ â€” ë¶„í¬Â·ìƒê´€Â·ìµœì Â·ë°±Â·í¬íŠ¸Â·ì§„ë‹¨</title>
+  <meta name="description" content="ÄöÆ® ºÐ¼® ? ºÐÆ÷¡¤»ó°ü¡¤ÃÖÀûÈ­¡¤¹éÅ×½ºÆ®¡¤Æ÷Æ®Æú¸®¿À¡¤Áø´Ü">
+  <title>ÄöÆ® ºÐ¼® ÆäÀÌÁö ? ºÐÆ÷¡¤»ó°ü¡¤ÃÖÀû¡¤¹é¡¤Æ÷Æ®¡¤Áø´Ü</title>
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
@@ -24,35 +24,35 @@
 <nav class="navbar navbar-dark bg-dark sticky-top">
   <div class="container-fluid">
     <span class="navbar-brand mb-0 h1">
-      ðŸ“Š í€€íŠ¸ ë¶„ì„ íŽ˜ì´ì§€
-      <small class="text-muted fs-6">â€” ë¶„í¬Â·ìƒê´€Â·ìµœì í™”Â·ë°±í…ŒìŠ¤íŠ¸Â·í¬íŠ¸í´ë¦¬ì˜¤Â·ì§„ë‹¨</small>
+      ?? ÄöÆ® ºÐ¼® ÆäÀÌÁö
+      <small class="text-muted fs-6">? ºÐÆ÷¡¤»ó°ü¡¤ÃÖÀûÈ­¡¤¹éÅ×½ºÆ®¡¤Æ÷Æ®Æú¸®¿À¡¤Áø´Ü</small>
     </span>
     <div class="d-flex gap-2 align-items-center flex-wrap">
-      <a href="/index.html" class="btn btn-sm btn-outline-info">â† ë©”ì¸ìœ¼ë¡œ</a>
-      <a href="?market=KOSPI" class="btn btn-sm" :class="marketFilter==='KOSPI' ? 'btn-primary' : 'btn-outline-light'">ðŸ“ˆ KOSPI</a>
-      <a href="?market=KOSDAQ" class="btn btn-sm" :class="marketFilter==='KOSDAQ' ? 'btn-primary' : 'btn-outline-light'">ðŸ“Š KOSDAQ</a>
+      <a href="/index" class="btn btn-sm btn-outline-info">¡ç ¸ÞÀÎÀ¸·Î</a>
+      <a href="?market=KOSPI" class="btn btn-sm" :class="marketFilter==='KOSPI' ? 'btn-primary' : 'btn-outline-light'">?? KOSPI</a>
+      <a href="?market=KOSDAQ" class="btn btn-sm" :class="marketFilter==='KOSDAQ' ? 'btn-primary' : 'btn-outline-light'">?? KOSDAQ</a>
       <select class="form-select form-select-sm" style="width:auto" x-model="strategyKey" @change="onStrategyChange()">
         <template x-for="s in strategies" :key="s.key">
           <option :value="s.key" x-text="(s.emoji || '') + ' ' + s.name"></option>
         </template>
       </select>
-      <span class="text-light small" x-text="state.lastUpdate || 'â€”'"></span>
+      <span class="text-light small" x-text="state.lastUpdate || '?'"></span>
       <button class="btn btn-sm btn-outline-light" @click="triggerUpdate()" :disabled="state.updating">
-        <span x-show="!state.updating">ðŸ”„ ì§€ê¸ˆ ê°±ì‹ </span>
-        <span x-show="state.updating">ì§„í–‰ ì¤‘...</span>
+        <span x-show="!state.updating">?? Áö±Ý °»½Å</span>
+        <span x-show="state.updating">ÁøÇà Áß...</span>
       </button>
-      <!-- ì•Œë¦¼ ë²¨ -->
+      <!-- ¾Ë¸² º§ -->
       <div class="position-relative" @click.outside="notifOpen = false">
-        <button class="btn btn-sm btn-outline-light position-relative" @click="toggleNotifPanel()" :title="notifUnreadCount > 0 ? notifUnreadCount + 'ê°œ ì•ˆì½ìŒ' : 'ì•Œë¦¼'">
-          ðŸ””
+        <button class="btn btn-sm btn-outline-light position-relative" @click="toggleNotifPanel()" :title="notifUnreadCount > 0 ? notifUnreadCount + '°³ ¾ÈÀÐÀ½' : '¾Ë¸²'">
+          ??
           <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" x-show="notifUnreadCount > 0" x-text="notifUnreadCount" style="font-size:9px;padding:2px 5px"></span>
         </button>
         <div class="notif-panel" x-show="notifOpen" x-cloak x-transition>
           <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
-            <strong>ðŸ”” ì•Œë¦¼</strong>
+            <strong>?? ¾Ë¸²</strong>
             <div>
-              <button class="btn btn-sm btn-link p-0 me-2" @click="markAllNotifRead()" x-show="notifUnreadCount > 0">ëª¨ë‘ ì½ìŒ</button>
-              <button class="btn btn-sm btn-link p-0" @click="clearNotifs()">ì „ì²´ ì‚­ì œ</button>
+              <button class="btn btn-sm btn-link p-0 me-2" @click="markAllNotifRead()" x-show="notifUnreadCount > 0">¸ðµÎ ÀÐÀ½</button>
+              <button class="btn btn-sm btn-link p-0" @click="clearNotifs()">ÀüÃ¼ »èÁ¦</button>
             </div>
           </div>
           <div style="max-height:380px;overflow-y:auto">
@@ -67,16 +67,16 @@
               </div>
             </template>
             <div x-show="notifications.length === 0" class="text-center text-muted p-3">
-              ì•Œë¦¼ì´ ì—†ìŠµë‹ˆë‹¤
+              ¾Ë¸²ÀÌ ¾ø½À´Ï´Ù
             </div>
           </div>
           <div class="text-center p-2 small text-muted">
-            ì¸ì•± ì•Œë¦¼ (localStorage ì €ìž¥ Â· ìµœëŒ€ 50ê°œ)
+            ÀÎ¾Û ¾Ë¸² (localStorage ÀúÀå ¡¤ ÃÖ´ë 50°³)
           </div>
         </div>
       </div>
-      <button class="btn btn-sm btn-outline-light" @click="toggleDark()" :title="darkMode ? 'ë¼ì´íŠ¸ëª¨ë“œ' : 'ë‹¤í¬ëª¨ë“œ'">
-        <span x-text="darkMode ? 'â˜€ï¸' : 'ðŸŒ™'"></span>
+      <button class="btn btn-sm btn-outline-light" @click="toggleDark()" :title="darkMode ? '¶óÀÌÆ®¸ðµå' : '´ÙÅ©¸ðµå'">
+        <span x-text="darkMode ? '??' : '??'"></span>
       </button>
     </div>
   </div>
@@ -84,7 +84,7 @@
 
 <main class="container-fluid py-3" x-data="app()" x-init="init()">
 
-  <!-- ===== ì§€ìˆ˜ ì¹´ë“œ (ë¶„ì„ íŽ˜ì´ì§€ìš© ìš”ì•½) ===== -->
+  <!-- ===== Áö¼ö Ä«µå (ºÐ¼® ÆäÀÌÁö¿ë ¿ä¾à) ===== -->
   <div class="row g-3 mb-3" x-show="indices.length > 0">
     <template x-for="idx in indices" :key="idx.market">
       <div class="col-md-4">
@@ -106,14 +106,14 @@
     </template>
   </div>
 
-  <!-- ===== ë¶„ì„ íŽ˜ì´ì§€ ì¸íŠ¸ë¡œ ===== -->
+  <!-- ===== ºÐ¼® ÆäÀÌÁö ÀÎÆ®·Î ===== -->
   <div class="alert alert-info mb-3" role="alert">
-    <strong>ðŸ“Š ë¶„ì„ íŽ˜ì´ì§€</strong> â€” ë©”ì¸ íŽ˜ì´ì§€ì—ì„œ 7ê°œ ë¬´ê±°ìš´ ë¶„ì„ íƒ­ì„ ë¶„ë¦¬í–ˆìŠµë‹ˆë‹¤.
-    ì´ˆê¸° ë¡œë“œ í›„ ê° íƒ­ í´ë¦­ ì‹œ ë°ì´í„° lazy fetch. ëª¨ë°”ì¼/PC ëª¨ë‘ ë¶€ë“œëŸ½ê²Œ ë™ìž‘í•©ë‹ˆë‹¤.
-    <a href="/index.html" class="alert-link">â† ë©”ì¸ìœ¼ë¡œ ëŒì•„ê°€ê¸°</a>
+    <strong>?? ºÐ¼® ÆäÀÌÁö</strong> ? ¸ÞÀÎ ÆäÀÌÁö¿¡¼­ 7°³ ¹«°Å¿î ºÐ¼® ÅÇÀ» ºÐ¸®Çß½À´Ï´Ù.
+    ÃÊ±â ·Îµå ÈÄ °¢ ÅÇ Å¬¸¯ ½Ã µ¥ÀÌÅÍ lazy fetch. ¸ð¹ÙÀÏ/PC ¸ðµÎ ºÎµå·´°Ô µ¿ÀÛÇÕ´Ï´Ù.
+    <a href="/index" class="alert-link">¡ç ¸ÞÀÎÀ¸·Î µ¹¾Æ°¡±â</a>
   </div>
 
-  <!-- ===== ì‹œìž¥ í‰ê°€ ì ìˆ˜ (í—¤ë” ë‹¤ìŒ) ===== -->
+  <!-- ===== ½ÃÀå Æò°¡ Á¡¼ö (Çì´õ ´ÙÀ½) ===== -->
   <div class="row g-3 mb-3" x-show="marketRegime">
     <div class="col-md-12">
       <div class="card shadow-sm" :style="`border-left: 8px solid ${marketRegime?.bgColor || '#9ca3af'}`">
@@ -127,20 +127,20 @@
               <div>
                 <div class="fs-4">
                   <span x-text="marketRegime?.emoji"></span>
-                  <strong x-text="marketRegime?.label || 'â€”'"></strong>
-                  <span class="badge bg-light text-dark ms-2" x-text="marketRegime?.lastDate || 'â€”'"></span>
+                  <strong x-text="marketRegime?.label || '?'"></strong>
+                  <span class="badge bg-light text-dark ms-2" x-text="marketRegime?.lastDate || '?'"></span>
                 </div>
                 <div class="text-muted small mt-1" x-text="marketRegime?.advice || ''"></div>
                 <div class="text-muted small mt-1">
-                  ðŸ“Š KOSPI <strong x-text="marketRegime?.lastClose?.toLocaleString() || 'â€”'"></strong> Â·
-                  breadth <strong x-text="marketRegime?.breadthSize || 0"></strong> ì¢…ëª©
+                  ?? KOSPI <strong x-text="marketRegime?.lastClose?.toLocaleString() || '?'"></strong> ¡¤
+                  breadth <strong x-text="marketRegime?.breadthSize || 0"></strong> Á¾¸ñ
                 </div>
               </div>
             </div>
             <div class="d-flex gap-2 flex-wrap" style="min-width:380px">
               <template x-for="(c, key) in (marketRegime?.components || {})" :key="key">
                 <div class="text-center p-2 border rounded" style="min-width:90px;background:#f8f9fa">
-                  <div class="small text-muted" x-text="({trend:'ðŸ“ˆ ì¶”ì„¸',momentum:'ðŸš€ ëª¨ë©˜í…€',breadth:'ðŸŒ Breadth',newHighLow:'ðŸ”„ ì‹ ê³ ì €',volatility:'âš¡ ë³€ë™ì„±'})[key] || key"></div>
+                  <div class="small text-muted" x-text="({trend:'?? Ãß¼¼',momentum:'?? ¸ð¸àÅÒ',breadth:'?? Breadth',newHighLow:'?? ½Å°íÀú',volatility:'? º¯µ¿¼º'})[key] || key"></div>
                   <div class="fw-bold" :style="`color:${c.score >= 60 ? '#10b981' : c.score <= 40 ? '#dc2626' : '#9ca3af'}`" x-text="c.score.toFixed(0)"></div>
                   <div class="small text-muted" x-text="(c.weight * 100).toFixed(0) + '%'"></div>
                 </div>
@@ -148,106 +148,106 @@
             </div>
           </div>
           <div class="mt-2 small text-muted">
-            <strong>ðŸ’¡ ë§¤íŠ¸ë¦­ìŠ¤ ì ìˆ˜ ë°˜ì˜:</strong>
-            ì¡°ì • ì ìˆ˜ = ë§¤íŠ¸ë¦­ìŠ¤ Ã— 0.8 + ì‹œìž¥í‰ê°€ Ã— 0.2
-            â†’ í˜„ìž¬ ì‹œìž¥ ì ìˆ˜ê°€ <strong x-text="(marketRegime?.score || 0).toFixed(1)"></strong>ì ì¼ ë•Œ, ë§¤íŠ¸ë¦­ìŠ¤ 50ì  ì¢…ëª©ì€
-            <strong class="text-primary" x-text="(50 * 0.8 + (marketRegime?.score || 0) * 0.2).toFixed(1)"></strong>ì ìœ¼ë¡œ ì¡°ì •ë¨
+            <strong>?? ¸ÅÆ®¸¯½º Á¡¼ö ¹Ý¿µ:</strong>
+            Á¶Á¤ Á¡¼ö = ¸ÅÆ®¸¯½º ¡¿ 0.8 + ½ÃÀåÆò°¡ ¡¿ 0.2
+            ¡æ ÇöÀç ½ÃÀå Á¡¼ö°¡ <strong x-text="(marketRegime?.score || 0).toFixed(1)"></strong>Á¡ÀÏ ¶§, ¸ÅÆ®¸¯½º 50Á¡ Á¾¸ñÀº
+            <strong class="text-primary" x-text="(50 * 0.8 + (marketRegime?.score || 0) * 0.2).toFixed(1)"></strong>Á¡À¸·Î Á¶Á¤µÊ
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ===== ì‹œìž¥ í‰ê°€ ì ìˆ˜ ì‹œê³„ì—´ (60ì¼) ===== -->
+  <!-- ===== ½ÃÀå Æò°¡ Á¡¼ö ½Ã°è¿­ (60ÀÏ) ===== -->
   <div class="row g-3 mb-3" x-show="marketRegimeHistory && marketRegimeHistory.length > 0">
     <div class="col-md-12">
       <div class="card">
         <div class="card-body">
-          <h6>ðŸ“ˆ ì‹œìž¥ í‰ê°€ ì ìˆ˜ ì‹œê³„ì—´ (ìµœê·¼ 60ì¼)</h6>
-          <p class="text-muted small mb-2">ë§¤ì¼ KOSPI ì¼ë´‰ + breadth ë°ì´í„°ë¡œ ì‹œìž¥ í‰ê°€ ì ìˆ˜ ìž¬ê³„ì‚°. ì¶”ì„¸/Breadth ì¶”ì´ ë¹„êµ.</p>
+          <h6>?? ½ÃÀå Æò°¡ Á¡¼ö ½Ã°è¿­ (ÃÖ±Ù 60ÀÏ)</h6>
+          <p class="text-muted small mb-2">¸ÅÀÏ KOSPI ÀÏºÀ + breadth µ¥ÀÌÅÍ·Î ½ÃÀå Æò°¡ Á¡¼ö Àç°è»ê. Ãß¼¼/Breadth ÃßÀÌ ºñ±³.</p>
           <canvas id="marketRegimeHistoryChart" height="180"></canvas>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ===== ë¶„í¬ í•„í„° ìƒíƒœ í‘œì‹œ ===== -->
+  <!-- ===== ºÐÆ÷ ÇÊÅÍ »óÅÂ Ç¥½Ã ===== -->
   <div class="alert alert-warning mb-2 py-2" x-show="distGradeFilter || distSectorFilter" role="alert" x-cloak>
-    <strong>ðŸ” í•„í„° ì ìš© ì¤‘:</strong>
-    <span class="badge bg-primary ms-1" x-show="distGradeFilter" x-text="'ë“±ê¸‰ ' + distGradeFilter"></span>
-    <span class="badge bg-info ms-1" x-show="distSectorFilter" x-text="'ì„¹í„° ' + distSectorFilter"></span>
-    <button class="btn btn-sm btn-link p-0 ms-2" @click="clearDistFilter()">âœ• í•„í„° í•´ì œ</button>
+    <strong>?? ÇÊÅÍ Àû¿ë Áß:</strong>
+    <span class="badge bg-primary ms-1" x-show="distGradeFilter" x-text="'µî±Þ ' + distGradeFilter"></span>
+    <span class="badge bg-info ms-1" x-show="distSectorFilter" x-text="'¼½ÅÍ ' + distSectorFilter"></span>
+    <button class="btn btn-sm btn-link p-0 ms-2" @click="clearDistFilter()">? ÇÊÅÍ ÇØÁ¦</button>
   </div>
 
-  <!-- ===== ë¶„ì„ íƒ­ ë„¤ë¹„ ===== -->
+  <!-- ===== ºÐ¼® ÅÇ ³×ºñ ===== -->
   <ul class="nav nav-tabs mb-3 flex-wrap">
-    <li class="nav-item"><a class="nav-link" :class="{active: tab==='chart'}" href="#" @click.prevent="setTab('chart')">ðŸ“Š ë¶„í¬</a></li>
-    <li class="nav-item"><a class="nav-link" :class="{active: tab==='corr'}" href="#" @click.prevent="setTab('corr')">ðŸ”— ìƒê´€</a></li>
-    <li class="nav-item"><a class="nav-link text-warning fw-bold" :class="{active: tab==='optimizer'}" href="#" @click.prevent="setTab('optimizer')">ðŸŽ¯ ìµœì í™”</a></li>
-    <li class="nav-item"><a class="nav-link text-warning fw-bold" :class="{active: tab==='backtest'}" href="#" @click.prevent="setTab('backtest')">âª ë°±í…ŒìŠ¤íŠ¸ <kbd>B</kbd></a></li>
-    <li class="nav-item"><a class="nav-link text-success fw-bold" :class="{active: tab==='portfolio'}" href="#" @click.prevent="setTab('portfolio')">ðŸ’¼ 10ì¢…ëª© <kbd>P</kbd></a></li>
-    <li class="nav-item"><a class="nav-link text-info fw-bold" :class="{active: tab==='analytics'}" href="#" @click.prevent="setTab('analytics')">ðŸ” ë¶„ì„ ì§„ë‹¨ <kbd>A</kbd></a></li>
-    <li class="nav-item"><a class="nav-link" :class="{active: tab==='signals'}" href="#" @click.prevent="setTab('signals')">ðŸ“ˆ ì‹ í˜¸ ì¶”ì </a></li>
-    <li class="nav-item"><a class="nav-link" :class="{active: tab==='log'}" href="#" @click.prevent="setTab('log')">ðŸ“‹ ë¡œê·¸</a></li>
+    <li class="nav-item"><a class="nav-link" :class="{active: tab==='chart'}" href="#" @click.prevent="setTab('chart')">?? ºÐÆ÷</a></li>
+    <li class="nav-item"><a class="nav-link" :class="{active: tab==='corr'}" href="#" @click.prevent="setTab('corr')">?? »ó°ü</a></li>
+    <li class="nav-item"><a class="nav-link text-warning fw-bold" :class="{active: tab==='optimizer'}" href="#" @click.prevent="setTab('optimizer')">?? ÃÖÀûÈ­</a></li>
+    <li class="nav-item"><a class="nav-link text-warning fw-bold" :class="{active: tab==='backtest'}" href="#" @click.prevent="setTab('backtest')">? ¹éÅ×½ºÆ® <kbd>B</kbd></a></li>
+    <li class="nav-item"><a class="nav-link text-success fw-bold" :class="{active: tab==='portfolio'}" href="#" @click.prevent="setTab('portfolio')">?? 10Á¾¸ñ <kbd>P</kbd></a></li>
+    <li class="nav-item"><a class="nav-link text-info fw-bold" :class="{active: tab==='analytics'}" href="#" @click.prevent="setTab('analytics')">?? ºÐ¼® Áø´Ü <kbd>A</kbd></a></li>
+    <li class="nav-item"><a class="nav-link" :class="{active: tab==='signals'}" href="#" @click.prevent="setTab('signals')">?? ½ÅÈ£ ÃßÀû</a></li>
+    <li class="nav-item"><a class="nav-link" :class="{active: tab==='log'}" href="#" @click.prevent="setTab('log')">?? ·Î±×</a></li>
   </ul>
 
-  <!-- ===== ë¶„ì„ íƒ­ ì½˜í…ì¸  (ë¶„í¬/ìƒê´€/ìµœì /ë°±/í¬íŠ¸/ë¶„ì„/ë¡œê·¸) ===== -->
-    <!-- ===== ë¶„í¬ ===== -->
+  <!-- ===== ºÐ¼® ÅÇ ÄÜÅÙÃ÷ (ºÐÆ÷/»ó°ü/ÃÖÀû/¹é/Æ÷Æ®/ºÐ¼®/·Î±×) ===== -->
+    <!-- ===== ºÐÆ÷ ===== -->
   <div x-show="tab==='chart'">
     <div class="row g-3">
       <div class="col-md-6">
         <div class="card"><div class="card-body">
-          <h6>ì´ì  ë¶„í¬ (ì „ì²´ ì¢…ëª©)</h6>
+          <h6>ÃÑÁ¡ ºÐÆ÷ (ÀüÃ¼ Á¾¸ñ)</h6>
           <canvas id="distChart" height="220"></canvas>
         </div></div>
       </div>
       <div class="col-md-6">
         <div class="card"><div class="card-body">
-          <h6>íŒ©í„°ë³„ ì ìˆ˜ ë¶„í¬ (Top 20)</h6>
+          <h6>ÆÑÅÍº° Á¡¼ö ºÐÆ÷ (Top 20)</h6>
           <canvas id="factorChart" height="220"></canvas>
         </div></div>
       </div>
 
       <div class="col-md-4">
         <div class="card"><div class="card-body">
-          <h6>ðŸŽ¯ ë“±ê¸‰ ë¶„í¬</h6>
-          <p class="text-muted small mb-2">A+ â‰¥80 / A â‰¥70 / B+ â‰¥60 / B â‰¥50 / C â‰¥40 / D â‰¥30 / F &lt;30</p>
+          <h6>?? µî±Þ ºÐÆ÷</h6>
+          <p class="text-muted small mb-2">A+ ¡Ã80 / A ¡Ã70 / B+ ¡Ã60 / B ¡Ã50 / C ¡Ã40 / D ¡Ã30 / F &lt;30</p>
           <canvas id="gradeDonutChart" height="220"></canvas>
         </div></div>
       </div>
       <div class="col-md-4">
         <div class="card"><div class="card-body">
-          <h6>ðŸ“Š ì‹œìž¥ë³„ ë¶„í¬</h6>
-          <p class="text-muted small mb-2">KOSPI vs KOSDAQ ì¢…ëª© ìˆ˜ / í‰ê·  ì ìˆ˜</p>
+          <h6>?? ½ÃÀåº° ºÐÆ÷</h6>
+          <p class="text-muted small mb-2">KOSPI vs KOSDAQ Á¾¸ñ ¼ö / Æò±Õ Á¡¼ö</p>
           <canvas id="marketChart" height="220"></canvas>
         </div></div>
       </div>
       <div class="col-md-4">
         <div class="card"><div class="card-body">
-          <h6>ðŸ·ï¸ ì„¹í„°ë³„ ë¶„í¬ (ìƒìœ„ 12)</h6>
-          <p class="text-muted small mb-2">ì¢…ëª© ìˆ˜ / í‰ê·  ì ìˆ˜</p>
+          <h6>??? ¼½ÅÍº° ºÐÆ÷ (»óÀ§ 12)</h6>
+          <p class="text-muted small mb-2">Á¾¸ñ ¼ö / Æò±Õ Á¡¼ö</p>
           <canvas id="sectorChart" height="220"></canvas>
         </div></div>
       </div>
 
       <div class="col-12">
         <div class="card"><div class="card-body">
-          <h6>ðŸ•¸ï¸ íŒ©í„° í‰ê·  ë¹„êµ (ì „ì²´ vs Top 20)</h6>
-          <p class="text-muted small mb-2">ê° íŒ©í„°ì˜ í‰ê·  ì ìˆ˜ë¥¼ 0-100 ìŠ¤ì¼€ì¼ë¡œ ë¹„êµ. Top 20 íŽ¸í–¥ í™•ì¸.</p>
+          <h6>??? ÆÑÅÍ Æò±Õ ºñ±³ (ÀüÃ¼ vs Top 20)</h6>
+          <p class="text-muted small mb-2">°¢ ÆÑÅÍÀÇ Æò±Õ Á¡¼ö¸¦ 0-100 ½ºÄÉÀÏ·Î ºñ±³. Top 20 ÆíÇâ È®ÀÎ.</p>
           <div style="height:280px"><canvas id="factorRadarChart"></canvas></div>
         </div></div>
       </div>
     </div>
   </div>
 
-  <!-- ===== ìƒê´€ ===== -->
+  <!-- ===== »ó°ü ===== -->
   <div x-show="tab==='corr'">
     <div class="row g-3">
       <div class="col-md-8">
         <div class="card h-100">
           <div class="card-body">
-            <h6>íŒ©í„° ê°„ ìƒê´€ê´€ê³„ (ì „ì²´ ì¢…ëª©, n=<span x-text="correlation.n || 0"></span>)</h6>
-            <p class="text-muted small">+1: ì™„ì „ì–‘ì˜ ìƒê´€, 0: ë¬´ìƒê´€, -1: ì™„ì „ìŒì˜ ìƒê´€. ì ˆëŒ“ê°’ 0.7 ì´ìƒì´ë©´ ì¤‘ë³µ ê°€ëŠ¥ì„±.</p>
+            <h6>ÆÑÅÍ °£ »ó°ü°ü°è (ÀüÃ¼ Á¾¸ñ, n=<span x-text="correlation.n || 0"></span>)</h6>
+            <p class="text-muted small">+1: ¿ÏÀü¾çÀÇ »ó°ü, 0: ¹«»ó°ü, -1: ¿ÏÀüÀ½ÀÇ »ó°ü. Àý´ñ°ª 0.7 ÀÌ»óÀÌ¸é Áßº¹ °¡´É¼º.</p>
             <div class="corr-matrix">
               <table class="table table-bordered table-sm mb-0">
                 <thead>
@@ -278,27 +278,27 @@
       <div class="col-md-4">
         <div class="card h-100">
           <div class="card-body">
-            <h6>ðŸ”— ë†’ì€ ìƒê´€ íŽ˜ì–´ (|r| â‰¥ 0.4)</h6>
-            <p class="text-muted small">ê°€ì¤‘ì¹˜ ì¤‘ë³µ ìœ„í—˜. í•œìª½ ê°€ì¤‘ì¹˜ë¥¼ ì¤„ì—¬ ë¶„ì‚° íš¨ê³¼ â†‘</p>
+            <h6>?? ³ôÀº »ó°ü Æä¾î (|r| ¡Ã 0.4)</h6>
+            <p class="text-muted small">°¡ÁßÄ¡ Áßº¹ À§Çè. ÇÑÂÊ °¡ÁßÄ¡¸¦ ÁÙ¿© ºÐ»ê È¿°ú ¡è</p>
             <ul class="list-group list-group-flush" style="max-height:480px;overflow-y:auto">
               <template x-for="p in (correlation.highPairs || [])" :key="p.a + '-' + p.b">
                 <li class="list-group-item d-flex justify-content-between align-items-center p-2">
                   <div>
                     <strong x-text="factorLabel(p.a)"></strong>
-                    <span class="text-muted mx-1">â†”</span>
+                    <span class="text-muted mx-1">¡ê</span>
                     <strong x-text="factorLabel(p.b)"></strong>
                     <br>
-                    <small class="text-muted" x-text="(p.r > 0 ? 'ì–‘ì˜ ìƒê´€' : 'ìŒì˜ ìƒê´€') + ' Â· ì¤‘ë³µ ê°€ëŠ¥ì„±' + (Math.abs(p.r) > 0.7 ? ' âš ï¸' : '')"></small>
+                    <small class="text-muted" x-text="(p.r > 0 ? '¾çÀÇ »ó°ü' : 'À½ÀÇ »ó°ü') + ' ¡¤ Áßº¹ °¡´É¼º' + (Math.abs(p.r) > 0.7 ? ' ??' : '')"></small>
                   </div>
                   <span class="badge" :class="Math.abs(p.r) > 0.7 ? 'bg-danger' : 'bg-warning text-dark'" x-text="p.r.toFixed(2)"></span>
                 </li>
               </template>
               <li x-show="!correlation.highPairs || correlation.highPairs.length === 0" class="list-group-item text-center text-muted">
-                |r| â‰¥ 0.4 ì¸ íŽ˜ì–´ ì—†ìŒ (ë…ë¦½ì )
+                |r| ¡Ã 0.4 ÀÎ Æä¾î ¾øÀ½ (µ¶¸³Àû)
               </li>
             </ul>
             <div class="alert alert-info mt-3 small" x-show="correlation.asOf">
-              ðŸ“… ê°±ì‹ : <strong x-text="correlation.asOf"></strong>
+              ?? °»½Å: <strong x-text="correlation.asOf"></strong>
             </div>
           </div>
         </div>
@@ -306,32 +306,32 @@
     </div>
   </div>
 
-  <!-- ===== ê°€ì¤‘ì¹˜ ìµœì í™” (NEW) ===== -->
+  <!-- ===== °¡ÁßÄ¡ ÃÖÀûÈ­ (NEW) ===== -->
   <div x-show="tab==='optimizer'">
-    <!-- â˜… 1ì°¨ vs 2ì°¨ íšŒê·€ë¶„ì„ ë¹„êµ ì°¨íŠ¸ -->
+    <!-- ¡Ú 1Â÷ vs 2Â÷ È¸±ÍºÐ¼® ºñ±³ Â÷Æ® -->
     <div class="card mb-3" x-show="optimizer.ok || true">
       <div class="card-body">
-        <h6 class="card-title">ðŸ“ˆ 1ì°¨ vs 2ì°¨ íšŒê·€ë¶„ì„ ë¹„êµ</h6>
-        <p class="text-muted small mb-2">Sharpe / Total / MDD ë¹„êµ. 2ì°¨ íšŒê·€ (Ridge + 5-fold CV) ê°€ ì¸ìƒ¤í’€ ì •í™•ë„ ë” ë†’ìŒ.</p>
+        <h6 class="card-title">?? 1Â÷ vs 2Â÷ È¸±ÍºÐ¼® ºñ±³</h6>
+        <p class="text-muted small mb-2">Sharpe / Total / MDD ºñ±³. 2Â÷ È¸±Í (Ridge + 5-fold CV) °¡ ÀÎ»þÇ® Á¤È®µµ ´õ ³ôÀ½.</p>
         <div style="height:240px"><canvas id="chartOptimizerCompare"></canvas></div>
       </div>
     </div>
 
     <div class="card mb-3" x-show="optimizer.ok === false">
       <div class="card-body">
-        <h6 class="text-warning">â³ ê°€ì¤‘ì¹˜ ìµœì í™” ë°ì´í„° ì¤€ë¹„ ì¤‘</h6>
-        <p class="text-muted" x-text="optimizer.error || 'GitHub Actionsì—ì„œ ì ìˆ˜ë¥¼ ëˆ„ì  ì¤‘...'"></p>
-        <p class="small text-muted">ë§¤ì¼ ìžë™ ê°±ì‹ ë˜ë©°, ìµœì†Œ 30ì¼ì¹˜ ì ìˆ˜ê°€ ìŒ“ì´ë©´ í™œì„±í™”ë©ë‹ˆë‹¤.</p>
+        <h6 class="text-warning">? °¡ÁßÄ¡ ÃÖÀûÈ­ µ¥ÀÌÅÍ ÁØºñ Áß</h6>
+        <p class="text-muted" x-text="optimizer.error || 'GitHub Actions¿¡¼­ Á¡¼ö¸¦ ´©Àû Áß...'"></p>
+        <p class="small text-muted">¸ÅÀÏ ÀÚµ¿ °»½ÅµÇ¸ç, ÃÖ¼Ò 30ÀÏÄ¡ Á¡¼ö°¡ ½×ÀÌ¸é È°¼ºÈ­µË´Ï´Ù.</p>
       </div>
     </div>
 
     <template x-if="optimizer.ok !== false">
       <div>
-        <!-- ðŸ† ìµœê³  ìˆ˜ìµë¥  ì¡°í•© -->
+        <!-- ?? ÃÖ°í ¼öÀÍ·ü Á¶ÇÕ -->
         <div class="card mb-3 border-warning" x-show="optimizer.best">
           <div class="card-body">
-            <h5 class="card-title">ðŸ† ìµœê³  ìˆ˜ìµë¥  ì¡°í•©</h5>
-            <p class="text-muted small">ë‹¤ì–‘í•œ ê°€ì¤‘ì¹˜ (5ê°œ ì‚¬ì „ì •ì˜ + íšŒê·€ë¶„ì„ + 80ê°œ random) ì¤‘ ìµœê³  ìˆ˜ìµë¥ ì„ ë³´ì¸ ì¡°í•©</p>
+            <h5 class="card-title">?? ÃÖ°í ¼öÀÍ·ü Á¶ÇÕ</h5>
+            <p class="text-muted small">´Ù¾çÇÑ °¡ÁßÄ¡ (5°³ »çÀüÁ¤ÀÇ + È¸±ÍºÐ¼® + 80°³ random) Áß ÃÖ°í ¼öÀÍ·üÀ» º¸ÀÎ Á¶ÇÕ</p>
             <div class="row g-3 align-items-center">
               <div class="col-md-6">
                 <div class="d-flex justify-content-between mb-2">
@@ -349,7 +349,7 @@
                 <div class="row g-2 text-center">
                   <div class="col-4">
                     <div class="card stat-card"><div class="card-body">
-                      <div class="text-muted small">ëˆ„ì  ìˆ˜ìµë¥ </div>
+                      <div class="text-muted small">´©Àû ¼öÀÍ·ü</div>
                       <div class="fs-3 fw-bold" :class="optimizer.best?.totalReturn >= 0 ? 'text-danger' : 'text-primary'"
                            x-text="formatPct(optimizer.best?.totalReturn)"></div>
                     </div></div>
@@ -363,23 +363,23 @@
                   <div class="col-4">
                     <div class="card stat-card"><div class="card-body">
                       <div class="text-muted small">Sharpe</div>
-                      <div class="fs-3 fw-bold" x-text="optimizer.best?.sharpe?.toFixed(2) || 'â€”'"></div>
+                      <div class="fs-3 fw-bold" x-text="optimizer.best?.sharpe?.toFixed(2) || '?'"></div>
                     </div></div>
                   </div>
                 </div>
               </div>
             </div>
             <button class="btn btn-warning btn-sm mt-3" @click="applyOptimizerWeights()">
-              âš–ï¸ ì´ ê°€ì¤‘ì¹˜ë¡œ ì ìˆ˜ ìž¬ê³„ì‚°
+              ?? ÀÌ °¡ÁßÄ¡·Î Á¡¼ö Àç°è»ê
             </button>
           </div>
         </div>
 
-        <!-- íšŒê·€ë¶„ì„ ì¶”ì²œ -->
+        <!-- È¸±ÍºÐ¼® ÃßÃµ -->
         <div class="card mb-3" x-show="optimizer.regression">
           <div class="card-body">
-            <h5 class="card-title">ðŸ“Š íšŒê·€ë¶„ì„ ì¶”ì²œ (OLS)</h5>
-            <p class="text-muted small">ê° ì›”ì˜ ì¢…ëª©ë³„ 5ê°œ íŒ©í„° ì ìˆ˜ì™€ ë‹¤ìŒë‹¬ ìˆ˜ìµë¥ ë¡œ cross-sectional OLS íšŒê·€ë¶„ì„. ì–‘ìˆ˜ ê³„ìˆ˜ë§Œ ì‚¬ìš© í›„ 100% í•© ì •ê·œí™”.</p>
+            <h5 class="card-title">?? È¸±ÍºÐ¼® ÃßÃµ (OLS)</h5>
+            <p class="text-muted small">°¢ ¿ùÀÇ Á¾¸ñº° 5°³ ÆÑÅÍ Á¡¼ö¿Í ´ÙÀ½´Þ ¼öÀÍ·ü·Î cross-sectional OLS È¸±ÍºÐ¼®. ¾ç¼ö °è¼ö¸¸ »ç¿ë ÈÄ 100% ÇÕ Á¤±ÔÈ­.</p>
             <div class="row g-3">
               <div class="col-md-6">
                 <div class="d-flex flex-wrap gap-1 mb-3">
@@ -389,16 +389,16 @@
                 </div>
                 <div class="row g-2 text-center">
                   <div class="col-6">
-                    <div class="text-muted small">RÂ² (ì„¤ëª…ë ¥)</div>
+                    <div class="text-muted small">R©÷ (¼³¸í·Â)</div>
                     <div class="fs-4 fw-bold" x-text="formatPct(optimizer.regression?.r2)"></div>
                   </div>
                   <div class="col-6">
-                    <div class="text-muted small">IC (ì •ë³´ê³„ìˆ˜)</div>
+                    <div class="text-muted small">IC (Á¤º¸°è¼ö)</div>
                     <div class="fs-4 fw-bold" x-text="formatPct(optimizer.regression?.ic)"></div>
                   </div>
                 </div>
                 <p class="text-muted small mt-2">
-                  <span x-text="'ìƒ˜í”Œ ìˆ˜: ' + (optimizer.regression?.nDates || 0) + 'ê°œì›”'"></span>
+                  <span x-text="'»ùÇÃ ¼ö: ' + (optimizer.regression?.nDates || 0) + '°³¿ù'"></span>
                 </p>
               </div>
             </div>
@@ -408,14 +408,14 @@
         <!-- Top 10 -->
         <div class="card">
           <div class="card-body">
-            <h5 class="card-title">ðŸ“‹ Top 10 (ë°±í…ŒìŠ¤íŠ¸ ìˆ˜ìµë¥  ìˆœ)</h5>
+            <h5 class="card-title">?? Top 10 (¹éÅ×½ºÆ® ¼öÀÍ·ü ¼ø)</h5>
             <div class="table-responsive">
               <table class="table table-sm table-hover">
                 <thead class="table-light">
                   <tr>
-                    <th>#</th><th>ì´ë¦„</th><th>ì†ŒìŠ¤</th>
-                    <th>ê°€ì¹˜</th><th>ëª¨ë©˜í…€</th><th>í€„ë¦¬í‹°</th><th>ì €ë³€ë™</th><th>ì„±ìž¥</th>
-                    <th>ìˆ˜ìµë¥ </th><th>CAGR</th><th>Sharpe</th><th>MDD</th><th></th>
+                    <th>#</th><th>ÀÌ¸§</th><th>¼Ò½º</th>
+                    <th>°¡Ä¡</th><th>¸ð¸àÅÒ</th><th>Ä÷¸®Æ¼</th><th>Àúº¯µ¿</th><th>¼ºÀå</th>
+                    <th>¼öÀÍ·ü</th><th>CAGR</th><th>Sharpe</th><th>MDD</th><th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -433,15 +433,15 @@
                       <td x-text="formatPct(r.cagr)"></td>
                       <td x-text="(r.sharpe || 0).toFixed(2)"></td>
                       <td class="text-danger" x-text="formatPct(r.mdd)"></td>
-                      <td><button class="btn btn-sm btn-outline-warning" @click="applyWeightsFromOptimizer(r.weights)">ì ìš©</button></td>
+                      <td><button class="btn btn-sm btn-outline-warning" @click="applyWeightsFromOptimizer(r.weights)">Àû¿ë</button></td>
                     </tr>
                   </template>
                 </tbody>
               </table>
             </div>
             <p class="text-muted small mt-2">
-              âš ï¸ In-sample ìµœì í™” ê²°ê³¼ìž…ë‹ˆë‹¤. ê³¼ì í•© ê°€ëŠ¥ì„± ìžˆìŒ. ì‹¤ì „ ì ìš© ì „ out-of-sample ê²€ì¦ ê¶Œìž¥.<br>
-              <span x-text="'ê³„ì‚°: ' + (optimizer.computedAt || '') + ' | ' + (optimizer.nDays || 0) + 'ì¼ / ' + (optimizer.nStocks || 0) + 'ì¢…ëª© | ' + (optimizer.fromDate || '') + ' ~ ' + (optimizer.toDate || '')"></span>
+              ?? In-sample ÃÖÀûÈ­ °á°úÀÔ´Ï´Ù. °úÀûÇÕ °¡´É¼º ÀÖÀ½. ½ÇÀü Àû¿ë Àü out-of-sample °ËÁõ ±ÇÀå.<br>
+              <span x-text="'°è»ê: ' + (optimizer.computedAt || '') + ' | ' + (optimizer.nDays || 0) + 'ÀÏ / ' + (optimizer.nStocks || 0) + 'Á¾¸ñ | ' + (optimizer.fromDate || '') + ' ~ ' + (optimizer.toDate || '')"></span>
             </p>
           </div>
         </div>
@@ -449,25 +449,25 @@
     </template>
   </div>
 
-  <!-- ===== ë°±í…ŒìŠ¤íŠ¸ (NEW: 4ê°œ ì°¨íŠ¸) ===== -->
+  <!-- ===== ¹éÅ×½ºÆ® (NEW: 4°³ Â÷Æ®) ===== -->
   <div x-show="tab==='backtest'">
     <div class="card">
       <div class="card-body">
         <div class="d-flex gap-2 align-items-center mb-3">
-          <h5 class="mb-0">âª ë°±í…ŒìŠ¤íŠ¸ (ì „ì²´ ížˆìŠ¤í† ë¦¬)</h5>
-          <span class="text-muted small ms-auto">GitHub Actionsê°€ ë§¤ì¼ ê³„ì‚°. ë¹„ìš©Â·ì„¸ê¸ˆ ë¯¸ë°˜ì˜.</span>
+          <h5 class="mb-0">? ¹éÅ×½ºÆ® (ÀüÃ¼ È÷½ºÅä¸®)</h5>
+          <span class="text-muted small ms-auto">GitHub Actions°¡ ¸ÅÀÏ °è»ê. ºñ¿ë¡¤¼¼±Ý ¹Ì¹Ý¿µ.</span>
         </div>
 
         <div class="alert alert-warning" x-show="!backtest.ok">
-          <strong>â³</strong> <span x-text="backtest.error || 'ë°±í…ŒìŠ¤íŠ¸ ë°ì´í„° ì¤€ë¹„ ì¤‘...'"></span>
+          <strong>?</strong> <span x-text="backtest.error || '¹éÅ×½ºÆ® µ¥ÀÌÅÍ ÁØºñ Áß...'"></span>
         </div>
 
         <div x-show="backtest.ok">
-          <!-- 4ê°œ stat -->
+          <!-- 4°³ stat -->
           <div class="row g-3 mb-3">
             <div class="col-md-3">
               <div class="card stat-card"><div class="card-body">
-                <div class="text-muted small">ëˆ„ì  ìˆ˜ìµë¥ </div>
+                <div class="text-muted small">´©Àû ¼öÀÍ·ü</div>
                 <div class="fs-3 fw-bold" :class="backtest.totalReturn >= 0 ? 'text-danger' : 'text-primary'"
                      x-text="formatPct(backtest.totalReturn)"></div>
                 <small class="text-muted" x-text="'KOSPI: ' + formatPct(backtest.kospiTotal)"></small>
@@ -475,7 +475,7 @@
             </div>
             <div class="col-md-3">
               <div class="card stat-card"><div class="card-body">
-                <div class="text-muted small">CAGR (ì—°í™˜ì‚°)</div>
+                <div class="text-muted small">CAGR (¿¬È¯»ê)</div>
                 <div class="fs-3 fw-bold" :class="backtest.cagr >= 0 ? 'text-danger' : 'text-primary'"
                      x-text="formatPct(backtest.cagr)"></div>
               </div></div>
@@ -488,9 +488,9 @@
             </div>
             <div class="col-md-3">
               <div class="card stat-card"><div class="card-body">
-                <div class="text-muted small">MDD (ìµœëŒ€ë‚™í­)</div>
+                <div class="text-muted small">MDD (ÃÖ´ë³«Æø)</div>
                 <div class="fs-3 fw-bold text-primary" x-text="formatPct(backtest.mdd)"></div>
-                <small class="text-muted" x-text="backtest.mddRecoveryMonths >= 0 ? (backtest.mddRecoveryMonths + 'ê°œì›” í›„ íšŒë³µ') : 'ë¯¸íšŒë³µ'"></small>
+                <small class="text-muted" x-text="backtest.mddRecoveryMonths >= 0 ? (backtest.mddRecoveryMonths + '°³¿ù ÈÄ È¸º¹') : '¹ÌÈ¸º¹'"></small>
               </div></div>
             </div>
           </div>
@@ -498,55 +498,55 @@
           <div class="row g-3 mb-3">
             <div class="col-md-3">
               <div class="card stat-card"><div class="card-body">
-                <div class="text-muted small">ðŸŽ¯ ìŠ¹ë¥  (Win Rate)</div>
+                <div class="text-muted small">?? ½Â·ü (Win Rate)</div>
                 <div class="fs-4 fw-bold" x-text="(backtest.winRate * 100).toFixed(1) + '%'"></div>
-                <small class="text-muted" x-text="`${backtest.winMonths || 0}/${backtest.months || 0}ê°œì›” ìˆ˜ìµ`"></small>
+                <small class="text-muted" x-text="`${backtest.winMonths || 0}/${backtest.months || 0}°³¿ù ¼öÀÍ`"></small>
               </div></div>
             </div>
             <div class="col-md-3">
               <div class="card stat-card"><div class="card-body">
-                <div class="text-muted small">ðŸ’° ì†ìµë¹„ (Profit Factor)</div>
+                <div class="text-muted small">?? ¼ÕÀÍºñ (Profit Factor)</div>
                 <div class="fs-4 fw-bold" :class="(backtest.profitFactor || 0) >= 1 ? 'text-danger' : 'text-primary'" x-text="(backtest.profitFactor || 0).toFixed(2)"></div>
-                <small class="text-muted" x-text="(backtest.profitFactor || 0) >= 1.5 ? 'âœ… ìš°ìˆ˜' : (backtest.profitFactor || 0) >= 1 ? 'ë³´í†µ' : 'âš ï¸ ê°œì„  í•„ìš”'"></small>
+                <small class="text-muted" x-text="(backtest.profitFactor || 0) >= 1.5 ? '? ¿ì¼ö' : (backtest.profitFactor || 0) >= 1 ? 'º¸Åë' : '?? °³¼± ÇÊ¿ä'"></small>
               </div></div>
             </div>
             <div class="col-md-3">
               <div class="card stat-card"><div class="card-body">
-                <div class="text-muted small">ðŸ“Š ë² íƒ€ (vs KOSPI)</div>
+                <div class="text-muted small">?? º£Å¸ (vs KOSPI)</div>
                 <div class="fs-4 fw-bold" x-text="(backtest.beta || 0).toFixed(2)"></div>
-                <small class="text-muted" x-text="(backtest.beta || 0) > 1 ? 'ë¯¼ê° (ì‹œìž¥â†‘â†“ ë” í¬ê²Œ)' : (backtest.beta || 0) < 1 ? 'ë‘”ê° (ë°©ì–´ì )' : 'ì‹œìž¥ ë™ì¼'"></small>
+                <small class="text-muted" x-text="(backtest.beta || 0) > 1 ? '¹Î°¨ (½ÃÀå¡è¡é ´õ Å©°Ô)' : (backtest.beta || 0) < 1 ? 'µÐ°¨ (¹æ¾îÀû)' : '½ÃÀå µ¿ÀÏ'"></small>
               </div></div>
             </div>
             <div class="col-md-3">
               <div class="card stat-card"><div class="card-body">
-                <div class="text-muted small">ðŸ“ˆ ì •ë³´ë¹„ìœ¨ (IR)</div>
+                <div class="text-muted small">?? Á¤º¸ºñÀ² (IR)</div>
                 <div class="fs-4 fw-bold" :class="(backtest.informationRatio || 0) >= 0.5 ? 'text-danger' : ''" x-text="(backtest.informationRatio || 0).toFixed(2)"></div>
-                <small class="text-muted" x-text="(backtest.informationRatio || 0) >= 0.5 ? 'âœ… ë²¤ì¹˜ë§ˆí¬ outperform' : 'ë²¤ì¹˜ë§ˆí¬ ë¶€í•©'"></small>
+                <small class="text-muted" x-text="(backtest.informationRatio || 0) >= 0.5 ? '? º¥Ä¡¸¶Å© outperform' : 'º¥Ä¡¸¶Å© ºÎÇÕ'"></small>
               </div></div>
             </div>
           </div>
 
-          <!-- ì°¨íŠ¸ 1: ëˆ„ì  + KOSPI -->
+          <!-- Â÷Æ® 1: ´©Àû + KOSPI -->
           <div class="card mb-3"><div class="card-body">
-            <h6>ðŸ“ˆ ëˆ„ì  ìˆ˜ìµë¥  (ì „ëžµ vs KOSPI)</h6>
+            <h6>?? ´©Àû ¼öÀÍ·ü (Àü·« vs KOSPI)</h6>
             <canvas id="navChart" height="180"></canvas>
           </div></div>
 
-          <!-- ì°¨íŠ¸ 2: ì—°ë„ë³„ -->
+          <!-- Â÷Æ® 2: ¿¬µµº° -->
           <div class="card mb-3"><div class="card-body">
-            <h6>ðŸ“Š ì—°ë„ë³„ ìˆ˜ìµë¥ </h6>
+            <h6>?? ¿¬µµº° ¼öÀÍ·ü</h6>
             <canvas id="yearlyChart" height="160"></canvas>
           </div></div>
 
-          <!-- ì°¨íŠ¸ 3: ì›”ë³„ ížˆíŠ¸ë§µ -->
+          <!-- Â÷Æ® 3: ¿ùº° È÷Æ®¸Ê -->
           <div class="card mb-3"><div class="card-body">
-            <h6>ðŸ—“ï¸ ì›”ë³„ ìˆ˜ìµë¥  ížˆíŠ¸ë§µ</h6>
+            <h6>??? ¿ùº° ¼öÀÍ·ü È÷Æ®¸Ê</h6>
             <div class="month-heatmap" id="monthHeatmap"></div>
           </div></div>
 
-          <!-- ì°¨íŠ¸ 4: ë“œë¡œìš°ë‹¤ìš´ -->
+          <!-- Â÷Æ® 4: µå·Î¿ì´Ù¿î -->
           <div class="card mb-3"><div class="card-body">
-            <h6>ðŸ“‰ ë“œë¡œìš°ë‹¤ìš´ (ê³ ì  ëŒ€ë¹„ í•˜ë½í­)</h6>
+            <h6>?? µå·Î¿ì´Ù¿î (°íÁ¡ ´ëºñ ÇÏ¶ôÆø)</h6>
             <canvas id="drawdownChart" height="160"></canvas>
           </div></div>
         </div>
@@ -554,42 +554,42 @@
     </div>
   </div>
 
-  <!-- ===== 10ì¢…ëª© ë¶„ì‚° í¬íŠ¸í´ë¦¬ì˜¤ (ì„¹í„° ë¶„ì‚° ìžë™) ===== -->
+  <!-- ===== 10Á¾¸ñ ºÐ»ê Æ÷Æ®Æú¸®¿À (¼½ÅÍ ºÐ»ê ÀÚµ¿) ===== -->
   <div x-show="tab==='portfolio'">
     <div class="card">
       <div class="card-body">
         <div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
-          <h5 class="mb-0">ðŸ’¼ 10ì¢…ëª© ë¶„ì‚° í¬íŠ¸í´ë¦¬ì˜¤ (ì„¹í„° ìžë™ ë¶„ì‚°)</h5>
-          <span class="text-muted small">ë‹¨ì¼ ì¢…ëª© íŽ¸í–¥ ë°©ì§€. ë§¤ë§¤ ì‹ í˜¸ëŠ” ì¢…ëª© ìƒì„¸ íŽ˜ì´ì§€ ì°¸ê³ .</span>
+          <h5 class="mb-0">?? 10Á¾¸ñ ºÐ»ê Æ÷Æ®Æú¸®¿À (¼½ÅÍ ÀÚµ¿ ºÐ»ê)</h5>
+          <span class="text-muted small">´ÜÀÏ Á¾¸ñ ÆíÇâ ¹æÁö. ¸Å¸Å ½ÅÈ£´Â Á¾¸ñ »ó¼¼ ÆäÀÌÁö Âü°í.</span>
           <button class="btn btn-sm btn-outline-success ms-auto" @click="loadPortfolio()" :disabled="portfolioLoading">
-            <span x-show="!portfolioLoading">ðŸ”„ ìƒˆë¡œê³ ì¹¨</span>
-            <span x-show="portfolioLoading">â³ ë¡œë”©...</span>
+            <span x-show="!portfolioLoading">?? »õ·Î°íÄ§</span>
+            <span x-show="portfolioLoading">? ·Îµù...</span>
           </button>
-          <button class="btn btn-sm btn-outline-success" @click="downloadPortfolioCsv()" x-show="portfolio?.items?.length">ðŸ“¥ CSV ë‹¤ìš´ë¡œë“œ</button>
+          <button class="btn btn-sm btn-outline-success" @click="downloadPortfolioCsv()" x-show="portfolio?.items?.length">?? CSV ´Ù¿î·Îµå</button>
         </div>
 
         <div class="alert alert-info" x-show="portfolio">
           <div class="row g-2 small">
-            <div class="col-md-3"><strong>ðŸ“… ê¸°ì¤€ì¼:</strong> <span x-text="portfolio?.asOf || 'â€”'"></span></div>
-            <div class="col-md-3"><strong>ðŸ“¦ ì¢…ëª© ìˆ˜:</strong> <span x-text="portfolio?.n || 0"></span>ê°œ</div>
-            <div class="col-md-3"><strong>ðŸ·ï¸ ì„¹í„° ë¶„ì‚°:</strong> <span x-text="Object.keys(portfolio?.sectorDistribution || {}).length"></span>ê°œ</div>
-            <div class="col-md-3"><strong>âš–ï¸ ë¹„ì¤‘:</strong> ê· ë“± 1/N (<span x-text="(100 / (portfolio?.n || 1)).toFixed(1)"></span>%)</div>
+            <div class="col-md-3"><strong>?? ±âÁØÀÏ:</strong> <span x-text="portfolio?.asOf || '?'"></span></div>
+            <div class="col-md-3"><strong>?? Á¾¸ñ ¼ö:</strong> <span x-text="portfolio?.n || 0"></span>°³</div>
+            <div class="col-md-3"><strong>??? ¼½ÅÍ ºÐ»ê:</strong> <span x-text="Object.keys(portfolio?.sectorDistribution || {}).length"></span>°³</div>
+            <div class="col-md-3"><strong>?? ºñÁß:</strong> ±Õµî 1/N (<span x-text="(100 / (portfolio?.n || 1)).toFixed(1)"></span>%)</div>
           </div>
           <hr>
           <div class="row g-2 small">
             <div class="col-md-12">
-              <strong>ðŸ›¡ï¸ ë¦¬ìŠ¤í¬ ê´€ë¦¬ (1ì°¨ë§¤ë„ -7% / 2ì°¨ë§¤ë„ +21% 3R / ì†ìµë¹„ 3:1):</strong>
+              <strong>??? ¸®½ºÅ© °ü¸® (1Â÷¸Åµµ -7% / 2Â÷¸Åµµ +21% 3R / ¼ÕÀÍºñ 3:1):</strong>
               <ul class="mb-0 mt-1">
-                <li>1ë§¤ë§¤ -7% ì†ì‹¤ = 1R (ê³„ì¢Œì˜ 1%). 1ë§¤ë§¤ ìµœëŒ€ 14% / 10ì¢…ëª© = 1.4%.</li>
-                <li>ë¶„í•  ì§„ìž…: 1ì°¨ë§¤ìˆ˜ 50% + 2ì°¨ë§¤ìˆ˜ 30% + 3ì°¨ë§¤ìˆ˜ 20%.</li>
-                <li>ì›” 1íšŒ ë¦¬ë°¸ëŸ°ì‹± ê¶Œìž¥. 5ì¼ì„  ë°ë“œí¬ë¡œìŠ¤ ì‹œ ì¦‰ì‹œ ìž¬í‰ê°€.</li>
+                <li>1¸Å¸Å -7% ¼Õ½Ç = 1R (°èÁÂÀÇ 1%). 1¸Å¸Å ÃÖ´ë 14% / 10Á¾¸ñ = 1.4%.</li>
+                <li>ºÐÇÒ ÁøÀÔ: 1Â÷¸Å¼ö 50% + 2Â÷¸Å¼ö 30% + 3Â÷¸Å¼ö 20%.</li>
+                <li>¿ù 1È¸ ¸®¹ë·±½Ì ±ÇÀå. 5ÀÏ¼± µ¥µåÅ©·Î½º ½Ã Áï½Ã ÀçÆò°¡.</li>
               </ul>
             </div>
           </div>
         </div>
 
         <div class="alert alert-warning" x-show="portfolio && portfolio.n === 0">
-          âš ï¸ í¬íŠ¸í´ë¦¬ì˜¤ ì¢…ëª©ì´ ì—†ìŠµë‹ˆë‹¤. ìƒˆë¡œê³ ì¹¨ ì‹œë„ í›„ì—ë„ ì—†ìœ¼ë©´ ë°ì´í„° ê°±ì‹  í•„ìš”.
+          ?? Æ÷Æ®Æú¸®¿À Á¾¸ñÀÌ ¾ø½À´Ï´Ù. »õ·Î°íÄ§ ½Ãµµ ÈÄ¿¡µµ ¾øÀ¸¸é µ¥ÀÌÅÍ °»½Å ÇÊ¿ä.
         </div>
 
         <div class="table-responsive" x-show="portfolio?.items?.length">
@@ -597,17 +597,17 @@
             <thead class="table-light">
               <tr>
                 <th>#</th>
-                <th>ì½”ë“œ</th>
-                <th>ì¢…ëª©ëª…</th>
-                <th>ì„¹í„°</th>
-                <th class="text-end">í˜„ìž¬ê°€</th>
-                <th class="text-end">ì´ì </th>
-                <th class="text-end">ë“±ê¸‰</th>
-                <th class="text-end">ë¹„ì¤‘</th>
-                <th class="text-end">ì™¸ì¸ 5ì¼</th>
-                <th class="text-end">ê¸°ê´€ 5ì¼</th>
-                <th>â­</th>
-                <th>ðŸ“Š</th>
+                <th>ÄÚµå</th>
+                <th>Á¾¸ñ¸í</th>
+                <th>¼½ÅÍ</th>
+                <th class="text-end">ÇöÀç°¡</th>
+                <th class="text-end">ÃÑÁ¡</th>
+                <th class="text-end">µî±Þ</th>
+                <th class="text-end">ºñÁß</th>
+                <th class="text-end">¿ÜÀÎ 5ÀÏ</th>
+                <th class="text-end">±â°ü 5ÀÏ</th>
+                <th>?</th>
+                <th>??</th>
               </tr>
             </thead>
             <tbody>
@@ -616,17 +616,17 @@
                   <td x-text="item.rank"></td>
                   <td><small class="text-muted" x-text="item.code"></small></td>
                   <td><strong x-text="item.name"></strong> <small class="text-muted" x-text="item.market === 'KOSPI' ? 'KOSPI' : 'KOSDAQ'"></small></td>
-                  <td><small x-text="item.sector || 'â€”'"></small></td>
-                  <td class="text-end" x-text="(item.close || 0).toLocaleString() + 'ì›'"></td>
+                  <td><small x-text="item.sector || '?'"></small></td>
+                  <td class="text-end" x-text="(item.close || 0).toLocaleString() + '¿ø'"></td>
                   <td class="text-end"><strong :class="scoreClass(item.total_score)" x-text="(item.total_score || 0).toFixed(1)"></strong></td>
                   <td class="text-end">
-                    <span class="grade-badge" :class="'grade-' + (item.grade?.color || 'secondary')" x-text="item.grade?.letter || 'â€”'"></span>
+                    <span class="grade-badge" :class="'grade-' + (item.grade?.color || 'secondary')" x-text="item.grade?.letter || '?'"></span>
                   </td>
                   <td class="text-end"><strong class="text-success" x-text="(item.weight || 0).toFixed(1) + '%'"></strong></td>
                   <td class="text-end" :class="(item.foreign_5d || 0) > 0 ? 'text-danger fw-bold' : (item.foreign_5d || 0) < 0 ? 'text-primary fw-bold' : ''" x-text="(item.foreign_5d || 0).toLocaleString()"></td>
                   <td class="text-end" :class="(item.inst_5d || 0) > 0 ? 'text-danger fw-bold' : (item.inst_5d || 0) < 0 ? 'text-primary fw-bold' : ''" x-text="(item.inst_5d || 0).toLocaleString()"></td>
-                  <td><button class="btn btn-sm star-btn" :class="isWatch(item.code) ? 'star-on' : 'star-off'" @click.stop="toggleWatch(item)">â˜†</button></td>
-                  <td><button class="btn btn-sm btn-outline-primary" @click.stop="openStock(item.code)">ðŸ“Š</button></td>
+                  <td><button class="btn btn-sm star-btn" :class="isWatch(item.code) ? 'star-on' : 'star-off'" @click.stop="toggleWatch(item)">¡Ù</button></td>
+                  <td><button class="btn btn-sm btn-outline-primary" @click.stop="openStock(item.code)">??</button></td>
                 </tr>
               </template>
             </tbody>
@@ -635,10 +635,10 @@
 
         <div class="row g-2 mt-3" x-show="portfolio?.sectorDistribution">
           <div class="col-12">
-            <h6>ðŸ·ï¸ ì„¹í„° ë¶„í¬</h6>
+            <h6>??? ¼½ÅÍ ºÐÆ÷</h6>
             <div class="d-flex flex-wrap gap-2">
               <template x-for="[sec, n] in Object.entries(portfolio?.sectorDistribution || {})" :key="sec">
-                <span class="badge bg-secondary" x-text="sec + ' Ã—' + n"></span>
+                <span class="badge bg-secondary" x-text="sec + ' ¡¿' + n"></span>
               </template>
             </div>
           </div>
@@ -647,91 +647,91 @@
     </div>
   </div>
 
-  <!-- ===== ðŸ” ë¶„ì„ ì§„ë‹¨ (íšŒê·€Â·í¬íŠ¸í´ë¦¬ì˜¤Â·ê³¼ì í™”) ===== -->
+  <!-- ===== ?? ºÐ¼® Áø´Ü (È¸±Í¡¤Æ÷Æ®Æú¸®¿À¡¤°úÀûÈ­) ===== -->
   <div x-show="tab==='analytics'">
     <div class="card">
       <div class="card-body">
         <div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
-          <h5 class="mb-0">ðŸ” ë¶„ì„ ì§„ë‹¨ (íšŒê·€ + í¬íŠ¸í´ë¦¬ì˜¤ + ê³¼ì í™”)</h5>
-          <span class="text-muted small">ë‹¨ì¶•í‚¤ A. 1.2ë…„ì¹˜ (14ê°œì›”) ë°ì´í„° ê¸°ë°˜. KIS API 8ë…„ì¹˜ ë°›ìœ¼ë©´ Â±20% ì´ë‚´ë¡œ ì¢ì•„ì§.</span>
+          <h5 class="mb-0">?? ºÐ¼® Áø´Ü (È¸±Í + Æ÷Æ®Æú¸®¿À + °úÀûÈ­)</h5>
+          <span class="text-muted small">´ÜÃàÅ° A. 1.2³âÄ¡ (14°³¿ù) µ¥ÀÌÅÍ ±â¹Ý. KIS API 8³âÄ¡ ¹ÞÀ¸¸é ¡¾20% ÀÌ³»·Î Á¼¾ÆÁü.</span>
           <button class="btn btn-sm btn-outline-info ms-auto" @click="loadAnalytics(true)" :disabled="analyticsLoading">
-            <span x-show="!analyticsLoading">ðŸ”„ ìƒˆë¡œê³ ì¹¨</span>
-            <span x-show="analyticsLoading">â³ ë¡œë”©...</span>
+            <span x-show="!analyticsLoading">?? »õ·Î°íÄ§</span>
+            <span x-show="analyticsLoading">? ·Îµù...</span>
           </button>
         </div>
 
         <div class="alert alert-info" x-show="analyticsLoading" role="alert">
-          â³ ë¶„ì„ ë°ì´í„° ë¡œë”© ì¤‘... (ëª¨ë°”ì¼ì€ 5~10ì´ˆ ì†Œìš”)
+          ? ºÐ¼® µ¥ÀÌÅÍ ·Îµù Áß... (¸ð¹ÙÀÏÀº 5~10ÃÊ ¼Ò¿ä)
         </div>
         <div class="alert alert-warning" x-show="!analyticsLoading && !analytics" role="alert">
-          âš ï¸ ë°ì´í„°ë¥¼ ë¶ˆëŸ¬ì˜¤ì§€ ëª»í–ˆìŠµë‹ˆë‹¤. ìƒˆë¡œê³ ì¹¨ ë²„íŠ¼ì„ ëˆŒëŸ¬ë³´ê±°ë‚˜, Vercel CDN ìºì‹œ (5ë¶„) ëŒ€ê¸°.
+          ?? µ¥ÀÌÅÍ¸¦ ºÒ·¯¿ÀÁö ¸øÇß½À´Ï´Ù. »õ·Î°íÄ§ ¹öÆ°À» ´­·¯º¸°Å³ª, Vercel CDN Ä³½Ã (5ºÐ) ´ë±â.
         </div>
 
-        <!-- 1) lag-1 ì‹œë®¬ vs ì¦‰ì‹œ ë§¤ìˆ˜ ë¹„êµ -->
-        <h6 class="mt-3">ðŸ“Š 1) lag-1 ì‹œë®¬ vs ì¦‰ì‹œ ë§¤ìˆ˜ (ì •í™•ë„ ë¹„êµ)</h6>
-        <p class="text-muted small mb-2">ë§¤ìˆ˜ íš¨ê³¼ ì¦‰ì‹œ ë°˜ì˜(ê³¼ëŒ€í‰ê°€) vs ë‹¤ìŒë‹¬ ë°˜ì˜(ì •í™•). lag-1ì´ sell2 ì‹œë®¬ì—ì„œ -61% ì°¨ì´ ë³´ìž„.</p>
+        <!-- 1) lag-1 ½Ã¹Ä vs Áï½Ã ¸Å¼ö ºñ±³ -->
+        <h6 class="mt-3">?? 1) lag-1 ½Ã¹Ä vs Áï½Ã ¸Å¼ö (Á¤È®µµ ºñ±³)</h6>
+        <p class="text-muted small mb-2">¸Å¼ö È¿°ú Áï½Ã ¹Ý¿µ(°ú´ëÆò°¡) vs ´ÙÀ½´Þ ¹Ý¿µ(Á¤È®). lag-1ÀÌ sell2 ½Ã¹Ä¿¡¼­ -61% Â÷ÀÌ º¸ÀÓ.</p>
         <div style="height:220px" class="mb-4"><canvas id="chartLag1"></canvas></div>
 
         <!-- 2) K-fold 5-fold CV -->
-        <h6 class="mt-3">ðŸ“Š 2) K-fold 5-fold CV (3ê°œì›” test)</h6>
-        <p class="text-muted small mb-2">ê° foldì—ì„œ 12ê°œì›” train / 3ê°œì›” test. ì¸ìƒ¤í’€ vs OOS Test Total ë¹„êµ.</p>
+        <h6 class="mt-3">?? 2) K-fold 5-fold CV (3°³¿ù test)</h6>
+        <p class="text-muted small mb-2">°¢ fold¿¡¼­ 12°³¿ù train / 3°³¿ù test. ÀÎ»þÇ® vs OOS Test Total ºñ±³.</p>
         <div style="height:220px" class="mb-4"><canvas id="chartKfold"></canvas></div>
 
         <!-- 3) Bootstrap 90% CI -->
-        <h6 class="mt-3">ðŸ“Š 3) Bootstrap 90% ì‹ ë¢°êµ¬ê°„ (rebal, 200 iter)</h6>
-        <p class="text-muted small mb-2">ì›”ë³„ ìˆ˜ìµë¥  ë¶€íŠ¸ìŠ¤íŠ¸ëž©. 5%/25%/50%/75%/95% ë¶„ìœ„ìˆ˜. 1.2ë…„ì¹˜ í•œê³„ë¡œ í­ì´ ë§¤ìš° ë„“ìŒ.</p>
+        <h6 class="mt-3">?? 3) Bootstrap 90% ½Å·Ú±¸°£ (rebal, 200 iter)</h6>
+        <p class="text-muted small mb-2">¿ùº° ¼öÀÍ·ü ºÎÆ®½ºÆ®·¦. 5%/25%/50%/75%/95% ºÐÀ§¼ö. 1.2³âÄ¡ ÇÑ°è·Î ÆøÀÌ ¸Å¿ì ³ÐÀ½.</p>
         <div style="height:220px" class="mb-4"><canvas id="chartBootstrap"></canvas></div>
 
-        <!-- 4) Regime ë¶„ì„ (bull/bear/sideways) -->
-        <h6 class="mt-3">ðŸ“Š 4) Regime ë¶„ì„ (KOSPI ret ê¸°ì¤€)</h6>
-        <p class="text-muted small mb-2">bull (>+5%) / bear (<-5%) / sideways (ê·¸ ì™¸). KOSPI ret 4ê°œì›”ì¹˜ í•œê³„ë¡œ bear only ê²€ì¦.</p>
+        <!-- 4) Regime ºÐ¼® (bull/bear/sideways) -->
+        <h6 class="mt-3">?? 4) Regime ºÐ¼® (KOSPI ret ±âÁØ)</h6>
+        <p class="text-muted small mb-2">bull (>+5%) / bear (<-5%) / sideways (±× ¿Ü). KOSPI ret 4°³¿ùÄ¡ ÇÑ°è·Î bear only °ËÁõ.</p>
         <div style="height:220px" class="mb-4"><canvas id="chartRegime"></canvas></div>
 
-        <!-- 5) ë‹¨ì¼ íŒ©í„° OOS Sharpe -->
-        <h6 class="mt-3">ðŸ“Š 5) ë‹¨ì¼ íŒ©í„° OOS Sharpe (7íŒ©í„° ë‹¨ì¼ ì‹œë®¬)</h6>
-        <p class="text-muted small mb-2">ê° íŒ©í„°ë¥¼ ë‹¨ë… ì‚¬ìš©í•œ 13ê°œì›” ì‹œë®¬ Sharpe. liquidity 1.47, momentum 1.27, volatility 1.41ì´ 1.1+ ì•ˆì •.</p>
+        <!-- 5) ´ÜÀÏ ÆÑÅÍ OOS Sharpe -->
+        <h6 class="mt-3">?? 5) ´ÜÀÏ ÆÑÅÍ OOS Sharpe (7ÆÑÅÍ ´ÜÀÏ ½Ã¹Ä)</h6>
+        <p class="text-muted small mb-2">°¢ ÆÑÅÍ¸¦ ´Üµ¶ »ç¿ëÇÑ 13°³¿ù ½Ã¹Ä Sharpe. liquidity 1.47, momentum 1.27, volatility 1.41ÀÌ 1.1+ ¾ÈÁ¤.</p>
         <div style="height:220px" class="mb-4"><canvas id="chartSingleFactor"></canvas></div>
 
-        <!-- 6) íšŒê·€ ê°€ì¤‘ì¹˜ ë¹„êµ -->
-        <h6 class="mt-3">ðŸ“Š 6) íšŒê·€ ê°€ì¤‘ì¹˜ ë¹„êµ (5ê°œ ì „ëžµ Ã— 7íŒ©í„°)</h6>
-        <p class="text-muted small mb-2">ê· í˜• / ê°€ì¹˜ / ì„±ìž¥ / ëª¨ë©˜í…€ / ë°©ì–´ / 4íŒ©í„° ê· ë“± ê°€ì¤‘ì¹˜. value 50, momentum 26~40, volatility 5~25.</p>
+        <!-- 6) È¸±Í °¡ÁßÄ¡ ºñ±³ -->
+        <h6 class="mt-3">?? 6) È¸±Í °¡ÁßÄ¡ ºñ±³ (5°³ Àü·« ¡¿ 7ÆÑÅÍ)</h6>
+        <p class="text-muted small mb-2">±ÕÇü / °¡Ä¡ / ¼ºÀå / ¸ð¸àÅÒ / ¹æ¾î / 4ÆÑÅÍ ±Õµî °¡ÁßÄ¡. value 50, momentum 26~40, volatility 5~25.</p>
         <div style="height:240px" class="mb-4"><canvas id="chartWeights"></canvas></div>
 
-        <!-- 7) ë™ì  í¬íŠ¸í´ë¦¬ì˜¤ 3ì „ëžµ ì‹œë®¬ -->
-        <h6 class="mt-3">ðŸ“Š 7) ë™ì  í¬íŠ¸í´ë¦¬ì˜¤ 3ì „ëžµ ì‹œë®¬ (13ê°œì›”)</h6>
-        <p class="text-muted small mb-2">static / rebal(ë§¤ì›” ë¦¬ë°¸ëŸ°ì‹±) / sell2(+21%/-7% ë§¤ë„). rebal Sharpe 1.11, MDD -12.1%. sell2 Sharpe 1.04, MDD -6.4% (ì•ˆì •).</p>
+        <!-- 7) µ¿Àû Æ÷Æ®Æú¸®¿À 3Àü·« ½Ã¹Ä -->
+        <h6 class="mt-3">?? 7) µ¿Àû Æ÷Æ®Æú¸®¿À 3Àü·« ½Ã¹Ä (13°³¿ù)</h6>
+        <p class="text-muted small mb-2">static / rebal(¸Å¿ù ¸®¹ë·±½Ì) / sell2(+21%/-7% ¸Åµµ). rebal Sharpe 1.11, MDD -12.1%. sell2 Sharpe 1.04, MDD -6.4% (¾ÈÁ¤).</p>
         <div style="height:220px" class="mb-4"><canvas id="chartDynamic"></canvas></div>
 
-        <!-- 8) Sell2 hit ë¶„í¬ -->
-        <h6 class="mt-3">ðŸ“Š 8) Sell2 hit ë¶„í¬ (13ê°œì›” ì‹œë®¬)</h6>
-        <p class="text-muted small mb-2">ìµì ˆ(+21% 3R) vs ì†ì ˆ(-7% 1R) ê±°ëž˜ ìˆ˜. ì†ì ˆ ë§Žìœ¼ë©´ ì†ì ˆ ë¼ì¸ ì¡°ì •(-10%) ê³ ë ¤.</p>
+        <!-- 8) Sell2 hit ºÐÆ÷ -->
+        <h6 class="mt-3">?? 8) Sell2 hit ºÐÆ÷ (13°³¿ù ½Ã¹Ä)</h6>
+        <p class="text-muted small mb-2">ÀÍÀý(+21% 3R) vs ¼ÕÀý(-7% 1R) °Å·¡ ¼ö. ¼ÕÀý ¸¹À¸¸é ¼ÕÀý ¶óÀÎ Á¶Á¤(-10%) °í·Á.</p>
         <div style="height:220px" class="mb-4"><canvas id="chartSell2Dist"></canvas></div>
 
-        <!-- 5) ì¸ì‚¬ì´íŠ¸ ìš”ì•½ -->
-        <h6 class="mt-3">ðŸ’¡ 5) ì¸ì‚¬ì´íŠ¸</h6>
+        <!-- 5) ÀÎ»çÀÌÆ® ¿ä¾à -->
+        <h6 class="mt-3">?? 5) ÀÎ»çÀÌÆ®</h6>
         <div class="row g-2">
           <div class="col-md-4">
             <div class="card border-0 shadow-sm bg-light h-100">
               <div class="card-body p-2">
-                <strong>ðŸŽ¯ ê°€ì¤‘ì¹˜ ì•ˆì •ì„±</strong>
-                <p class="small mb-0" x-text="analytics?.weightStability || 'â€”'"></p>
-                <p class="small text-muted mb-0">5-fold OOS ëª¨ë‘ 4íŒ©í„° ê· ë“± 25% ì¼ê´€. <strong>ê³¼ì í™” ì ìŒ</strong>.</p>
+                <strong>?? °¡ÁßÄ¡ ¾ÈÁ¤¼º</strong>
+                <p class="small mb-0" x-text="analytics?.weightStability || '?'"></p>
+                <p class="small text-muted mb-0">5-fold OOS ¸ðµÎ 4ÆÑÅÍ ±Õµî 25% ÀÏ°ü. <strong>°úÀûÈ­ ÀûÀ½</strong>.</p>
               </div>
             </div>
           </div>
           <div class="col-md-4">
             <div class="card border-0 shadow-sm h-100" :class="(analytics?.verdict?.oosRatio || 0) >= 70 ? 'bg-success text-white' : (analytics?.verdict?.oosRatio || 0) >= 50 ? 'bg-warning text-dark' : 'bg-danger text-white'">
               <div class="card-body p-2">
-                <strong>ðŸš¨ ê³¼ì í™” ì§„ë‹¨</strong>
-                <p class="small mb-0">OOS/ì¸ìƒ¤í’€: <strong x-text="(analytics?.verdict?.oosRatio || 0) + '%'"></strong></p>
-                <p class="small mb-0" x-text="analytics?.verdict?.message || 'â€”'"></p>
+                <strong>?? °úÀûÈ­ Áø´Ü</strong>
+                <p class="small mb-0">OOS/ÀÎ»þÇ®: <strong x-text="(analytics?.verdict?.oosRatio || 0) + '%'"></strong></p>
+                <p class="small mb-0" x-text="analytics?.verdict?.message || '?'"></p>
               </div>
             </div>
           </div>
           <div class="col-md-4">
             <div class="card border-0 shadow-sm bg-light h-100">
               <div class="card-body p-2">
-                <strong>ðŸ“… í•œê³„</strong>
+                <strong>?? ÇÑ°è</strong>
                 <ul class="small mb-0 ps-3" style="line-height:1.5">
                   <template x-for="(lim, i) in (analytics?.limitations || [])" :key="i">
                     <li x-text="lim"></li>
@@ -745,32 +745,32 @@
     </div>
   </div>
 
-  <!-- ===== ðŸ“ˆ ì‹ í˜¸ ì¶”ì  (1ì°¨/2ì°¨ ë§¤ìˆ˜Â·ë§¤ë„ í›„ ì‹¤ì œ ìˆ˜ìµë¥ ) ===== -->
+  <!-- ===== ?? ½ÅÈ£ ÃßÀû (1Â÷/2Â÷ ¸Å¼ö¡¤¸Åµµ ÈÄ ½ÇÁ¦ ¼öÀÍ·ü) ===== -->
   <div x-show="tab==='signals'">
     <div class="card">
       <div class="card-body">
         <div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
-          <h5 class="mb-0">ðŸ“ˆ ì‹ í˜¸ ì¶”ì  (1ì°¨/2ì°¨ ë§¤ìˆ˜Â·ë§¤ë„ í›„ ì‹¤ì œ ìˆ˜ìµë¥ )</h5>
-          <span class="text-muted small" x-text="signalPerformance ? 'ðŸ“… ' + (signalPerformance.priceDate || 'â€”') + ' ê¸°ì¤€, ' + (signalPerformance.lookbackDays || 0) + 'ì¼ / ' + (signalPerformance.markets || []).join(',') : 'ë¡œë”© ì¤‘...'"></span>
-          <button class="btn btn-sm btn-outline-primary ms-auto" @click="loadSignalPerformance()">ðŸ”„ ìƒˆë¡œê³ ì¹¨</button>
+          <h5 class="mb-0">?? ½ÅÈ£ ÃßÀû (1Â÷/2Â÷ ¸Å¼ö¡¤¸Åµµ ÈÄ ½ÇÁ¦ ¼öÀÍ·ü)</h5>
+          <span class="text-muted small" x-text="signalPerformance ? '?? ' + (signalPerformance.priceDate || '?') + ' ±âÁØ, ' + (signalPerformance.lookbackDays || 0) + 'ÀÏ / ' + (signalPerformance.markets || []).join(',') : '·Îµù Áß...'"></span>
+          <button class="btn btn-sm btn-outline-primary ms-auto" @click="loadSignalPerformance()">?? »õ·Î°íÄ§</button>
         </div>
 
         <div class="alert alert-info small" x-show="signalPerformance">
-          <strong>ðŸ’¡ í•´ì„ ê°€ì´ë“œ</strong><br>
-          â€¢ <strong>1ì°¨ë§¤ìˆ˜</strong> (ê³¨ë“ í¬ë¡œìŠ¤+ì •ë°°ì—´+ê±°ëž˜ëŸ‰1.5x): ë§¤ìˆ˜ ì‹ í˜¸ í›„ +5/+10/+20ì¼ í›„ ì‹¤ì œ ìˆ˜ìµë¥ <br>
-          â€¢ <strong>2ì°¨ë§¤ìˆ˜</strong> (ëˆŒë¦¼ëª©+ì–‘ë´‰+ê±°ëž˜ëŸ‰ê°ì†Œ): ë” ë¹ˆë²ˆí•œ ë§¤ìˆ˜ ì‹ í˜¸, ë¶„ì‚° ë§¤ë§¤ ì‹œ íš¨ê³¼<br>
-          â€¢ <strong>1ì°¨ë§¤ë„</strong> (ì†ì ˆ -7%): ì†ì ˆ ì‹ í˜¸ í›„ ì¶”ê°€ í•˜ë½ = íšŒí”¼ íš¨ê³¼ (ìŒìˆ˜ = ìž˜í•œ ì†ì ˆ)<br>
-          â€¢ <strong>2ì°¨ë§¤ë„</strong> (ìµì ˆ +21%): ìµì ˆ ì‹ í˜¸ í›„ ì¶”ê°€ ìƒìŠ¹ = ë†“ì¹œ ìˆ˜ìµ (ì–‘ìˆ˜ = ì•„ì‰¬ìš´ ìµì ˆ)
+          <strong>?? ÇØ¼® °¡ÀÌµå</strong><br>
+          ? <strong>1Â÷¸Å¼ö</strong> (°ñµçÅ©·Î½º+Á¤¹è¿­+°Å·¡·®1.5x): ¸Å¼ö ½ÅÈ£ ÈÄ +5/+10/+20ÀÏ ÈÄ ½ÇÁ¦ ¼öÀÍ·ü<br>
+          ? <strong>2Â÷¸Å¼ö</strong> (´­¸²¸ñ+¾çºÀ+°Å·¡·®°¨¼Ò): ´õ ºó¹øÇÑ ¸Å¼ö ½ÅÈ£, ºÐ»ê ¸Å¸Å ½Ã È¿°ú<br>
+          ? <strong>1Â÷¸Åµµ</strong> (¼ÕÀý -7%): ¼ÕÀý ½ÅÈ£ ÈÄ Ãß°¡ ÇÏ¶ô = È¸ÇÇ È¿°ú (À½¼ö = ÀßÇÑ ¼ÕÀý)<br>
+          ? <strong>2Â÷¸Åµµ</strong> (ÀÍÀý +21%): ÀÍÀý ½ÅÈ£ ÈÄ Ãß°¡ »ó½Â = ³õÄ£ ¼öÀÍ (¾ç¼ö = ¾Æ½¬¿î ÀÍÀý)
         </div>
 
-        <!-- 4ê°œ KPI (KOSPI/KOSDAQ ë¹„êµ) -->
+        <!-- 4°³ KPI (KOSPI/KOSDAQ ºñ±³) -->
         <div class="row g-2 mb-3" x-show="signalPerformance">
           <template x-for="(s, t) in signalKpi()" :key="t">
             <div class="col-md-3">
               <div class="card stat-card"><div class="card-body">
                 <div class="text-muted small d-flex justify-content-between">
                   <span x-text="s.label"></span>
-                  <span class="badge bg-light text-dark" x-text="s.kosdaqMain || 'â€”'"></span>
+                  <span class="badge bg-light text-dark" x-text="s.kosdaqMain || '?'"></span>
                 </div>
                 <div class="fs-4 fw-bold" :class="s.color" x-text="s.main"></div>
                 <small class="text-muted d-flex justify-content-between">
@@ -782,41 +782,41 @@
           </template>
         </div>
 
-        <!-- KOSPI/KOSDAQ ë¹„êµ ì°¨íŠ¸ -->
+        <!-- KOSPI/KOSDAQ ºñ±³ Â÷Æ® -->
         <div class="row g-2 mb-3">
           <div class="col-md-6">
             <div class="card"><div class="card-body">
-              <h6>ðŸ“Š ì‹ í˜¸ ì¢…ë¥˜ë³„ +10ì¼ í›„ í‰ê·  ìˆ˜ìµë¥  (KOSPI vs KOSDAQ)</h6>
+              <h6>?? ½ÅÈ£ Á¾·ùº° +10ÀÏ ÈÄ Æò±Õ ¼öÀÍ·ü (KOSPI vs KOSDAQ)</h6>
               <canvas id="signalAvgReturnChart" height="220"></canvas>
             </div></div>
           </div>
           <div class="col-md-6">
             <div class="card"><div class="card-body">
-              <h6>ðŸ“ˆ ë§¤ìˆ˜ ì‹ í˜¸ ìŠ¹ë¥  (BUY: ìˆ˜ìµ+1%/+2%/+3% ê¸°ì¤€, KOSPI)</h6>
+              <h6>?? ¸Å¼ö ½ÅÈ£ ½Â·ü (BUY: ¼öÀÍ+1%/+2%/+3% ±âÁØ, KOSPI)</h6>
               <canvas id="signalWinRateChart" height="220"></canvas>
             </div></div>
           </div>
         </div>
 
-        <!-- KOSDAQ ë‹¨ë… ì°¨íŠ¸ (O) -->
+        <!-- KOSDAQ ´Üµ¶ Â÷Æ® (O) -->
         <div class="row g-2 mb-3" x-show="signalPerformanceKosdaq">
           <div class="col-md-12">
             <div class="card"><div class="card-body">
-              <h6>ðŸ“Š KOSDAQ ë‹¨ë… ì‹ í˜¸ ì¶”ì  (+10ì¼ / +20ì¼ í‰ê·  ìˆ˜ìµë¥ , ìŠ¹ë¥ )</h6>
-              <p class="text-muted small mb-1">KOSDAQ ë§¤ìˆ˜ ì‹ í˜¸ëŠ” KOSPIë³´ë‹¤ +8.82%p ìš°ìˆ˜ (í˜„ìž¬ ë°ì´í„°)</p>
+              <h6>?? KOSDAQ ´Üµ¶ ½ÅÈ£ ÃßÀû (+10ÀÏ / +20ÀÏ Æò±Õ ¼öÀÍ·ü, ½Â·ü)</h6>
+              <p class="text-muted small mb-1">KOSDAQ ¸Å¼ö ½ÅÈ£´Â KOSPIº¸´Ù +8.82%p ¿ì¼ö (ÇöÀç µ¥ÀÌÅÍ)</p>
               <canvas id="signalKosdaqChart" height="180"></canvas>
             </div></div>
           </div>
         </div>
 
-        <!-- ì‹ í˜¸ ì¢…ë¥˜ë³„ ìƒì„¸ í‘œ -->
-        <h6 class="mt-3">ðŸ“‹ ì‹ í˜¸ ì¢…ë¥˜ë³„ ìƒì„¸ í†µê³„</h6>
+        <!-- ½ÅÈ£ Á¾·ùº° »ó¼¼ Ç¥ -->
+        <h6 class="mt-3">?? ½ÅÈ£ Á¾·ùº° »ó¼¼ Åë°è</h6>
         <div class="table-responsive">
           <table class="table table-sm table-hover">
             <thead class="table-light">
               <tr>
-                <th>ì‹ í˜¸</th><th>ì´ ê±´ìˆ˜</th><th>+5ì¼ í›„</th><th>+10ì¼ í›„</th><th>+20ì¼ í›„</th>
-                <th>+20ì¼ ìµœëŒ€</th><th>+20ì¼ ìµœì†Œ</th>
+                <th>½ÅÈ£</th><th>ÃÑ °Ç¼ö</th><th>+5ÀÏ ÈÄ</th><th>+10ÀÏ ÈÄ</th><th>+20ÀÏ ÈÄ</th>
+                <th>+20ÀÏ ÃÖ´ë</th><th>+20ÀÏ ÃÖ¼Ò</th>
               </tr>
             </thead>
             <tbody>
@@ -835,14 +835,14 @@
           </table>
         </div>
 
-        <!-- ìµœê·¼ 30ê°œ ì‹ í˜¸ -->
-        <h6 class="mt-3">ðŸ“… ìµœê·¼ 30ê°œ ì‹ í˜¸ (ì‹¤ì œ ì¶”ì  ê²°ê³¼)</h6>
+        <!-- ÃÖ±Ù 30°³ ½ÅÈ£ -->
+        <h6 class="mt-3">?? ÃÖ±Ù 30°³ ½ÅÈ£ (½ÇÁ¦ ÃßÀû °á°ú)</h6>
         <div class="table-responsive">
           <table class="table table-sm table-hover">
             <thead class="table-light">
               <tr>
-                <th>ë‚ ì§œ</th><th>ì¢…ëª©</th><th>ì‹ í˜¸</th><th>ê°€ê²©</th><th>ì ìˆ˜</th>
-                <th class="text-end">+5ì¼</th><th class="text-end">+10ì¼</th><th class="text-end">+20ì¼</th>
+                <th>³¯Â¥</th><th>Á¾¸ñ</th><th>½ÅÈ£</th><th>°¡°Ý</th><th>Á¡¼ö</th>
+                <th class="text-end">+5ÀÏ</th><th class="text-end">+10ÀÏ</th><th class="text-end">+20ÀÏ</th>
               </tr>
             </thead>
             <tbody>
@@ -851,11 +851,11 @@
                   <td><small x-text="r.date"></small></td>
                   <td><strong x-text="r.name"></strong> <small class="text-muted" x-text="r.code"></small></td>
                   <td><span class="badge" :class="signalTypeColor(r.type)" x-text="signalTypeLabel(r.type)"></span></td>
-                  <td class="text-end" x-text="r.price.toLocaleString() + 'ì›'"></td>
-                  <td class="text-end" x-text="r.score || 'â€”'"></td>
-                  <td class="text-end" :class="(r.ret5d || 0) >= 0 ? 'text-danger fw-bold' : 'text-primary fw-bold'" x-text="r.ret5d !== null ? (r.ret5d >= 0 ? '+' : '') + r.ret5d.toFixed(2) + '%' : 'â€”'"></td>
-                  <td class="text-end" :class="(r.ret10d || 0) >= 0 ? 'text-danger fw-bold' : 'text-primary fw-bold'" x-text="r.ret10d !== null ? (r.ret10d >= 0 ? '+' : '') + r.ret10d.toFixed(2) + '%' : 'â€”'"></td>
-                  <td class="text-end" :class="(r.ret20d || 0) >= 0 ? 'text-danger fw-bold' : 'text-primary fw-bold'" x-text="r.ret20d !== null ? (r.ret20d >= 0 ? '+' : '') + r.ret20d.toFixed(2) + '%' : 'â€”'"></td>
+                  <td class="text-end" x-text="r.price.toLocaleString() + '¿ø'"></td>
+                  <td class="text-end" x-text="r.score || '?'"></td>
+                  <td class="text-end" :class="(r.ret5d || 0) >= 0 ? 'text-danger fw-bold' : 'text-primary fw-bold'" x-text="r.ret5d !== null ? (r.ret5d >= 0 ? '+' : '') + r.ret5d.toFixed(2) + '%' : '?'"></td>
+                  <td class="text-end" :class="(r.ret10d || 0) >= 0 ? 'text-danger fw-bold' : 'text-primary fw-bold'" x-text="r.ret10d !== null ? (r.ret10d >= 0 ? '+' : '') + r.ret10d.toFixed(2) + '%' : '?'"></td>
+                  <td class="text-end" :class="(r.ret20d || 0) >= 0 ? 'text-danger fw-bold' : 'text-primary fw-bold'" x-text="r.ret20d !== null ? (r.ret20d >= 0 ? '+' : '') + r.ret20d.toFixed(2) + '%' : '?'"></td>
                 </tr>
               </template>
             </tbody>
@@ -864,34 +864,34 @@
       </div>
     </div>
 
-    <!-- ===== ë§¤íŠ¸ë¦­ìŠ¤ ë¶„ì„ (KOSPI/KOSDAQ í† ê¸€ + ë“±ê¸‰ ë¶„í¬ + 1ì°¨ë§¤ìˆ˜ í™œì„±) ===== -->
+    <!-- ===== ¸ÅÆ®¸¯½º ºÐ¼® (KOSPI/KOSDAQ Åä±Û + µî±Þ ºÐÆ÷ + 1Â÷¸Å¼ö È°¼º) ===== -->
     <div class="card mt-3">
       <div class="card-body">
         <div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
-          <h5 class="mb-0">ðŸŽ¯ ë§¤íŠ¸ë¦­ìŠ¤ ë¶„ì„ (KOSPI/KOSDAQ)</h5>
+          <h5 class="mb-0">?? ¸ÅÆ®¸¯½º ºÐ¼® (KOSPI/KOSDAQ)</h5>
           <span class="text-muted small" x-show="matrixVerifyKospi || matrixVerifyKosdaq">
-            ðŸ“… <span x-text="matrixVerifyKospi?.asOf || matrixVerifyKosdaq?.asOf || 'â€”'"></span> ê¸°ì¤€
+            ?? <span x-text="matrixVerifyKospi?.asOf || matrixVerifyKosdaq?.asOf || '?'"></span> ±âÁØ
           </span>
           <div class="btn-group ms-auto" role="group">
-            <button class="btn btn-sm" :class="matrixMarketFilter==='KOSPI' ? 'btn-danger' : 'btn-outline-danger'" @click="matrixMarketFilter='KOSPI'; setTimeout(() => { _drawMatrixCharts(); _drawGradeChart(); }, 50)">ðŸ“ˆ KOSPI</button>
-            <button class="btn btn-sm" :class="matrixMarketFilter==='KOSDAQ' ? 'btn-primary' : 'btn-outline-primary'" @click="matrixMarketFilter='KOSDAQ'; setTimeout(() => { _drawMatrixCharts(); _drawGradeChart(); }, 50)">ðŸ“Š KOSDAQ</button>
-            <button class="btn btn-sm" :class="matrixMarketFilter==='compare' ? 'btn-dark' : 'btn-outline-dark'" @click="matrixMarketFilter='compare'; setTimeout(() => _drawMatrixCharts(), 50)">ðŸ”„ ë¹„êµ</button>
+            <button class="btn btn-sm" :class="matrixMarketFilter==='KOSPI' ? 'btn-danger' : 'btn-outline-danger'" @click="matrixMarketFilter='KOSPI'; setTimeout(() => { _drawMatrixCharts(); _drawGradeChart(); }, 50)">?? KOSPI</button>
+            <button class="btn btn-sm" :class="matrixMarketFilter==='KOSDAQ' ? 'btn-primary' : 'btn-outline-primary'" @click="matrixMarketFilter='KOSDAQ'; setTimeout(() => { _drawMatrixCharts(); _drawGradeChart(); }, 50)">?? KOSDAQ</button>
+            <button class="btn btn-sm" :class="matrixMarketFilter==='compare' ? 'btn-dark' : 'btn-outline-dark'" @click="matrixMarketFilter='compare'; setTimeout(() => _drawMatrixCharts(), 50)">?? ºñ±³</button>
           </div>
-          <button class="btn btn-sm btn-outline-primary" @click="loadMatrixVerify(true)">ðŸ”„ ìƒˆë¡œê³ ì¹¨</button>
+          <button class="btn btn-sm btn-outline-primary" @click="loadMatrixVerify(true)">?? »õ·Î°íÄ§</button>
         </div>
 
-        <!-- KPI 4ê°œ (ì •ë°°ì—´, 1ì°¨ë§¤ìˆ˜ í™œì„±, 2ì°¨ë§¤ìˆ˜ í™œì„±, ë™ì‹œ í™œì„±) -->
+        <!-- KPI 4°³ (Á¤¹è¿­, 1Â÷¸Å¼ö È°¼º, 2Â÷¸Å¼ö È°¼º, µ¿½Ã È°¼º) -->
         <div class="row g-2 mb-3" x-show="matrixVerifyKospi || matrixVerifyKosdaq">
-          <template x-for="(label, key) in {aligned:'ðŸŸ¢ ì •ë°°ì—´', buy1Active:'ðŸš€ 1ì°¨ë§¤ìˆ˜', buy2Active:'ðŸ›’ 2ì°¨ë§¤ìˆ˜', bothActive:'âš¡ ë™ì‹œí™œì„±'}" :key="key">
+          <template x-for="(label, key) in {aligned:'?? Á¤¹è¿­', buy1Active:'?? 1Â÷¸Å¼ö', buy2Active:'?? 2Â÷¸Å¼ö', bothActive:'? µ¿½ÃÈ°¼º'}" :key="key">
             <div class="col-md-3">
               <div class="card stat-card"><div class="card-body py-2">
                 <div class="text-muted small" x-text="label"></div>
                 <div class="fs-5 fw-bold d-flex justify-content-between">
-                  <span class="text-danger" x-text="(matrixVerifyKospi?.stats?.[key] ?? 0) + 'ê°œ'"></span>
-                  <span class="text-primary" x-text="(matrixVerifyKosdaq?.stats?.[key] ?? 0) + 'ê°œ'"></span>
+                  <span class="text-danger" x-text="(matrixVerifyKospi?.stats?.[key] ?? 0) + '°³'"></span>
+                  <span class="text-primary" x-text="(matrixVerifyKosdaq?.stats?.[key] ?? 0) + '°³'"></span>
                 </div>
                 <small class="text-muted">
-                  KOSPI: <span class="text-danger fw-bold" x-text="matrixVerifyKospi?.count || 0"></span> Â·
+                  KOSPI: <span class="text-danger fw-bold" x-text="matrixVerifyKospi?.count || 0"></span> ¡¤
                   KOSDAQ: <span class="text-primary fw-bold" x-text="matrixVerifyKosdaq?.count || 0"></span>
                 </small>
               </div></div>
@@ -899,59 +899,59 @@
           </template>
         </div>
 
-        <!-- ì°¨íŠ¸ 2ê°œ: ë“±ê¸‰ ë¶„í¬, ì ìˆ˜ ížˆìŠ¤í† ê·¸ëž¨ -->
+        <!-- Â÷Æ® 2°³: µî±Þ ºÐÆ÷, Á¡¼ö È÷½ºÅä±×·¥ -->
         <div class="row g-2 mb-3" x-show="matrixVerifyKospi || matrixVerifyKosdaq">
           <div class="col-md-6">
             <div class="card"><div class="card-body">
-              <h6>ðŸ“Š ë§¤íŠ¸ë¦­ìŠ¤ ë“±ê¸‰ ë¶„í¬ (KOSPI vs KOSDAQ)</h6>
-              <p class="text-muted small mb-1">A(90+) Â· B(75+) Â· C(60+) Â· D(40+) Â· F(&lt;40)</p>
+              <h6>?? ¸ÅÆ®¸¯½º µî±Þ ºÐÆ÷ (KOSPI vs KOSDAQ)</h6>
+              <p class="text-muted small mb-1">A(90+) ¡¤ B(75+) ¡¤ C(60+) ¡¤ D(40+) ¡¤ F(&lt;40)</p>
               <canvas id="matrixGradeChart" height="220"></canvas>
             </div></div>
           </div>
           <div class="col-md-6">
             <div class="card"><div class="card-body">
-              <h6>ðŸ“ˆ ë§¤íŠ¸ë¦­ìŠ¤ ì ìˆ˜ ë¶„í¬ (<span x-text="matrixMarketFilter==='KOSPI' ? 'KOSPI' : matrixMarketFilter==='KOSDAQ' ? 'KOSDAQ' : 'KOSPI+KOSDAQ'"></span>)</h6>
-              <p class="text-muted small mb-1">total_score ê¸°ì¤€ 10ì  ë‹¨ìœ„ ë²„í‚· (Top ë§¤íŠ¸ë¦­ìŠ¤ ì¢…ëª©ë§Œ)</p>
+              <h6>?? ¸ÅÆ®¸¯½º Á¡¼ö ºÐÆ÷ (<span x-text="matrixMarketFilter==='KOSPI' ? 'KOSPI' : matrixMarketFilter==='KOSDAQ' ? 'KOSDAQ' : 'KOSPI+KOSDAQ'"></span>)</h6>
+              <p class="text-muted small mb-1">total_score ±âÁØ 10Á¡ ´ÜÀ§ ¹öÅ¶ (Top ¸ÅÆ®¸¯½º Á¾¸ñ¸¸)</p>
               <canvas id="matrixScoreHistChart" height="220"></canvas>
             </div></div>
           </div>
         </div>
 
-        <!-- 1ì°¨ë§¤ìˆ˜ ë“±ê¸‰ë³„ í™œì„± KPI (Q ìž‘ì—…) -->
-        <h6 class="mt-3">ðŸŽ¯ ë§¤íŠ¸ë¦­ìŠ¤ ë“±ê¸‰ë³„ 1ì°¨ë§¤ìˆ˜ í™œì„± ì¢…ëª© (Q. ë“±ê¸‰ë³„ ìˆ˜ìµë¥  ê²€ì¦)</h6>
+        <!-- 1Â÷¸Å¼ö µî±Þº° È°¼º KPI (Q ÀÛ¾÷) -->
+        <h6 class="mt-3">?? ¸ÅÆ®¸¯½º µî±Þº° 1Â÷¸Å¼ö È°¼º Á¾¸ñ (Q. µî±Þº° ¼öÀÍ·ü °ËÁõ)</h6>
         <div class="row g-2 mb-3" x-show="matrixVerifyKospi || matrixVerifyKosdaq">
           <template x-for="g in ['A', 'B', 'C', 'D', 'F']" :key="g">
             <div class="col-md">
               <div class="card stat-card"><div class="card-body py-2 text-center">
-                <div class="small text-muted">ë“±ê¸‰ <strong x-text="g"></strong></div>
+                <div class="small text-muted">µî±Þ <strong x-text="g"></strong></div>
                 <div class="fs-5 fw-bold" x-text="(matrixGradeBuy1Stats()[g]?.active || 0) + ' / ' + (matrixGradeBuy1Stats()[g]?.total || 0)"></div>
                 <small class="text-muted">
-                  <span x-text="matrixGradeBuy1Stats()[g]?.total ? ((matrixGradeBuy1Stats()[g].active / matrixGradeBuy1Stats()[g].total) * 100).toFixed(0) + '% í™œì„±' : '0%'"></span>
+                  <span x-text="matrixGradeBuy1Stats()[g]?.total ? ((matrixGradeBuy1Stats()[g].active / matrixGradeBuy1Stats()[g].total) * 100).toFixed(0) + '% È°¼º' : '0%'"></span>
                 </small>
               </div></div>
             </div>
           </template>
         </div>
 
-        <!-- ë“±ê¸‰ë³„ ì‹ í˜¸ ìˆ˜ìµë¥  ì°¨íŠ¸ (Q. ë“±ê¸‰ë³„ ìˆ˜ìµë¥  ê²€ì¦ - ì§„ì§œ ê²°ê³¼) -->
-        <h6 class="mt-3">ðŸ“Š ë“±ê¸‰ë³„ ì‹ í˜¸ ìˆ˜ìµë¥  ê²€ì¦ â€” <span class="text-muted">ê³ ë“±ê¸‰ ì†ì ˆì´ ë” íš¨ê³¼ì ì¸ê°€?</span></h6>
+        <!-- µî±Þº° ½ÅÈ£ ¼öÀÍ·ü Â÷Æ® (Q. µî±Þº° ¼öÀÍ·ü °ËÁõ - ÁøÂ¥ °á°ú) -->
+        <h6 class="mt-3">?? µî±Þº° ½ÅÈ£ ¼öÀÍ·ü °ËÁõ ? <span class="text-muted">°íµî±Þ ¼ÕÀýÀÌ ´õ È¿°úÀûÀÎ°¡?</span></h6>
         <div class="row g-2 mb-3" x-show="gradePerformance">
           <div class="col-md-7">
             <div class="card"><div class="card-body">
               <p class="text-muted small mb-1">
-                í˜„ìž¬ ë§¤íŠ¸ë¦­ìŠ¤ ì ìˆ˜(quantile ê¸°ë°˜)ë¡œ ë“±ê¸‰ ë¶„ë¥˜ í›„ ì‹ í˜¸ ì¶”ì  +5d/+10d/+20d í‰ê· .<br>
-                <strong>B ë“±ê¸‰ sell1 -28.47% > C ë“±ê¸‰ sell1 -3.66%</strong> = ê³ ë“±ê¸‰ ì†ì ˆì´ ë” íš¨ê³¼ì  âœ…
+                ÇöÀç ¸ÅÆ®¸¯½º Á¡¼ö(quantile ±â¹Ý)·Î µî±Þ ºÐ·ù ÈÄ ½ÅÈ£ ÃßÀû +5d/+10d/+20d Æò±Õ.<br>
+                <strong>B µî±Þ sell1 -28.47% > C µî±Þ sell1 -3.66%</strong> = °íµî±Þ ¼ÕÀýÀÌ ´õ È¿°úÀû ?
               </p>
               <canvas id="gradePerformanceChart" height="220"></canvas>
             </div></div>
           </div>
           <div class="col-md-5">
             <div class="card"><div class="card-body">
-              <h6>ðŸ“‹ ë“±ê¸‰ Ã— ì‹ í˜¸ë³„ +10d í‰ê· </h6>
+              <h6>?? µî±Þ ¡¿ ½ÅÈ£º° +10d Æò±Õ</h6>
               <div class="table-responsive">
                 <table class="table table-sm table-hover">
                   <thead class="table-light">
-                    <tr><th>ë“±ê¸‰</th><th>ì‹ í˜¸ìˆ˜</th><th>ë§¤ìˆ˜+10d</th><th>ì†ì ˆ+10d</th></tr>
+                    <tr><th>µî±Þ</th><th>½ÅÈ£¼ö</th><th>¸Å¼ö+10d</th><th>¼ÕÀý+10d</th></tr>
                   </thead>
                   <tbody>
                     <template x-for="g in ['A', 'B', 'C', 'D', 'F']" :key="g">
@@ -959,9 +959,9 @@
                         <td>
                           <span class="badge" :class="matrixGrade(g === 'A' ? 95 : g === 'B' ? 80 : g === 'C' ? 65 : g === 'D' ? 50 : 30).color" x-text="g"></span>
                         </td>
-                        <td x-text="(gradePerformance?.[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi']?.[g]?.signalCount || 0) + 'ê±´'"></td>
-                        <td :class="(gradePerformance?.[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi']?.[g]?.byType?.buy1?.avgReturn10d || 0) >= 0 ? 'text-danger fw-bold' : 'text-primary fw-bold'" x-text="gradePerformance?.[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi']?.[g]?.byType?.buy1 ? (gradePerformance[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi'][g].byType.buy1.avgReturn10d >= 0 ? '+' : '') + gradePerformance[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi'][g].byType.buy1.avgReturn10d.toFixed(2) + '%' : 'â€”'"></td>
-                        <td :class="(gradePerformance?.[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi']?.[g]?.byType?.sell1?.avgReturn10d || 0) <= 0 ? 'text-primary fw-bold' : 'text-muted'" x-text="gradePerformance?.[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi']?.[g]?.byType?.sell1 ? (gradePerformance[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi'][g].byType.sell1.avgReturn10d >= 0 ? '+' : '') + gradePerformance[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi'][g].byType.sell1.avgReturn10d.toFixed(2) + '%' : 'â€”'"></td>
+                        <td x-text="(gradePerformance?.[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi']?.[g]?.signalCount || 0) + '°Ç'"></td>
+                        <td :class="(gradePerformance?.[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi']?.[g]?.byType?.buy1?.avgReturn10d || 0) >= 0 ? 'text-danger fw-bold' : 'text-primary fw-bold'" x-text="gradePerformance?.[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi']?.[g]?.byType?.buy1 ? (gradePerformance[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi'][g].byType.buy1.avgReturn10d >= 0 ? '+' : '') + gradePerformance[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi'][g].byType.buy1.avgReturn10d.toFixed(2) + '%' : '?'"></td>
+                        <td :class="(gradePerformance?.[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi']?.[g]?.byType?.sell1?.avgReturn10d || 0) <= 0 ? 'text-primary fw-bold' : 'text-muted'" x-text="gradePerformance?.[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi']?.[g]?.byType?.sell1 ? (gradePerformance[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi'][g].byType.sell1.avgReturn10d >= 0 ? '+' : '') + gradePerformance[matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi'][g].byType.sell1.avgReturn10d.toFixed(2) + '%' : '?'"></td>
                       </tr>
                     </template>
                   </tbody>
@@ -971,20 +971,20 @@
           </div>
         </div>
 
-        <!-- Top ë§¤íŠ¸ë¦­ìŠ¤ ì¢…ëª© (í˜„ìž¬ í•„í„° ê¸°ì¤€) -->
+        <!-- Top ¸ÅÆ®¸¯½º Á¾¸ñ (ÇöÀç ÇÊÅÍ ±âÁØ) -->
         <h6 class="mt-3">
-          ðŸ† Top ë§¤íŠ¸ë¦­ìŠ¤ ì¢…ëª© (
-          <span x-text="matrixMarketFilter==='KOSPI' ? 'KOSPI' : matrixMarketFilter==='KOSDAQ' ? 'KOSDAQ' : 'ë¹„êµ'"></span>
+          ?? Top ¸ÅÆ®¸¯½º Á¾¸ñ (
+          <span x-text="matrixMarketFilter==='KOSPI' ? 'KOSPI' : matrixMarketFilter==='KOSDAQ' ? 'KOSDAQ' : 'ºñ±³'"></span>
           )
         </h6>
         <div class="table-responsive">
           <table class="table table-sm table-hover">
             <thead class="table-light">
               <tr>
-                <th>ìˆœìœ„</th><th>ì½”ë“œ</th><th>ì¢…ëª©ëª…</th><th>ì‹œìž¥</th><th>ì„¹í„°</th>
-                <th>ë§¤íŠ¸ë¦­ìŠ¤</th><th>ì¡°ì •<small class="text-muted">(ì‹œìž¥ë°˜ì˜)</small></th><th>ë“±ê¸‰</th>
-                <th>1ì°¨ë§¤ìˆ˜</th><th>2ì°¨ë§¤ìˆ˜</th><th>1ì°¨ë§¤ë„</th><th>ì†ì ˆ</th>
-                <th>í˜„ìž¬ê°€</th>
+                <th>¼øÀ§</th><th>ÄÚµå</th><th>Á¾¸ñ¸í</th><th>½ÃÀå</th><th>¼½ÅÍ</th>
+                <th>¸ÅÆ®¸¯½º</th><th>Á¶Á¤<small class="text-muted">(½ÃÀå¹Ý¿µ)</small></th><th>µî±Þ</th>
+                <th>1Â÷¸Å¼ö</th><th>2Â÷¸Å¼ö</th><th>1Â÷¸Åµµ</th><th>¼ÕÀý</th>
+                <th>ÇöÀç°¡</th>
               </tr>
             </thead>
             <tbody>
@@ -994,27 +994,27 @@
                   <td><small class="text-muted" x-text="it.code"></small></td>
                   <td><strong x-text="it.name"></strong></td>
                   <td>
-                    <span class="badge" :class="it.market==='KOSPI' ? 'bg-danger' : 'bg-primary'" x-text="it.market || it._market || 'â€”'"></span>
+                    <span class="badge" :class="it.market==='KOSPI' ? 'bg-danger' : 'bg-primary'" x-text="it.market || it._market || '?'"></span>
                   </td>
-                  <td><small x-text="it.sector || 'â€”'"></small></td>
+                  <td><small x-text="it.sector || '?'"></small></td>
                   <td class="fw-bold" x-text="(it.total_score || 0).toFixed(1)"></td>
-                  <td class="fw-bold text-primary" x-text="(matrixAdjusted(it.total_score) ?? 0).toFixed(1)" :title="'ë§¤íŠ¸ë¦­ìŠ¤ ' + (it.total_score || 0).toFixed(1) + ' Ã— 0.8 + ì‹œìž¥ ' + (marketRegime?.score || 0).toFixed(1) + ' Ã— 0.2'"></td>
+                  <td class="fw-bold text-primary" x-text="(matrixAdjusted(it.total_score) ?? 0).toFixed(1)" :title="'¸ÅÆ®¸¯½º ' + (it.total_score || 0).toFixed(1) + ' ¡¿ 0.8 + ½ÃÀå ' + (marketRegime?.score || 0).toFixed(1) + ' ¡¿ 0.2'"></td>
                   <td>
                     <span class="badge" :class="matrixGrade(matrixAdjusted(it.total_score) || 0).color" x-text="matrixGrade(matrixAdjusted(it.total_score) || 0).grade + ' ' + matrixGrade(matrixAdjusted(it.total_score) || 0).emoji"></span>
                   </td>
                   <td>
-                    <span :class="it.buy1Active ? 'text-success fw-bold' : 'text-muted'" x-text="it.buy1Active ? 'ðŸŸ¢ ' + (it.buy1Score || 0) : 'âšª ' + (it.buy1Score || 0)"></span>
+                    <span :class="it.buy1Active ? 'text-success fw-bold' : 'text-muted'" x-text="it.buy1Active ? '?? ' + (it.buy1Score || 0) : '? ' + (it.buy1Score || 0)"></span>
                   </td>
                   <td>
-                    <span :class="it.buy2Active ? 'text-success' : 'text-muted'" x-text="it.buy2Active ? 'ðŸŸ¢ ' + (it.buy2Score || 0) : 'âšª ' + (it.buy2Score || 0)"></span>
+                    <span :class="it.buy2Active ? 'text-success' : 'text-muted'" x-text="it.buy2Active ? '?? ' + (it.buy2Score || 0) : '? ' + (it.buy2Score || 0)"></span>
                   </td>
-                  <td class="text-muted" x-text="it.sell1Price ? it.sell1Price.toLocaleString() + 'ì›' : 'â€”'"></td>
-                  <td class="text-danger" x-text="it.stopLoss ? it.stopLoss.toLocaleString() + 'ì›' : 'â€”'"></td>
-                  <td class="text-end" x-text="it.currentPrice ? it.currentPrice.toLocaleString() + 'ì›' : 'â€”'"></td>
+                  <td class="text-muted" x-text="it.sell1Price ? it.sell1Price.toLocaleString() + '¿ø' : '?'"></td>
+                  <td class="text-danger" x-text="it.stopLoss ? it.stopLoss.toLocaleString() + '¿ø' : '?'"></td>
+                  <td class="text-end" x-text="it.currentPrice ? it.currentPrice.toLocaleString() + '¿ø' : '?'"></td>
                 </tr>
               </template>
               <tr x-show="!matrixVerifyKospi && !matrixVerifyKosdaq">
-                <td colspan="13" class="text-center text-muted py-3">ë°ì´í„° ë¡œë”© ì¤‘...</td>
+                <td colspan="13" class="text-center text-muted py-3">µ¥ÀÌÅÍ ·Îµù Áß...</td>
               </tr>
             </tbody>
           </table>
@@ -1023,20 +1023,20 @@
     </div>
   </div>
 
-  <!-- ===== ë¡œê·¸ ===== -->
+  <!-- ===== ·Î±× ===== -->
   <div x-show="tab==='log'">
     <div class="card">
       <div class="card-body">
-        <h6>ìµœê·¼ ê°±ì‹  ì´ë ¥</h6>
+        <h6>ÃÖ±Ù °»½Å ÀÌ·Â</h6>
         <table class="table table-sm">
-          <thead><tr><th>ì‹œê°</th><th>ìƒíƒœ</th><th>ë©”ì‹œì§€</th><th>ì†Œìš”</th></tr></thead>
+          <thead><tr><th>½Ã°¢</th><th>»óÅÂ</th><th>¸Þ½ÃÁö</th><th>¼Ò¿ä</th></tr></thead>
           <tbody>
             <template x-for="l in logs" :key="l.id">
               <tr>
                 <td x-text="l.run_at"></td>
                 <td><span class="badge" :class="l.status==='ok' ? 'bg-success' : (l.status==='error' ? 'bg-danger' : 'bg-secondary')" x-text="l.status"></span></td>
                 <td x-text="l.message"></td>
-                <td x-text="l.duration_ms ? (l.duration_ms/1000).toFixed(1) + 's' : 'â€”'"></td>
+                <td x-text="l.duration_ms ? (l.duration_ms/1000).toFixed(1) + 's' : '?'"></td>
               </tr>
             </template>
           </tbody>
@@ -1045,30 +1045,30 @@
     </div>
   </div>
 
-  <!-- ===== ë„ì›€ë§ ëª¨ë‹¬ ===== -->
+  <!-- ===== µµ¿ò¸» ¸ð´Þ ===== -->
   <div class="modal fade" id="helpModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">âŒ¨ï¸ í€€íŠ¸ ë¶„ì„ íŽ˜ì´ì§€ ê°€ì´ë“œ</h5>
+          <h5 class="modal-title">?? ÄöÆ® ºÐ¼® ÆäÀÌÁö °¡ÀÌµå</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          <h6>ë¶„ì„ íŽ˜ì´ì§€ ë‹¨ì¶•í‚¤</h6>
+          <h6>ºÐ¼® ÆäÀÌÁö ´ÜÃàÅ°</h6>
           <table class="table shortcuts-table">
-            <thead><tr><th>í‚¤</th><th>ë™ìž‘</th></tr></thead>
+            <thead><tr><th>Å°</th><th>µ¿ÀÛ</th></tr></thead>
             <tbody>
-              <tr><td><kbd>B</kbd></td><td>âª ë°±í…ŒìŠ¤íŠ¸ íƒ­ìœ¼ë¡œ ì´ë™</td></tr>
-              <tr><td><kbd>P</kbd></td><td>ðŸ’¼ 10ì¢…ëª© ë¶„ì‚° í¬íŠ¸í´ë¦¬ì˜¤ íƒ­ìœ¼ë¡œ ì´ë™</td></tr>
-              <tr><td><kbd>A</kbd></td><td>ðŸ” ë¶„ì„ ì§„ë‹¨ íƒ­ìœ¼ë¡œ ì´ë™</td></tr>
-              <tr><td>â† (ë¸Œë¼ìš°ì € ë’¤ë¡œ)</td><td>ë©”ì¸ íŽ˜ì´ì§€ë¡œ ëŒì•„ê°€ê¸°</td></tr>
+              <tr><td><kbd>B</kbd></td><td>? ¹éÅ×½ºÆ® ÅÇÀ¸·Î ÀÌµ¿</td></tr>
+              <tr><td><kbd>P</kbd></td><td>?? 10Á¾¸ñ ºÐ»ê Æ÷Æ®Æú¸®¿À ÅÇÀ¸·Î ÀÌµ¿</td></tr>
+              <tr><td><kbd>A</kbd></td><td>?? ºÐ¼® Áø´Ü ÅÇÀ¸·Î ÀÌµ¿</td></tr>
+              <tr><td>¡ç (ºê¶ó¿ìÀú µÚ·Î)</td><td>¸ÞÀÎ ÆäÀÌÁö·Î µ¹¾Æ°¡±â</td></tr>
             </tbody>
           </table>
           <div class="alert alert-secondary small mt-3">
-            <strong>ðŸ’¡ ë¶„ì„ íŽ˜ì´ì§€ íŒ</strong><br>
-            â€¢ ê° íƒ­ í´ë¦­ ì‹œ í•´ë‹¹ ë°ì´í„° lazy fetch (Chart.js 1íšŒë§Œ ë¡œë“œ)<br>
-            â€¢ 1.2ë…„ì¹˜ (14ê°œì›”) ë°±í…ŒìŠ¤íŠ¸ ë°ì´í„° ê¸°ë°˜ â€” KIS API 8ë…„ì¹˜ ë°›ìœ¼ë©´ Â±20% ì´ë‚´ë¡œ ì •ë°€<br>
-            â€¢ ë©”ì¸ íŽ˜ì´ì§€ (TOP 20)ëŠ” <a href="/index.html">ì—¬ê¸°</a>
+            <strong>?? ºÐ¼® ÆäÀÌÁö ÆÁ</strong><br>
+            ? °¢ ÅÇ Å¬¸¯ ½Ã ÇØ´ç µ¥ÀÌÅÍ lazy fetch (Chart.js 1È¸¸¸ ·Îµå)<br>
+            ? 1.2³âÄ¡ (14°³¿ù) ¹éÅ×½ºÆ® µ¥ÀÌÅÍ ±â¹Ý ? KIS API 8³âÄ¡ ¹ÞÀ¸¸é ¡¾20% ÀÌ³»·Î Á¤¹Ð<br>
+            ? ¸ÞÀÎ ÆäÀÌÁö (TOP 20)´Â <a href="/index">¿©±â</a>
           </div>
         </div>
       </div>
@@ -1079,7 +1079,7 @@
 
 <script src="/js/app.js"></script>
 <script>
-  // PWA: Service Worker ë“±ë¡ (ì˜¤í”„ë¼ì¸ + ìžë™ ìºì‹œ)
+  // PWA: Service Worker µî·Ï (¿ÀÇÁ¶óÀÎ + ÀÚµ¿ Ä³½Ã)
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js')
@@ -1090,7 +1090,7 @@
             if (!newSw) return;
             newSw.addEventListener('statechange', () => {
               if (newSw.state === 'activated') {
-                console.log('[PWA] ìƒˆ ë²„ì „ í™œì„±í™”, íŽ˜ì´ì§€ reload...');
+                console.log('[PWA] »õ ¹öÀü È°¼ºÈ­, ÆäÀÌÁö reload...');
                 if (!sessionStorage.getItem('sw_reloaded')) {
                   sessionStorage.setItem('sw_reloaded', '1');
                   location.reload();
@@ -1099,7 +1099,7 @@
             });
           });
         })
-        .catch((err) => console.warn('[PWA] SW ë“±ë¡ ì‹¤íŒ¨:', err));
+        .catch((err) => console.warn('[PWA] SW µî·Ï ½ÇÆÐ:', err));
     });
   }
 </script>

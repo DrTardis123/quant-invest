@@ -8,6 +8,12 @@
   },
   "cleanUrls": true,
   "trailingSlash": false,
+  "redirects": [
+    { "source": "/explore.html",   "destination": "/explore",   "statusCode": 301 },
+    { "source": "/analysis.html",  "destination": "/analysis",  "statusCode": 301 },
+    { "source": "/index.html",     "destination": "/",          "statusCode": 301 },
+    { "source": "/(.*)\\.html",    "destination": "/$1",        "statusCode": 301 }
+  ],
   "rewrites": [
     { "source": "/api/top",         "destination": "/data/top.json" },
     { "source": "/api/scores",      "destination": "/data/all.json" },
