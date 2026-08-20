@@ -1,23 +1,23 @@
 'use strict';
 
-// ?�???�자 ?�?�보??
-// - ?�스??Vercel): /api/* ??/data/*.json 리라?�트 (?�적 ?�이??
-// - 로컬: /api/* ??Express + DuckDB
-// ?�쪽 모두 apiGet() ?�로 ?�규??
+// 퀀트 투자 대시보드
+// - 호스팅(Vercel): /api/* → /data/*.json 리라이트 (정적 데이터)
+// - 로컬: /api/* → Express + DuckDB
+// 양쪽 모두 apiGet() 으로 정규화.
 
 function app() {
   return {
-    // ----- ?�태 -----
+    // ----- 상태 -----
     tab: 'top',
-    // ?�이지 감�?: 'main' | 'explore' | 'analysis'
+    // 페이지 감지: 'main' | 'explore' | 'analysis'
     page: (() => {
       const p = (typeof location !== 'undefined' ? location.pathname : '/');
-      if (p.endsWith('/explore')) return 'explore';
-      if (p.endsWith('/analysis')) return 'analysis';
+      if (p.endsWith('/explore.html')) return 'explore';
+      if (p.endsWith('/analysis.html')) return 'analysis';
       return 'main';
     })(),
     hosted: false,
-    marketFilter: 'KOSPI',  // 기본 KOSPI�?(KOSDAQ?� 별도 ?�이지)
+    marketFilter: 'KOSPI',  // 기본 KOSPI만 (KOSDAQ은 별도 페이지)
     darkMode: false,
     state: {
       dataSource: '',
@@ -46,59 +46,59 @@ function app() {
     sectorData: { markets: [], sectors: [] },
     correlation: { keys: [], matrix: {} },
 
-    // ?�규 기능 ?�태
+    // 신규 기능 상태
     watchlist: [],
     compareSet: [],
     gainers: [],
     losers: [],
-    moversAsOf: '',     // movers.json 갱신 ?�각
-    moversPeriod: '',   // ?�이??기�????�명
+    moversAsOf: '',     // movers.json 갱신 시각
+    moversPeriod: '',   // 데이터 기준일 설명
     newHighs: [],
     newLows: [],
     strongBuy: [],
     strongSell: [],
     portfolio: null,
     portfolioLoading: false,
-    signalPerformance: null,  // KOSPI ?�호 추적 (백필 결과)
-    signalPerformanceKosdaq: null,  // KOSDAQ ?�호 추적 (별도 JSON)
-    matrixVerifyKospi: null,  // KOSPI 매트�?�� 검�?Top 200
-    matrixVerifyKosdaq: null,  // KOSDAQ 매트�?�� 검�?Top 200
-    matrixMarketFilter: 'compare',  // 매트�?�� 분석 ???�터: 'KOSPI' | 'KOSDAQ' | 'compare'
-    marketRegime: null,  // ?�장 ?��? ?�수 (1-100)
+    signalPerformance: null,  // KOSPI 신호 추적 (백필 결과)
+    signalPerformanceKosdaq: null,  // KOSDAQ 신호 추적 (별도 JSON)
+    matrixVerifyKospi: null,  // KOSPI 매트릭스 검증 Top 200
+    matrixVerifyKosdaq: null,  // KOSDAQ 매트릭스 검증 Top 200
+    matrixMarketFilter: 'compare',  // 매트릭스 분석 탭 필터: 'KOSPI' | 'KOSDAQ' | 'compare'
+    marketRegime: null,  // 시장 평가 점수 (1-100)
     marketRegimeLoading: false,
-    gradePerformance: null,  // ?�급�??�호 ?�익�?(KOSPI/KOSDAQ)
+    gradePerformance: null,  // 등급별 신호 수익률 (KOSPI/KOSDAQ)
     gradePerformanceLoading: false,
-    marketRegimeHistory: null,  // ?�장 ?��? ?�수 ?�계??(60??
+    marketRegimeHistory: null,  // 시장 평가 점수 시계열 (60일)
     analytics: null,
     analyticsLoading: false,
     _analyticsCharts: {},
     briefing: '',
-    realtime: null,  // ?�시�??�세 (TOP 20)
+    realtime: null,  // 실시간 시세 (TOP 20)
     realtimeLastFetch: 0,
     _realtimeTimer: null,
-    notifications: [],  // ?�앱 ?�림
-    notifOpen: false,  // ?�림 ?�널 ?�림/?�힘
-    notifUnreadCount: 0,  // ?�읽??카운??
-    distGradeFilter: null,  // 분포 ?�급 ?�터 (null=?�체, 'A+', 'A', ...)
-    distSectorFilter: null,  // 분포 ?�터 ?�터
+    notifications: [],  // 인앱 알림
+    notifOpen: false,  // 알림 패널 열림/닫힘
+    notifUnreadCount: 0,  // 안읽음 카운트
+    distGradeFilter: null,  // 분포 등급 필터 (null=전체, 'A+', 'A', ...)
+    distSectorFilter: null,  // 분포 섹터 필터
 
-    // ?�티마이?� + 백테?�트
-    optimizer: { ok: false, error: '로딩 �?..' },
-    backtest: { ok: false, error: '로딩 �?..' },
-    dynamicPortfolio: null,  // ?�적 리밸?�싱 (13개월 top 10 byStock ?�력)
+    // 옵티마이저 + 백테스트
+    optimizer: { ok: false, error: '로딩 중...' },
+    backtest: { ok: false, error: '로딩 중...' },
+    dynamicPortfolio: null,  // 동적 리밸런싱 (13개월 top 10 byStock 이력)
 
     _charts: {},
     _modal: null,
     _refreshTimer: null,
     _tabDraws: { chart: false, backtest: false, corr: false, heatmap: false, sector: false, movers: false, highlow: false, supply: false, watchlist: false },
 
-    // ----- 초기??-----
+    // ----- 초기화 -----
     async init() {
       this._modal = new bootstrap.Modal(document.getElementById('stockModal'));
 
-      // 모달 ?�전???�린 ??차트 그리�?(transition ?��?
+      // 모달 완전히 열린 후 차트 그리기 (transition 대기)
       document.getElementById('stockModal').addEventListener('shown.bs.modal', () => {
-        // Chart.js lazy 로드 (모달??chart-heavy???�이지 진입 경로)
+        // Chart.js lazy 로드 (모달이 chart-heavy한 페이지 진입 경로)
         if (window.ChartLoader && !window.ChartLoader.isLoaded()) {
           window.ChartLoader.ready().then(() => {
             this.$nextTick(() => this._drawStockCharts());
@@ -107,24 +107,24 @@ function app() {
           this.$nextTick(() => this._drawStockCharts());
         }
       });
-      // 모달 ?�힐 ??모든 chart destroy (메모�?leak 방�?)
+      // 모달 닫힐 때 모든 chart destroy (메모리 leak 방지)
       document.getElementById('stockModal').addEventListener('hidden.bs.modal', () => {
         this._destroyModalCharts();
-        this.stockDetail = null;  // ???�이???�제
+        this.stockDetail = null;  // 큰 데이터 해제
       });
 
       this.strategies = Object.values(window.QUANT_STRATEGIES || {});
-      // ?�동 최적?�된 best 가중치�??�선 채택 (?�용???�동 변�??�을 ??
+      // 자동 최적화된 best 가중치를 우선 채택 (사용자 수동 변경 없을 때)
       try {
         const opt = await window.apiGet('/api/optimizer');
         if (opt && opt.ok !== false && opt.best && opt.best.weights) {
-          // auto-best ?�략??strategies ?�에 추�?
+          // auto-best 전략을 strategies 앞에 추가
           this.strategies = [
             {
               key: 'auto-best',
-              name: '?�� ?�동 최적 (Sharpe ' + (opt.best.sharpe || 0).toFixed(2) + ')',
-              emoji: '?��',
-              description: '13개월 historical ?��? ?�동 최적. Total ' + ((opt.best.total || 0) * 100).toFixed(0) + '% / MDD ' + ((opt.best.mdd || 0) * 100).toFixed(1) + '%',
+              name: '🎯 자동 최적 (Sharpe ' + (opt.best.sharpe || 0).toFixed(2) + ')',
+              emoji: '🎯',
+              description: '13개월 historical 시뮬 자동 최적. Total ' + ((opt.best.total || 0) * 100).toFixed(0) + '% / MDD ' + ((opt.best.mdd || 0) * 100).toFixed(1) + '%',
               weights: opt.best.weights,
             },
             ...this.strategies,
@@ -138,15 +138,15 @@ function app() {
         this.currentWeights = window.QUANT_STRATEGIES[this.strategyKey].weights;
       }
 
-      // localStorage?�서 관?�종�?+ ?�크모드 + 가중치 복원
-      // localStorage ?�전 ?�기 (?�상 ??fallback)
-      try { this.watchlist = JSON.parse(localStorage.getItem('quant_watchlist') || '[]') || []; } catch (e) { console.warn('[init] watchlist ?�상, 초기??); this.watchlist = []; }
+      // localStorage에서 관심종목 + 다크모드 + 가중치 복원
+      // localStorage 안전 읽기 (손상 시 fallback)
+      try { this.watchlist = JSON.parse(localStorage.getItem('quant_watchlist') || '[]') || []; } catch (e) { console.warn('[init] watchlist 손상, 초기화'); this.watchlist = []; }
       try { const savedWeights = JSON.parse(localStorage.getItem('quant_weights') || 'null'); if (savedWeights) this.currentWeights = savedWeights; } catch (e) { /* ignore */ }
       if (savedWeights) this.currentWeights = savedWeights;
       const savedDark = (() => { try { return localStorage.getItem('quant_darkmode'); } catch (e) { return null; } })();
       if (savedDark === '1') { this.darkMode = true; document.body.classList.add('dark-mode'); }
 
-      // ????���??�환?�면 ?�당 차트 ?�시 그리�?
+      // 새 탭으로 전환되면 해당 차트 다시 그리기
       this.$watch('detailTab', (t) => {
         if (!t) return;
         this.$nextTick(() => {
@@ -159,26 +159,26 @@ function app() {
         });
       });
 
-      // URL?�서 ?�라미터 ?�기
+      // URL에서 파라미터 읽기
       const urlParams = new URLSearchParams(window.location.search);
       const m = urlParams.get('market');
       if (m === 'KOSPI' || m === 'KOSDAQ') this.marketFilter = m;
       const code = urlParams.get('code');
       if (code) setTimeout(() => this.openStock(code), 1500);
 
-      // Chart.js ?�전 ?�인 (CDN 로드 ???�으�?fallback)
+      // Chart.js 사전 확인 (CDN 로드 안 됐으면 fallback)
       if (typeof window.Chart === 'undefined') {
-        console.warn('[init] Chart.js 미로????차트 기능 비활?�화');
+        console.warn('[init] Chart.js 미로드 — 차트 기능 비활성화');
       } else {
         console.log('[init] Chart.js 로드 OK, v' + (window.Chart.version || 'unknown'));
       }
 
-      // 분석 ?�이??미리 fetch (???�작 ??캐시)
+      // 분석 데이터 미리 fetch (앱 시작 시 캐시)
       setTimeout(() => { this.loadAnalytics().catch((e) => console.warn('[init] analytics prefetch failed:', e)); }, 2000);
-      // ?�적 ?�트?�리??미리 fetch (stock detail?�서 ?�용)
+      // 동적 포트폴리오 미리 fetch (stock detail에서 사용)
       setTimeout(() => { this.loadDynamicPortfolio().catch((e) => console.warn('[init] dynamic-portfolio prefetch failed:', e)); }, 2500);
 
-      // tab 변�???차트 ?�시 그리�?(display:none 문제 ?�결)
+      // tab 변경 시 차트 다시 그리기 (display:none 문제 해결)
       this.$watch('tab', (t) => {
         if (!t) return;
         this.$nextTick(() => {
@@ -192,35 +192,35 @@ function app() {
           else if (t === 'highlow') { this.loadHighLow(); }
           else if (t === 'supply') { this.loadSupplySignals(); }
           else if (t === 'portfolio') { this.loadPortfolio(); }
-          // analytics??setTab()?�서�?처리 (중복 방�?)
+          // analytics는 setTab()에서만 처리 (중복 방지)
           else if (t === 'watchlist') { this._tabDraws.watchlist = true; }
         });
       });
 
-      // ?�크모드 ?��? ??class ?�용
+      // 다크모드 토글 시 class 적용
       this.$watch('darkMode', (v) => {
         document.body.classList.toggle('dark-mode', v);
-        try { localStorage.setItem('quant_darkmode', v ? '1' : '0'); } catch (e) { /* quota exceeded ??*/ }
+        try { localStorage.setItem('quant_darkmode', v ? '1' : '0'); } catch (e) { /* quota exceeded 등 */ }
       });
 
-      // 가중치 변�????�동 ?�??
+      // 가중치 변경 시 자동 저장
       this.$watch('currentWeights', (w) => {
         try { localStorage.setItem('quant_weights', JSON.stringify(w)); } catch (e) { /* ignore */ }
         this._recomputeAndSet();
       });
 
-      // ?�보???�축??
+      // 키보드 단축키
       document.addEventListener('keydown', (e) => {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
         if (e.ctrlKey || e.altKey || e.metaKey) return;
-        // setTab()???�이지 navigate ?�동 처리 ???�축?�는 setTab�??�출
+        // setTab()이 페이지 navigate 자동 처리 — 단축키는 setTab만 호출
         if (e.key === 't' || e.key === 'T') { e.preventDefault(); this.setTab('top'); }
         else if (e.key === 'h' || e.key === 'H') { e.preventDefault(); this.setTab('highlow'); }
         else if (e.key === 'b' || e.key === 'B') { e.preventDefault(); this.setTab('backtest'); }
         else if (e.key === 'm' || e.key === 'M') { e.preventDefault(); this.setTab('movers'); }
         else if (e.key === 'w' || e.key === 'W') { e.preventDefault(); this.setTab('watchlist'); }
-        else if (e.key === 'a' || e.key === 'A') { e.preventDefault(); this.setTab('analytics'); }  // 메인/분석 ?�쪽?�서 ?�작
-        else if (e.key === 'p' || e.key === 'P') { e.preventDefault(); this.setTab('portfolio'); }  // 메인/분석 ?�쪽?�서 ?�작
+        else if (e.key === 'a' || e.key === 'A') { e.preventDefault(); this.setTab('analytics'); }  // 메인/분석 양쪽에서 동작
+        else if (e.key === 'p' || e.key === 'P') { e.preventDefault(); this.setTab('portfolio'); }  // 메인/분석 양쪽에서 동작
         else if (e.key === '?') { e.preventDefault(); this.showShortcuts(); }
         else if (e.key === 'c' || e.key === 'C') { e.preventDefault(); this.openCompare(); }
         else if (e.key === 'n' || e.key === 'N') {
@@ -228,7 +228,7 @@ function app() {
           const code = this.stockDetail?.stock?.code || this.selectedCode;
           if (code) this.openNaver(code);
         } else if (e.key === 'd' || e.key === 'D') {
-          // ?�음증권: ?�재 보고 ?�는 종목 ?�는 TOP 1
+          // 다음증권: 현재 보고 있는 종목 또는 TOP 1
           e.preventDefault();
           const code = this.stockDetail?.stock?.code || this.selectedCode || this.top?.[0]?.code;
           if (code) this.openDaum(code);
@@ -241,12 +241,12 @@ function app() {
         }
       });
 
-      // URL ?tab= 쿼리�??�이지 진입 ???�당 ???�성??
+      // URL ?tab= 쿼리로 페이지 진입 시 해당 탭 활성화
       const params = new URLSearchParams(location.search);
       const initialTab = params.get('tab');
       if (initialTab) this.tab = initialTab;
 
-      // ?�이지�?초기 fetch ??무거???�이?�는 lazy, ?�이지??가볍게
+      // 페이지별 초기 fetch — 무거운 데이터는 lazy, 페이지는 가볍게
       const fetches = [
         this.loadHealth(),
         this.loadMeta(),
@@ -254,113 +254,113 @@ function app() {
       ];
       if (this.page === 'main') {
         fetches.push(this.loadTop());         // 메인: TOP 20 (6KB)
-        fetches.push(this.loadRealtime());    // 메인: ?�시�?가�?
-        fetches.push(this.loadMarketRegime()); // ?�장 ?��? ?�수
+        fetches.push(this.loadRealtime());    // 메인: 실시간 가격
+        fetches.push(this.loadMarketRegime()); // 시장 평가 점수
       } else if (this.page === 'analysis') {
         fetches.push(this.loadLogs());
         fetches.push(this.loadOptimizer());
         fetches.push(this.loadBacktest());
-        fetches.push(this.loadMarketRegime());  // ?�장 ?��? ?�수
-        fetches.push(this.loadMatrixVerify());  // 매트�?�� 검�?KOSPI/KOSDAQ
+        fetches.push(this.loadMarketRegime());  // 시장 평가 점수
+        fetches.push(this.loadMatrixVerify());  // 매트릭스 검증 KOSPI/KOSDAQ
       }
-      // explore: �???�� lazy fetch (?�용???�릭 ??
+      // explore: 첫 탭만 lazy fetch (사용자 클릭 시)
       fetches.push(this.loadNotifications());
       await Promise.all(fetches);
 
       this._recomputeAndSet();
-      // Chart.js 백그?�운???�리로드 (?�용?��? 차트 ???�릭 ??즉시 ?�용 가??
+      // Chart.js 백그라운드 프리로드 (사용자가 차트 탭 클릭 시 즉시 사용 가능)
       if (window.ChartLoader && !window.ChartLoader.isLoaded()) {
         window.ChartLoader.preload();
       }
-      // 메인 ?�이지?�서�?sparkline 그리�?(?�색/분석?� ?�른 차트)
+      // 메인 페이지에서만 sparkline 그리기 (탐색/분석은 다른 차트)
       if (this.page === 'main') {
         this.$nextTick(() => this._drawAllSparklines());
         this._generateBriefing();
         this._startRealtimePolling();
       }
-      // ?�동 ?�로고침 OFF (?�동 ?�로고침 버튼?�로�? ??CPU/메모�?보호
+      // 자동 새로고침 OFF (수동 새로고침 버튼으로만) — CPU/메모리 보호
     },
 
-    // ===== factor ?�계 =====
+    // ===== factor 통계 =====
     factorStatsTotal() {
       const s = this.meta?.factor_stats;
-      if (!s) return '??;
+      if (!s) return '—';
       return (s.halt || 0) + (s.zeroVolume || 0) + (s.caution || 0) + (s.veryLowLiq || 0) + (s.lowLiquidity || 0) + (s.cautionLiq || 0);
     },
     factorStatsBreakdown() {
       const s = this.meta?.factor_stats;
       if (!s) return '';
       const parts = [];
-      if (s.halt) parts.push(`?��${s.halt}`);
+      if (s.halt) parts.push(`🚫${s.halt}`);
       if (s.zeroVolume) parts.push(`0vol ${s.zeroVolume}`);
-      if (s.caution) parts.push(`?�️${s.caution}`);
-      if (s.veryLowLiq) parts.push(`?��?��${s.veryLowLiq}(<1??`);
-      if (s.lowLiquidity) parts.push(`?��${s.lowLiquidity}(1~5??`);
-      if (s.cautionLiq) parts.push(`?��${s.cautionLiq}(5~10??`);
-      return parts.length > 0 ? parts.join(' / ') : '?�상';
+      if (s.caution) parts.push(`⚠️${s.caution}`);
+      if (s.veryLowLiq) parts.push(`💧💧${s.veryLowLiq}(<1억)`);
+      if (s.lowLiquidity) parts.push(`💧${s.lowLiquidity}(1~5억)`);
+      if (s.cautionLiq) parts.push(`💧${s.cautionLiq}(5~10억)`);
+      return parts.length > 0 ? parts.join(' / ') : '정상';
     },
 
     _destroyModalCharts() {
-      // 모달 ?�의 모든 chart ?�스?�스 destroy (Chart.js 메모�?leak 방�?)
+      // 모달 안의 모든 chart 인스턴스 destroy (Chart.js 메모리 leak 방지)
       const keys = ['price', 'vol', 'radar', 'supply', 'holding', 'ma', 'rsi', 'macd', 'bb', 'weight', 'contrib', 'imp'];
       for (const k of keys) {
         if (this._charts[k]) { try { this._charts[k].destroy(); } catch (_) {} this._charts[k] = null; }
       }
     },
 
-    // 비교 모달 ?�기
+    // 비교 모달 열기
     openCompareModal() {
-      if (this.compareSet.length < 2) { alert('2�??�상 ?�택?�주?�요'); return; }
+      if (this.compareSet.length < 2) { alert('2개 이상 선택해주세요'); return; }
       const el = document.getElementById('compareModal');
       if (!this._compareModal) this._compareModal = new bootstrap.Modal(el);
       this._compareModal.show();
     },
 
     async manualRefresh() {
-      // ?�동 ?�로고침 ???�용?��? 버튼 ?��????�만 ?�출
+      // 수동 새로고침 — 사용자가 버튼 눌렀을 때만 호출
       const btn = document.querySelector('[data-action="refresh"]');
-      if (btn) { btn.disabled = true; btn.textContent = '갱신 �?..'; }
+      if (btn) { btn.disabled = true; btn.textContent = '갱신 중...'; }
       try { await this._silentRefresh(); }
       finally {
-        if (btn) { btn.disabled = false; btn.textContent = '?�� ?�로고침'; }
+        if (btn) { btn.disabled = false; btn.textContent = '🔄 새로고침'; }
       }
     },
 
     async setTab(t) {
-      // ?�재 ?�이지???�는 ??? ?�당 ?�이지�?navigate (?tab= 쿼리�?진입)
+      // 현재 페이지에 없는 탭은 해당 페이지로 navigate (?tab= 쿼리로 진입)
       const mainTabs = ['top', 'watchlist'];
       const exploreTabs = ['movers', 'highlow', 'heatmap', 'all', 'sector', 'supply'];
       const analysisTabs = ['distribution', 'corr', 'optimizer', 'backtest', 'analytics', 'logs'];
-      // shared: ?�쪽 ?�이지??모두 ?�는 ??(navigate 불필??
+      // shared: 양쪽 페이지에 모두 있는 탭 (navigate 불필요)
       const sharedTabs = ['portfolio'];
       if (this.page === 'main' && !sharedTabs.includes(t) && (exploreTabs.includes(t) || analysisTabs.includes(t))) {
-        const target = exploreTabs.includes(t) ? '' : '';
+        const target = exploreTabs.includes(t) ? 'explore.html' : 'analysis.html';
         location.href = `/${target}?tab=${t}`;
         return;
       }
       if (this.page === 'explore' && !sharedTabs.includes(t) && (mainTabs.includes(t) || analysisTabs.includes(t))) {
-        const target = mainTabs.includes(t) ? '/' : '';
+        const target = mainTabs.includes(t) ? '/' : 'analysis.html';
         location.href = `${target}?tab=${t}`;
         return;
       }
       if (this.page === 'analysis' && !sharedTabs.includes(t) && (mainTabs.includes(t) || exploreTabs.includes(t))) {
-        const target = mainTabs.includes(t) ? '/' : '';
+        const target = mainTabs.includes(t) ? '/' : 'explore.html';
         location.href = `${target}?tab=${t}`;
         return;
       }
       const oldTab = this.tab;
       this.tab = t;
-      // ?�전 fetch 취소 (race condition 방�?)
+      // 이전 fetch 취소 (race condition 방지)
       if (this._currentFetchCtl) { try { this._currentFetchCtl.abort(); } catch (e) {} }
       this._currentFetchCtl = new AbortController();
-      // ?�전 차트 destroy (메모�??�수 방�?)
+      // 이전 차트 destroy (메모리 누수 방지)
       if (oldTab && oldTab !== t) this._destroyAllCharts();
-      // Chart.js lazy 로드: 차트 그리�??�에 로드 보장 (�?1?�만 ~150ms, ?�후 캐시)
+      // Chart.js lazy 로드: 차트 그리기 전에 로드 보장 (첫 1회만 ~150ms, 이후 캐시)
       if (window.ChartLoader && !window.ChartLoader.isLoaded()) {
         try { await window.ChartLoader.ready(); } catch (e) { console.warn('[setTab] chart loader:', e); }
       }
-      // canvas ?�더�?보장???�해 $nextTick ?�??setTimeout (50ms ??
-      // Alpine.js x-show + $nextTick race condition ?�피
+      // canvas 렌더링 보장을 위해 $nextTick 대신 setTimeout (50ms 후)
+      // Alpine.js x-show + $nextTick race condition 회피
       setTimeout(() => {
         try {
           if (t === 'heatmap') { this.loadHeatmap(); setTimeout(() => this._drawHeatmap(), 100); }
@@ -388,7 +388,7 @@ function app() {
       }, 50);
     },
 
-    // === 모든 차트 destroy (메모�??�수 방�?) ===
+    // === 모든 차트 destroy (메모리 누수 방지) ===
     _destroyAllCharts() {
       for (const k of Object.keys(this._charts || {})) {
         try { if (this._charts[k] && this._charts[k].destroy) this._charts[k].destroy(); } catch (e) { /* ignore */ }
@@ -400,7 +400,7 @@ function app() {
       }
     },
 
-    // === ?�전??차트 그리�?(canvas width 0 / Chart.js ?�러 방�?) ===
+    // === 안전한 차트 그리기 (canvas width 0 / Chart.js 에러 방지) ===
     _safeDraw(canvasId, drawFn) {
       const c = document.getElementById(canvasId);
       if (!c) { console.warn(`[${canvasId}] not found`); return false; }
@@ -409,7 +409,7 @@ function app() {
       catch (e) { console.error(`[${canvasId}] error:`, e); return false; }
     },
 
-    // === ?�전??fetch (10�?timeout) ===
+    // === 안전한 fetch (10초 timeout) ===
     async _safeFetch(url, ms = 10000) {
       const ctl = new AbortController();
       const t = setTimeout(() => ctl.abort(), ms);
@@ -425,19 +425,19 @@ function app() {
     },
 
     _drawCorrelation() {
-      // ?��? ?�렬?� HTML�?직접 그려???�어 별도 ?�업 ?�음
+      // 상관 행렬은 HTML로 직접 그려져 있어 별도 작업 없음
     },
     _drawOptimizer() {
       try {
         const c = document.getElementById('chartOptimizerCompare');
         if (!c || c.clientWidth === 0) return;
         const data1 = this.optimizer?.best || { sharpe: 0, total: 0, mdd: 0 };
-        // 2�??��? 결과: fetch
+        // 2차 회귀 결과: fetch
         Promise.all([
           window.apiGet('/api/regression-2').catch(() => null),
         ]).then(([r2]) => {
           const data2 = r2?.finalBest || r2?.best || { sharpe: 0, total: 0, mdd: 0 };
-          const labels = ['1�??��? (?�샤?�)', '2�??��? (Ridge+5fold)'];
+          const labels = ['1차 회귀 (인샤풀)', '2차 회귀 (Ridge+5fold)'];
           const sharpes = [data1.sharpe || 0, data2.sharpe || 0];
           const totals = [(data1.total || 0) * 100, (data2.total || 0) * 100];
           const mdds = [(data1.mdd || 0) * 100, (data2.mdd || 0) * 100];
@@ -449,7 +449,7 @@ function app() {
               datasets: [
                 { label: 'Sharpe × 100', data: sharpes.map((v) => v * 100), backgroundColor: 'rgba(75, 192, 75, 0.7)' },
                 { label: 'Total (%)', data: totals, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
-                { label: 'MDD (% ?�수)', data: mdds, backgroundColor: 'rgba(255, 99, 132, 0.7)' },
+                { label: 'MDD (% 음수)', data: mdds, backgroundColor: 'rgba(255, 99, 132, 0.7)' },
               ],
             },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { ticks: { callback: (v) => v + (Math.abs(v) >= 10 ? '%' : '') } } } },
@@ -472,12 +472,12 @@ function app() {
 
     async _silentRefresh() {
       try {
-        // ?�이지별로 ?�요??fetch�?
+        // 페이지별로 필요한 fetch만
         const fetches = [this.loadHealth(), this.loadMeta(), this.loadIndices()];
         if (this.page === 'main') {
           fetches.push(this.loadTop(), this.loadRealtime());
         } else if (this.page === 'explore') {
-          // loadAll?� ?��? 메모리에 ?�을 가?�성 ??(???�릭 ??lazy)
+          // loadAll은 이미 메모리에 있을 가능성 큼 (탭 클릭 시 lazy)
         } else if (this.page === 'analysis') {
           fetches.push(this.loadLogs());
         }
@@ -489,7 +489,7 @@ function app() {
 
     _recomputeAndSet() {
       if (!this.all || this.all.length === 0) return;
-      // marketFilter�???�????�터 (메�??�서 ?��? ?�외?��?�??�전�?
+      // marketFilter로 한 번 더 필터 (메타에서 이미 제외했지만 안전망)
       const filtered = this.marketFilter === 'KOSPI'
         ? this.all.filter((r) => r.market === 'KOSPI' && r.total_score > 0)
         : this.all;
@@ -523,8 +523,8 @@ function app() {
     },
 
     _fmtDate(d) {
-      // DuckDB DATE: {days:N} ?�는 ISO string
-      if (!d) return '??;
+      // DuckDB DATE: {days:N} 또는 ISO string
+      if (!d) return '—';
       if (typeof d === 'string') return d.slice(0, 10);
       if (d && typeof d === 'object' && d.days !== undefined) {
         return new Date(Date.UTC(1970, 0, 1) + d.days * 86400000).toISOString().slice(0, 10);
@@ -550,7 +550,7 @@ function app() {
           as_of: r.as_of || '',
           exclude_kosdaq: r.exclude_kosdaq || false,
         };
-        // URL ?market= ?�으�?meta??exclude_kosdaq�?결정
+        // URL ?market= 없으면 meta의 exclude_kosdaq로 결정
         if (!new URLSearchParams(window.location.search).get('market')) {
           this.marketFilter = r.exclude_kosdaq ? 'KOSPI' : 'KOSPI';
         }
@@ -567,7 +567,7 @@ function app() {
 
     async loadAll() {
       try {
-        // KOSDAQ 모드: 별도 kosdaq-top.json ?�용
+        // KOSDAQ 모드: 별도 kosdaq-top.json 사용
         const endpoint = this.marketFilter === 'KOSDAQ' ? '/api/kosdaq-top' : '/api/scores?limit=2500';
         const r = await window.apiGet(endpoint);
         if (r && r.__error) return;
@@ -580,7 +580,7 @@ function app() {
     },
 
     async loadTop() {
-      // ?�위 20개만 (6KB) - 빠른 ?�작, 모바??5�???0.5�?
+      // 상위 20개만 (6KB) - 빠른 시작, 모바일 5분 → 0.5초
       try {
         const r = await window.apiGet('/api/top');
         if (r && r.__error) return;
@@ -589,7 +589,7 @@ function app() {
           ...row,
           grade: row.grade || window.QUANT_GRADE(row.total_score),
         }));
-        // topN ?�라?�스 (20)
+        // topN 슬라이스 (20)
         this.top = this.all.slice(0, this.state.topN).map((r) => ({
           ...r,
           total_score: r.recomputed_total || r.total_score,
@@ -642,7 +642,7 @@ function app() {
     async loadOptimizer() {
       try {
         const r = await window.apiGet('/api/optimizer');
-        this.optimizer = r || { ok: false, error: '?�답 ?�음' };
+        this.optimizer = r || { ok: false, error: '응답 없음' };
       } catch (e) {
         this.optimizer = { ok: false, error: e.message };
       }
@@ -651,14 +651,14 @@ function app() {
     async loadBacktest() {
       try {
         const r = await window.apiGet('/api/backtest');
-        this.backtest = r || { ok: false, error: '?�답 ?�음' };
+        this.backtest = r || { ok: false, error: '응답 없음' };
         if (r && r.ok) this.$nextTick(() => this._drawBacktestCharts());
       } catch (e) {
         this.backtest = { ok: false, error: e.message };
       }
     },
 
-    // ===== ?�시�??�세 =====
+    // ===== 실시간 시세 =====
     async loadRealtime() {
       try {
         const r = await window.apiGet('/api/realtime');
@@ -670,16 +670,16 @@ function app() {
       } catch (e) { console.warn('[realtime]', e.message); }
     },
     _startRealtimePolling() {
-      // 60초마??TOP ?�이지 ?�성 ???�링 (??마감 ???�버 ?�답 ?�을 ???�음)
+      // 60초마다 TOP 페이지 활성 시 폴링 (장 마감 시 서버 응답 없을 수 있음)
       if (this._realtimeTimer) clearInterval(this._realtimeTimer);
       this._realtimeTimer = setInterval(() => {
-        // ?�이지가 보이지 ?�으�??�링 ?�킵 (배터�??�트?�크 보호)
+        // 페이지가 보이지 않으면 폴링 스킵 (배터리/네트워크 보호)
         if (document.hidden) return;
         this.loadRealtime();
       }, 60000);
     },
     _applyRealtimeToTop() {
-      // this.top 배열??close/change/change_pct �?realtime 값으�???��?�기
+      // this.top 배열의 close/change/change_pct 를 realtime 값으로 덮어쓰기
       if (!this.realtime || !this.realtime.quotes || !this.top || this.top.length === 0) return;
       const map = new Map(this.realtime.quotes.map((q) => [q.code, q]));
       let updated = 0;
@@ -695,7 +695,7 @@ function app() {
           t.change_pct = newPct;
         }
       }
-      if (updated > 0) console.log(`[realtime] ${updated}�?종목 가�?갱신 (${this.realtime.fetchedAt})`);
+      if (updated > 0) console.log(`[realtime] ${updated}개 종목 가격 갱신 (${this.realtime.fetchedAt})`);
     },
     realtimeFor(code) {
       if (!this.realtime || !this.realtime.quotes) return null;
@@ -706,7 +706,7 @@ function app() {
       return Math.round((Date.now() - new Date(this.realtime.fetchedAt).getTime()) / 60000);
     },
     realtimeStatus() {
-      // 'live' = 5�??�내, 'stale' = 30�??�내, 'old' = �??�상
+      // 'live' = 5분 이내, 'stale' = 30분 이내, 'old' = 그 이상
       const age = this.realtimeAgeMin();
       if (age === null) return 'none';
       if (age <= 5) return 'live';
@@ -717,16 +717,16 @@ function app() {
       const s = this.realtimeStatus();
       if (s === 'live') return '#198754';   // 초록
       if (s === 'stale') return '#fd7e14';  // 주황
-      if (s === 'old') return '#6c757d';    // ?�색
-      return '#dc3545';                      // 빨강 (?�음/?�러)
+      if (s === 'old') return '#6c757d';    // 회색
+      return '#dc3545';                      // 빨강 (없음/에러)
     },
 
-    // ===== ?�앱 ?�림 =====
+    // ===== 인앱 알림 =====
     loadNotifications() {
-      // 1) localStorage?�서 기존 ?�림 로드
+      // 1) localStorage에서 기존 알림 로드
       try { this.notifications = window.NotifStore.load(); } catch (e) { this.notifications = []; }
       this._updateNotifUnread();
-      // 2) ?�재 ?�이?�로 ???�림 ?�성 + 병합
+      // 2) 현재 데이터로 새 알림 생성 + 병합
       try {
         const newOnes = window.NotifStore.generateFromData({
           portfolio: this.portfolio,
@@ -747,7 +747,7 @@ function app() {
     },
     toggleNotifPanel() {
       this.notifOpen = !this.notifOpen;
-      // ?�널 ?�면 모두 ?�음 처리
+      // 패널 열면 모두 읽음 처리
       if (this.notifOpen && this.notifUnreadCount > 0) {
         this.notifications = this.notifications.map((n) => ({ ...n, read: true }));
         try { window.NotifStore.markAllRead(); } catch (e) {}
@@ -760,7 +760,7 @@ function app() {
       this.notifUnreadCount = 0;
     },
     clearNotifs() {
-      if (!confirm('모든 ?�림????��?�시겠습?�까?')) return;
+      if (!confirm('모든 알림을 삭제하시겠습니까?')) return;
       try { window.NotifStore.clear(); } catch (e) {}
       this.notifications = [];
       this.notifUnreadCount = 0;
@@ -776,10 +776,10 @@ function app() {
       const diff = Date.now() - t;
       const min = Math.round(diff / 60000);
       if (min < 1) return '방금';
-      if (min < 60) return `${min}�???;
+      if (min < 60) return `${min}분 전`;
       const hr = Math.round(min / 60);
-      if (hr < 24) return `${hr}?�간 ??;
-      return `${Math.round(hr / 24)}????;
+      if (hr < 24) return `${hr}시간 전`;
+      return `${Math.round(hr / 24)}일 전`;
     },
     notifPriorityClass(p) {
       if (p === 'high') return 'text-danger';
@@ -788,7 +788,7 @@ function app() {
     },
 
     forceDrawBacktest() {
-      // 백테?�트 ??버튼 ?�릭 ??(??�� 비활?????�성 ?�점???�출)
+      // 백테스트 탭 버튼 클릭 시 (탭이 비활성 → 활성 시점에 호출)
       this.$nextTick(() => this._drawBacktestCharts());
     },
 
@@ -811,7 +811,7 @@ function app() {
       this.tab = 'top';
     },
 
-    // ----- ?�파?�라??-----
+    // ----- 스파크라인 -----
     _drawAllSparklines() {
       if (!Array.isArray(this.indices)) return;
       for (const idx of this.indices) {
@@ -846,17 +846,17 @@ function app() {
       ctx2d.stroke();
     },
 
-    // ----- ?�틸 (common.js ?�임, ?�위 ?�환) -----
-    fmt(v) { return window.Q ? window.Q.fmt(v) : (v ?? '??); },
-    fmtFund(v) { return window.Q ? window.Q.fmtFund(v) : (v ?? '??); },
-    formatPct(v) { return window.Q ? window.Q.formatPct(v) : '??; },
-    formatIdx(v) { return window.Q ? window.Q.formatIdx(v) : (v ?? '??); },
-    formatCap(v) { return window.Q ? window.Q.formatCap(v) : (v ?? '??); },
-    formatVolume(shares) { return window.Q ? window.Q.formatVolume(shares) : '??; },
-    formatWon(won) { return window.Q ? window.Q.formatWon(won) : '??; },
+    // ----- 유틸 (common.js 위임, 하위 호환) -----
+    fmt(v) { return window.Q ? window.Q.fmt(v) : (v ?? '—'); },
+    fmtFund(v) { return window.Q ? window.Q.fmtFund(v) : (v ?? '—'); },
+    formatPct(v) { return window.Q ? window.Q.formatPct(v) : '—'; },
+    formatIdx(v) { return window.Q ? window.Q.formatIdx(v) : (v ?? '—'); },
+    formatCap(v) { return window.Q ? window.Q.formatCap(v) : (v ?? '—'); },
+    formatVolume(shares) { return window.Q ? window.Q.formatVolume(shares) : '—'; },
+    formatWon(won) { return window.Q ? window.Q.formatWon(won) : '—'; },
     weightLabel(k) { return window.Q ? window.Q.weightLabel(k) : k; },
     factorLabel(k) { return window.Q ? window.Q.factorLabel(k) : k; },
-    // scoreClass/corrColor??common.js???�일 ?�그?�처�?존재
+    // scoreClass/corrColor는 common.js에 동일 시그니처로 존재
     scoreColor(s) { return window.Q ? window.Q.scoreColor(s) : '#6c757d'; },
     scoreClass(s) { return window.Q ? window.Q.scoreClass(s) : ''; },
     corrColor(r) { return window.Q ? window.Q.corrColor(r) : '#ffffff'; },
@@ -865,8 +865,8 @@ function app() {
     qualityLabel(k) { return window.Q ? window.Q.qualityLabel(k) : k; },
     qualityClass(k, v) { return window.Q ? window.Q.qualityClass(k, v) : ''; },
     analystRatingClass(rating) { return window.Q ? window.Q.analystRatingClass(rating) : 'bg-secondary'; },
-    // 밸류?�이???�벨/?�상
-    valuationLabel(k) { return ({ per: 'PER', pbr: 'PBR', psr: 'PSR', eps: 'EPS', bps: 'BPS', dividend_yield: '배당�?%)' })[k] || k; },
+    // 밸류에이션 라벨/색상
+    valuationLabel(k) { return ({ per: 'PER', pbr: 'PBR', psr: 'PSR', eps: 'EPS', bps: 'BPS', dividend_yield: '배당률(%)' })[k] || k; },
     valuationClass(k, v) {
       if (v === null || v === undefined) return '';
       if (k === 'per') return v < 10 ? 'text-danger' : (v > 25 ? 'text-primary' : '');
@@ -874,8 +874,8 @@ function app() {
       if (k === 'dividend_yield') return v >= 3 ? 'text-danger' : '';
       return '';
     },
-    // ?�리???�벨/?�상
-    qualityLabel(k) { return ({ roe: 'ROE(%)', roa: 'ROA(%)', debt_ratio: '부채비??%)', operating_margin: '?�업?�익�?%)', net_margin: '?�이?�률(%)' })[k] || k; },
+    // 퀄리티 라벨/색상
+    qualityLabel(k) { return ({ roe: 'ROE(%)', roa: 'ROA(%)', debt_ratio: '부채비율(%)', operating_margin: '영업이익률(%)', net_margin: '순이익률(%)' })[k] || k; },
     qualityClass(k, v) {
       if (v === null || v === undefined) return '';
       if (k === 'roe') return v >= 15 ? 'text-danger fw-bold' : (v < 5 ? 'text-primary' : '');
@@ -885,7 +885,7 @@ function app() {
       if (k === 'net_margin') return v >= 7 ? 'text-danger fw-bold' : (v < 3 ? 'text-primary' : '');
       return '';
     },
-    // 가??최근 fundamentals
+    // 가장 최근 fundamentals
     latestFundamental(k) {
       const f = this.stockDetail?.fundamentals || [];
       if (f.length === 0) return null;
@@ -900,7 +900,7 @@ function app() {
       }
       return v;
     },
-    // ?�널리스???�급 ?�상
+    // 애널리스트 등급 색상
     analystRatingClass(rating) {
       if (!rating) return 'bg-secondary';
       if (rating === 'Strong Buy') return 'bg-danger';
@@ -946,7 +946,7 @@ function app() {
       if (!ctx || !this.top.length) return;
       const avg = (k) => this.top.reduce((a, b) => a + (b[k] || 0), 0) / this.top.length;
       if (this._charts.factorAvg) this._charts.factorAvg.destroy();
-      this._charts.factorAvg = new Chart(ctx, { type: 'bar', data: { labels: ['가�?, '모멘?�', '?�리??, '?�변??, '?�장'], datasets: [{ data: [avg('value_score'), avg('momentum_score'), avg('quality_score'), avg('volatility_score'), avg('growth_score')], backgroundColor: ['#0d6efd', '#198754', '#fd7e14', '#6f42c1', '#dc3545'] }] }, options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { min: 0, max: 100 } } } });
+      this._charts.factorAvg = new Chart(ctx, { type: 'bar', data: { labels: ['가치', '모멘텀', '퀄리티', '저변동', '성장'], datasets: [{ data: [avg('value_score'), avg('momentum_score'), avg('quality_score'), avg('volatility_score'), avg('growth_score')], backgroundColor: ['#0d6efd', '#198754', '#fd7e14', '#6f42c1', '#dc3545'] }] }, options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { min: 0, max: 100 } } } });
     },
 
     // ----- 분포 -----
@@ -962,7 +962,7 @@ function app() {
         this.distribution = r;
         this._drawDist(scores);
         this._drawFactorStack();
-        // 추�? 4�?차트 (canvas ?�더 보장 ?�해 $nextTick ?�용)
+        // 추가 4개 차트 (canvas 렌더 보장 위해 $nextTick 사용)
         this.$nextTick(() => {
           try { this._drawGradeDonut(); } catch (e) { console.error('[gradeDonut]', e); }
           try { this._drawMarket(); } catch (e) { console.error('[market]', e); }
@@ -974,21 +974,21 @@ function app() {
     _drawDist(scores) {
       const ctx = document.getElementById('distChart');
       if (!ctx) return;
-      // canvas가 보이???�태?��? ?�인 (display:none?�면 height 0)
+      // canvas가 보이는 상태인지 확인 (display:none이면 height 0)
       const w = ctx.clientWidth || 400;
       const h = ctx.clientHeight || 220;
       if (w === 0) { console.warn('distChart width=0, skip'); return; }
-      // ?�급/?�터 ?�터 ?�용
+      // 등급/섹터 필터 적용
       let filtered = scores;
       if (this.distGradeFilter || this.distSectorFilter) {
-        // allFactors?�서 코드 ??score 매핑
+        // allFactors에서 코드 → score 매핑
         const codeMap = new Map((this.all || []).map((r) => [r.code, r]));
         filtered = scores.filter((s, idx) => {
-          // scores???�자 배열?��?�? ?�본 allFactors�??�회?�면??매칭
-          // ?�순?? scores??분포 ?�이?�이므�? sectorFilter??추�? ?�이???�요
-          // ???�단 gradeFilter�??�동 (sectorFilter???�속)
+          // scores는 숫자 배열이지만, 원본 allFactors를 순회하면서 매칭
+          // 단순화: scores는 분포 데이터이므로, sectorFilter는 추가 데이터 필요
+          // → 일단 gradeFilter만 작동 (sectorFilter는 후속)
           if (!this.distGradeFilter) return true;
-          // ?�수�??�급?�로 변??
+          // 점수를 등급으로 변환
           const letter = s >= 80 ? 'A+' : s >= 70 ? 'A' : s >= 60 ? 'B+' : s >= 50 ? 'B' : s >= 40 ? 'C' : s >= 30 ? 'D' : 'F';
           return letter === this.distGradeFilter;
         });
@@ -998,32 +998,32 @@ function app() {
       const labels = bins.map((_, i) => `${i*10}-${i*10+10}`);
       const colors = bins.map((_, i) => this.distGradeFilter && (i * 10 + 5) >= this.gradeFilterMin && (i * 10 + 5) < this.gradeFilterMax ? '#0d6efd' : this.scoreColor(i * 10 + 5));
       if (this._charts.dist) this._charts.dist.destroy();
-      // ?�터 ?�성 ???�목 ?�시
-      const filterLabel = this.distGradeFilter ? ` (?�급: ${this.distGradeFilter})` : '';
+      // 필터 활성 시 제목 표시
+      const filterLabel = this.distGradeFilter ? ` (등급: ${this.distGradeFilter})` : '';
       this._charts.dist = new Chart(ctx, {
         type: 'bar',
-        data: { labels, datasets: [{ label: '종목 ?? + filterLabel, data: bins, backgroundColor: colors }] },
-        options: { plugins: { legend: { display: true }, tooltip: { callbacks: { afterLabel: () => this.distGradeFilter ? '?�터 ?�용 �????�블?�릭 ?�제' : '' } } } }
+        data: { labels, datasets: [{ label: '종목 수' + filterLabel, data: bins, backgroundColor: colors }] },
+        options: { plugins: { legend: { display: true }, tooltip: { callbacks: { afterLabel: () => this.distGradeFilter ? '필터 적용 중 — 더블클릭 해제' : '' } } } }
       });
     },
     _drawFactorStack() {
       const ctx = document.getElementById('factorChart');
       if (!ctx || !this.top || this.top.length === 0) return;
-      const labels = this.top.map((r) => r.name.length > 6 ? r.name.slice(0, 6) + '?? : r.name);
+      const labels = this.top.map((r) => r.name.length > 6 ? r.name.slice(0, 6) + '…' : r.name);
       const datasets = [
-        { label: '가�?, data: this.top.map((r) => r.value_score), backgroundColor: '#0d6efd' },
-        { label: '모멘?�', data: this.top.map((r) => r.momentum_score), backgroundColor: '#198754' },
-        { label: '?�리??, data: this.top.map((r) => r.quality_score), backgroundColor: '#fd7e14' },
-        { label: '?�변??, data: this.top.map((r) => r.volatility_score), backgroundColor: '#6f42c1' },
-        { label: '?�장', data: this.top.map((r) => r.growth_score), backgroundColor: '#dc3545' },
-        { label: '?�동', data: this.top.map((r) => r.liquidity_score), backgroundColor: '#20c997' },
-        { label: '?�급', data: this.top.map((r) => r.supply_score), backgroundColor: '#0dcaf0' },
+        { label: '가치', data: this.top.map((r) => r.value_score), backgroundColor: '#0d6efd' },
+        { label: '모멘텀', data: this.top.map((r) => r.momentum_score), backgroundColor: '#198754' },
+        { label: '퀄리티', data: this.top.map((r) => r.quality_score), backgroundColor: '#fd7e14' },
+        { label: '저변동', data: this.top.map((r) => r.volatility_score), backgroundColor: '#6f42c1' },
+        { label: '성장', data: this.top.map((r) => r.growth_score), backgroundColor: '#dc3545' },
+        { label: '유동', data: this.top.map((r) => r.liquidity_score), backgroundColor: '#20c997' },
+        { label: '수급', data: this.top.map((r) => r.supply_score), backgroundColor: '#0dcaf0' },
       ];
       if (this._charts.factor) this._charts.factor.destroy();
       this._charts.factor = new Chart(ctx, { type: 'bar', data: { labels, datasets }, options: { indexAxis: 'y', plugins: { legend: { position: 'bottom' } }, scales: { x: { max: 100, stacked: true }, y: { stacked: true } } } });
     },
 
-    // ----- 분포 ?�이지 4�?추�? 차트 -----
+    // ----- 분포 페이지 4개 추가 차트 -----
     _drawGradeDonut() {
       const ctx = document.getElementById('gradeDonutChart');
       if (!ctx || !this.distribution || !this.distribution.gradeCounts) return;
@@ -1035,7 +1035,7 @@ function app() {
       const total = data.reduce((a, b) => a + b, 0);
       if (total === 0) return;
       if (this._charts.gradeDonut) this._charts.gradeDonut.destroy();
-      // ?�성 ?�터 강조 (offset)
+      // 활성 필터 강조 (offset)
       const offset = order.map((g) => this.distGradeFilter === g ? 18 : 0);
       this._charts.gradeDonut = new Chart(ctx, {
         type: 'doughnut',
@@ -1048,7 +1048,7 @@ function app() {
         options: {
           plugins: {
             legend: { position: 'right', labels: { font: { size: 11 } } },
-            tooltip: { callbacks: { label: (c) => `${c.label}: ${c.parsed}�?(${(c.parsed / total * 100).toFixed(1)}%) · ?�릭 ???�터` } }
+            tooltip: { callbacks: { label: (c) => `${c.label}: ${c.parsed}개 (${(c.parsed / total * 100).toFixed(1)}%) · 클릭 시 필터` } }
           },
           maintainAspectRatio: false, cutout: '50%',
           onClick: (e, els) => {
@@ -1062,7 +1062,7 @@ function app() {
         },
       });
     },
-    // === 분포 ?�터?�티�? ?�터 ===
+    // === 분포 인터랙티브: 필터 ===
     setDistGradeFilter(g) {
       this.distGradeFilter = this.distGradeFilter === g ? null : g;
       this._drawGradeDonut();
@@ -1093,15 +1093,15 @@ function app() {
         data: {
           labels,
           datasets: [
-            { label: '종목 ??, data: mb.map((m) => m.count), backgroundColor: labels.map((l) => colors[l] || '#6c757d'), yAxisID: 'y' },
-            { label: '?�균 ?�수', data: mb.map((m) => m.avg), type: 'line', borderColor: '#dc3545', backgroundColor: '#dc3545', yAxisID: 'y1', tension: 0.2 },
+            { label: '종목 수', data: mb.map((m) => m.count), backgroundColor: labels.map((l) => colors[l] || '#6c757d'), yAxisID: 'y' },
+            { label: '평균 점수', data: mb.map((m) => m.avg), type: 'line', borderColor: '#dc3545', backgroundColor: '#dc3545', yAxisID: 'y1', tension: 0.2 },
           ],
         },
         options: {
           plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
           scales: {
-            y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: '종목 ?? } },
-            y1: { type: 'linear', position: 'right', beginAtZero: true, max: 100, grid: { display: false }, title: { display: true, text: '?�균 ?�수' } },
+            y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: '종목 수' } },
+            y1: { type: 'linear', position: 'right', beginAtZero: true, max: 100, grid: { display: false }, title: { display: true, text: '평균 점수' } },
           },
         },
       });
@@ -1111,22 +1111,22 @@ function app() {
       if (!ctx || !this.distribution || !this.distribution.sectorBreakdown || this.distribution.sectorBreakdown.length === 0) return;
       if (ctx.clientWidth === 0) { console.warn('sectorChart width=0, skip'); return; }
       const sb = this.distribution.sectorBreakdown.slice(0, 12);
-      const labels = sb.map((s) => s.sector.length > 6 ? s.sector.slice(0, 6) + '?? : s.sector);
+      const labels = sb.map((s) => s.sector.length > 6 ? s.sector.slice(0, 6) + '…' : s.sector);
       if (this._charts.sector) this._charts.sector.destroy();
       this._charts.sector = new Chart(ctx, {
         type: 'bar',
         data: {
           labels,
           datasets: [
-            { label: '종목 ??, data: sb.map((s) => s.count), backgroundColor: '#0d6efd', yAxisID: 'y', order: 2 },
-            { label: '?�균 ?�수', data: sb.map((s) => s.avg), type: 'line', borderColor: '#dc3545', backgroundColor: '#dc3545', yAxisID: 'y1', tension: 0.2, order: 1 },
+            { label: '종목 수', data: sb.map((s) => s.count), backgroundColor: '#0d6efd', yAxisID: 'y', order: 2 },
+            { label: '평균 점수', data: sb.map((s) => s.avg), type: 'line', borderColor: '#dc3545', backgroundColor: '#dc3545', yAxisID: 'y1', tension: 0.2, order: 1 },
           ],
         },
         options: {
           indexAxis: 'y',
           plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
           scales: {
-            x: { beginAtZero: true, title: { display: true, text: '종목 ?? } },
+            x: { beginAtZero: true, title: { display: true, text: '종목 수' } },
             y: { ticks: { font: { size: 10 } } },
             y1: { display: false, beginAtZero: true, max: 100 },
           },
@@ -1138,7 +1138,7 @@ function app() {
       if (!ctx || !this.distribution || !this.distribution.factorAvg) return;
       if (ctx.clientWidth === 0) { console.warn('factorRadarChart width=0, skip'); return; }
       const fa = this.distribution.factorAvg;
-      const labels = ['가�?, '모멘?�', '?�리??, '?�변??, '?�장', '?�동', '?�급'];
+      const labels = ['가치', '모멘텀', '퀄리티', '저변동', '성장', '유동', '수급'];
       const keys = ['value_score', 'momentum_score', 'quality_score', 'volatility_score', 'growth_score', 'liquidity_score', 'supply_score'];
       if (this._charts.factorRadar) this._charts.factorRadar.destroy();
       this._charts.factorRadar = new Chart(ctx, {
@@ -1146,8 +1146,8 @@ function app() {
         data: {
           labels,
           datasets: [
-            { label: '?�체 종목 ?�균', data: keys.map((k) => fa.all?.[k] || 0), backgroundColor: 'rgba(13, 110, 253, 0.2)', borderColor: '#0d6efd', borderWidth: 2, pointRadius: 3 },
-            { label: 'Top 20 ?�균', data: keys.map((k) => fa.top20?.[k] || 0), backgroundColor: 'rgba(220, 53, 69, 0.2)', borderColor: '#dc3545', borderWidth: 2, pointRadius: 3 },
+            { label: '전체 종목 평균', data: keys.map((k) => fa.all?.[k] || 0), backgroundColor: 'rgba(13, 110, 253, 0.2)', borderColor: '#0d6efd', borderWidth: 2, pointRadius: 3 },
+            { label: 'Top 20 평균', data: keys.map((k) => fa.top20?.[k] || 0), backgroundColor: 'rgba(220, 53, 69, 0.2)', borderColor: '#dc3545', borderWidth: 2, pointRadius: 3 },
           ],
         },
         options: {
@@ -1158,7 +1158,7 @@ function app() {
       });
     },
 
-    // ----- 백테?�트 4�?차트 -----
+    // ----- 백테스트 4개 차트 -----
     _drawBacktestCharts() {
       try {
         this._drawNavChart();
@@ -1177,7 +1177,7 @@ function app() {
         data: {
           labels,
           datasets: [
-            { label: '?�략', data: this.backtest.nav.map((n) => n.value), borderColor: '#dc3545', tension: 0.1, pointRadius: 0, fill: false },
+            { label: '전략', data: this.backtest.nav.map((n) => n.value), borderColor: '#dc3545', tension: 0.1, pointRadius: 0, fill: false },
             { label: 'KOSPI', data: this.backtest.kospiNav?.map((n) => n.value) || [], borderColor: '#6c757d', tension: 0.1, pointRadius: 0, fill: false, borderDash: [5, 5] },
           ],
         },
@@ -1194,7 +1194,7 @@ function app() {
         data: {
           labels,
           datasets: [
-            { label: '?�략', data: this.backtest.yearlyReturns.map((y) => (y.strategy * 100).toFixed(2)), backgroundColor: this.backtest.yearlyReturns.map((y) => y.strategy >= 0 ? '#dc3545' : '#0d6efd') },
+            { label: '전략', data: this.backtest.yearlyReturns.map((y) => (y.strategy * 100).toFixed(2)), backgroundColor: this.backtest.yearlyReturns.map((y) => y.strategy >= 0 ? '#dc3545' : '#0d6efd') },
             { label: 'KOSPI', data: this.backtest.yearlyReturns.map((y) => (y.kospi * 100).toFixed(2)), backgroundColor: this.backtest.yearlyReturns.map((y) => y.kospi >= 0 ? '#fd7e14' : '#6c757d') },
           ],
         },
@@ -1211,11 +1211,11 @@ function app() {
       if (!el || !this.backtest.monthGrid) return;
       const grid = this.backtest.monthGrid;
       const years = Object.keys(grid).sort();
-      if (years.length === 0) { el.innerHTML = '<p class="text-muted">?�이???�음</p>'; return; }
+      if (years.length === 0) { el.innerHTML = '<p class="text-muted">데이터 없음</p>'; return; }
 
-      let html = '<table class="month-heatmap-table"><thead><tr><th>??/th>';
-      for (let m = 1; m <= 12; m++) html += `<th>${m}??/th>`;
-      html += '<th>?�간</th></tr></thead><tbody>';
+      let html = '<table class="month-heatmap-table"><thead><tr><th>년</th>';
+      for (let m = 1; m <= 12; m++) html += `<th>${m}월</th>`;
+      html += '<th>연간</th></tr></thead><tbody>';
 
       for (const year of years) {
         html += `<tr><th>${year}</th>`;
@@ -1226,7 +1226,7 @@ function app() {
             html += '<td class="mcell empty">-</td>';
           } else {
             const pct = (v * 100).toFixed(1);
-            const color = this.scoreColor(50 + v * 100); // scale: v=-0.2 ??30, v=0 ??50, v=0.5 ??100
+            const color = this.scoreColor(50 + v * 100); // scale: v=-0.2 → 30, v=0 → 50, v=0.5 → 100
             html += `<td class="mcell" style="background:${color};color:#fff" title="${(v*100).toFixed(2)}%">${pct > 0 ? '+' : ''}${pct}</td>`;
             yearSum += v;
             yearCount++;
@@ -1248,7 +1248,7 @@ function app() {
         data: {
           labels: this.backtest.drawdown.map((d) => d.idx),
           datasets: [{
-            label: '?�로?�다??,
+            label: '드로우다운',
             data: this.backtest.drawdown.map((d) => d.value * 100),
             borderColor: '#0d6efd',
             backgroundColor: 'rgba(13,110,253,0.1)',
@@ -1267,13 +1267,13 @@ function app() {
       });
     },
 
-    // ----- 종목 ?�세 -----
+    // ----- 종목 상세 -----
     async openStock(code) {
       try {
-        // 분석 ?�이지?�서??모달???�으므�?메인?�로 ?�동 (?code=XXX)
+        // 분석 페이지에서는 모달이 없으므로 메인으로 이동 (?code=XXX)
         if (this.page === 'analysis') {
           const market = this.marketFilter || 'KOSPI';
-          location.href = '/??code=' + encodeURIComponent(code) + '&market=' + encodeURIComponent(market);
+          location.href = '/index.html?code=' + encodeURIComponent(code) + '&market=' + encodeURIComponent(market);
           return;
         }
         const r = await window.apiGet('/api/stock/' + encodeURIComponent(code));
@@ -1281,7 +1281,7 @@ function app() {
         this.stockDetail = r;
         this.detailTab = 'overview';
         this._modal.show();
-        // 차트??'shown.bs.modal' ?�벤?�에??그려�?(transition ??보장)
+        // 차트는 'shown.bs.modal' 이벤트에서 그려짐 (transition 후 보장)
       } catch (e) { console.error(e); }
     },
 
@@ -1314,11 +1314,11 @@ function app() {
       return rows;
     },
 
-    // ===== ????�� computed =====
+    // ===== 새 탭용 computed =====
     get supplySummary() {
       const flow = this.stockDetail?.investor_flow || [];
       if (flow.length === 0) return { foreign_5d: 0, foreign_20d: 0, inst_5d: 0, foreign_ratio: null };
-      // flow??최신 ??과거 ??
+      // flow는 최신 → 과거 순
       const sumN = (key, n) => flow.slice(0, n).reduce((s, r) => s + (Number(r[key]) || 0), 0);
       const last = flow[0];
       return {
@@ -1332,50 +1332,50 @@ function app() {
     get techSignals() {
       const sig = this.stockDetail?.technical?.signals || {};
       return {
-        ma_trend_color: (sig.ma_trend || '').includes('?�승') ? 'text-danger' : (sig.ma_trend || '').includes('?�락') ? 'text-primary' : 'text-muted',
-        rsi_color: sig.rsi_zone === '과매?? ? 'text-danger' : sig.rsi_zone === '과매?? ? 'text-primary' : 'text-muted',
-        macd_color: (sig.macd_signal || '').includes('골든') || (sig.macd_signal || '').includes('?�향') ? 'text-danger' : (sig.macd_signal || '').includes('?�드') || (sig.macd_signal || '').includes('?�향') ? 'text-primary' : 'text-muted',
-        bb_color: (sig.bb_position || '').includes('?�단') ? 'text-danger' : (sig.bb_position || '').includes('?�단') ? 'text-primary' : 'text-muted',
+        ma_trend_color: (sig.ma_trend || '').includes('상승') ? 'text-danger' : (sig.ma_trend || '').includes('하락') ? 'text-primary' : 'text-muted',
+        rsi_color: sig.rsi_zone === '과매수' ? 'text-danger' : sig.rsi_zone === '과매도' ? 'text-primary' : 'text-muted',
+        macd_color: (sig.macd_signal || '').includes('골든') || (sig.macd_signal || '').includes('상향') ? 'text-danger' : (sig.macd_signal || '').includes('데드') || (sig.macd_signal || '').includes('하향') ? 'text-primary' : 'text-muted',
+        bb_color: (sig.bb_position || '').includes('상단') ? 'text-danger' : (sig.bb_position || '').includes('하단') ? 'text-primary' : 'text-muted',
       };
     },
 
     get oneLiner() {
-      // ?�?�투??관???�줄??(status + 7?�터 + ?�무 + 모멘?� 종합, ?�세??
+      // 퀀트투자 관점 한줄평 (status + 7팩터 + 재무 + 모멘텀 종합, 자세히)
       const s = this.stockDetail?.score;
-      if (!s) return '??;
+      if (!s) return '—';
       const tech = this.stockDetail?.technical?.signals || {};
       const flow = this.stockDetail?.investor_flow || [];
       const f = this.stockDetail?.fundamentals || [];
-      const isUpTrend = (tech.ma_trend || '').includes('?�승');
-      const isDownTrend = (tech.ma_trend || '').includes('?�락');
-      const isOverbought = tech.rsi_zone === '과매??;
-      const isOversold = tech.rsi_zone === '과매??;
+      const isUpTrend = (tech.ma_trend || '').includes('상승');
+      const isDownTrend = (tech.ma_trend || '').includes('하락');
+      const isOverbought = tech.rsi_zone === '과매수';
+      const isOversold = tech.rsi_zone === '과매도';
 
-      // ??거래?��?/?�동??0 ??최우??
-      if (s.status === 'halt') return '?�� [거래?��?] 매매 불�?. 즉시 ?�외 ?�?? 가�??�일·거래??0 ???��? 매수 금�?. 메인 ?�?�보??0??처리.';
-      if (s.status === 'zero_volume') return '??[거래??0] 최근 20???�균 거래?��?0?? ?�실??거래?��?. 매매 불�?. 0??처리.';
-      if (s.status === 'caution') return '?�️ [거래주의] 최근 5???�균 거래?��?1??미만. ?�기 ?�동??부�? ?�피 권장.';
-      if (s.status === 'very_low_liquidity') return '?��?�� [초�??�동?? 20???�균 거래?��?1??미만 (KRX ?�?�동??종목). ?�리?��?·?��? ?�프?�드 리스???? -30???�널?? ?�자 부?�합.';
-      if (s.status === 'low_liquidity') return '?�� [?�?�동?? 20???�균 거래?��?1~5?? ?�전 매매 ?�려?�. -20???�널??';
-      if (s.status === 'caution_liquidity') return '?�� [??? ?�동?? 20???�균 거래?��?5~10?? ?�윙 매매 가?�하지�?주의. -10???�널??';
-      if (s.status === 'excluded_kosdaq') return '?�� [KOSDAQ] 메인 ?�?�보???�외. ?market=KOSDAQ ?�로 ?�인 가??';
+      // ★ 거래정지/유동성 0 → 최우선
+      if (s.status === 'halt') return '🚫 [거래정지] 매매 불가. 즉시 제외 대상. 가격 동일·거래량 0 — 절대 매수 금지. 메인 대시보드 0점 처리.';
+      if (s.status === 'zero_volume') return '⛔ [거래량 0] 최근 20일 평균 거래대금 0원. 사실상 거래정지. 매매 불가. 0점 처리.';
+      if (s.status === 'caution') return '⚠️ [거래주의] 최근 5일 평균 거래대금 1억 미만. 단기 유동성 부족. 회피 권장.';
+      if (s.status === 'very_low_liquidity') return '💧💧 [초저유동성] 20일 평균 거래대금 1억 미만 (KRX 저유동성 종목). 슬리피지·호가 스프레드 리스크 큼. -30점 페널티. 투자 부적합.';
+      if (s.status === 'low_liquidity') return '💧 [저유동성] 20일 평균 거래대금 1~5억. 실전 매매 어려움. -20점 페널티.';
+      if (s.status === 'caution_liquidity') return '💧 [낮은 유동성] 20일 평균 거래대금 5~10억. 스윙 매매 가능하지만 주의. -10점 페널티.';
+      if (s.status === 'excluded_kosdaq') return '📊 [KOSDAQ] 메인 대시보드 제외. ?market=KOSDAQ 으로 확인 가능.';
 
-      // === ?�세 ?�줄??(5~7 segments) ===
+      // === 상세 한줄평 (5~7 segments) ===
       const parts = [];
 
-      // 1) 종합 ?�수
+      // 1) 종합 점수
       const ts = Number(s.total_score) || 0;
       const grade = s.grade?.letter || '';
       let summary = '';
-      if (ts >= 80) summary = `?�� 종합 최상??(${ts.toFixed(1)}?? ${grade}?�급). 7?�터 가중합???�위�?`;
-      else if (ts >= 70) summary = `??종합 ?�수 (${ts.toFixed(1)}?? ${grade}?�급). 7?�터 ?�정??`;
-      else if (ts >= 60) summary = `?�� 종합 ?�호 (${ts.toFixed(1)}?? ${grade}?�급). ?�균 ?�상.`;
-      else if (ts >= 45) summary = `?�️ 종합 중립 (${ts.toFixed(1)}??. ?��? ?�터 강세·?��? ?�세.`;
-      else if (ts >= 30) summary = `?�️ 종합 ?�세 (${ts.toFixed(1)}??.`;
-      else summary = `?�� 종합 매우 ?�세 (${ts.toFixed(1)}??.`;
+      if (ts >= 80) summary = `🏆 종합 최상위 (${ts.toFixed(1)}점, ${grade}등급). 7팩터 가중합산 상위권.`;
+      else if (ts >= 70) summary = `✅ 종합 우수 (${ts.toFixed(1)}점, ${grade}등급). 7팩터 안정적.`;
+      else if (ts >= 60) summary = `👍 종합 양호 (${ts.toFixed(1)}점, ${grade}등급). 평균 이상.`;
+      else if (ts >= 45) summary = `⚖️ 종합 중립 (${ts.toFixed(1)}점). 일부 팩터 강세·일부 약세.`;
+      else if (ts >= 30) summary = `⚠️ 종합 약세 (${ts.toFixed(1)}점).`;
+      else summary = `🚨 종합 매우 약세 (${ts.toFixed(1)}점).`;
       parts.push(summary);
 
-      // 2) ?�무/가�??�장
+      // 2) 재무/가치/성장
       const latest = f[0] || {};
       const per = Number(latest.per) || 0;
       const pbr = Number(latest.pbr) || 0;
@@ -1385,64 +1385,64 @@ function app() {
       const revenueYoy = f.length >= 5 ? ((Number(latest.revenue) - Number(f[4].revenue)) / Number(f[4].revenue)) * 100 : 0;
       const eps = Number(latest.eps) || 0;
       const fundParts = [];
-      if (per > 0 && per < 15) fundParts.push(`PER ${per.toFixed(1)}배로 ?�?��?`);
+      if (per > 0 && per < 15) fundParts.push(`PER ${per.toFixed(1)}배로 저평가`);
       else if (per > 30) fundParts.push(`PER ${per.toFixed(1)}배로 고평가`);
-      else if (per > 0) fundParts.push(`PER ${per.toFixed(1)}�?(?�정)`);
-      if (pbr > 0 && pbr < 1.5) fundParts.push(`PBR ${pbr.toFixed(2)}�??�PBR`);
-      else if (pbr > 3) fundParts.push(`PBR ${pbr.toFixed(2)}�?고PBR`);
-      else if (pbr > 0) fundParts.push(`PBR ${pbr.toFixed(2)}�?);
-      if (roe > 15) fundParts.push(`ROE ${roe.toFixed(1)}% ?�량`);
-      else if (roe > 8) fundParts.push(`ROE ${roe.toFixed(1)}% ?�호`);
+      else if (per > 0) fundParts.push(`PER ${per.toFixed(1)}배 (적정)`);
+      if (pbr > 0 && pbr < 1.5) fundParts.push(`PBR ${pbr.toFixed(2)}배 저PBR`);
+      else if (pbr > 3) fundParts.push(`PBR ${pbr.toFixed(2)}배 고PBR`);
+      else if (pbr > 0) fundParts.push(`PBR ${pbr.toFixed(2)}배`);
+      if (roe > 15) fundParts.push(`ROE ${roe.toFixed(1)}% 우량`);
+      else if (roe > 8) fundParts.push(`ROE ${roe.toFixed(1)}% 양호`);
       else if (roe > 0) fundParts.push(`ROE ${roe.toFixed(1)}% 보통`);
-      if (debt > 0 && debt < 100) fundParts.push(`부채비??${debt.toFixed(0)}% ?�정`);
-      else if (debt > 200) fundParts.push(`부채비??${debt.toFixed(0)}% ?�험`);
-      if (dvr > 3) fundParts.push(`배당?�익�?${dvr.toFixed(1)}% 고배??);
+      if (debt > 0 && debt < 100) fundParts.push(`부채비율 ${debt.toFixed(0)}% 안정`);
+      else if (debt > 200) fundParts.push(`부채비율 ${debt.toFixed(0)}% 위험`);
+      if (dvr > 3) fundParts.push(`배당수익률 ${dvr.toFixed(1)}% 고배당`);
       if (f.length >= 5 && Math.abs(revenueYoy) > 0.1) {
-        if (revenueYoy > 10) fundParts.push(`매출 YoY +${revenueYoy.toFixed(1)}% 고성??);
-        else if (revenueYoy < -5) fundParts.push(`매출 YoY ${revenueYoy.toFixed(1)}% ??��??);
+        if (revenueYoy > 10) fundParts.push(`매출 YoY +${revenueYoy.toFixed(1)}% 고성장`);
+        else if (revenueYoy < -5) fundParts.push(`매출 YoY ${revenueYoy.toFixed(1)}% 역성장`);
       }
       if (fundParts.length > 0) {
-        parts.push(`?�무: ${fundParts.join(', ')}.`);
+        parts.push(`재무: ${fundParts.join(', ')}.`);
       } else if (f.length > 0) {
-        parts.push('?�무: ?�이???��?�??�음 (?�기 갱신 ?��?.');
+        parts.push('재무: 데이터 일부만 있음 (정기 갱신 대기).');
       } else {
-        parts.push('?�무: ?�이??미수�? 분기보고?�·KIS API ?�용 권장.');
+        parts.push('재무: 데이터 미수집. 분기보고서·KIS API 활용 권장.');
       }
 
-      // 3) 기술??추세
-      if (isUpTrend && !isOverbought) parts.push('기술: ?�동?�균 ?�승 ?�배??+ 과매???�님 ??추세 추종 매수 구간.');
-      else if (isUpTrend && isOverbought) parts.push('기술: ?�승 추세?�나 ?�기 과매???�역 ??분할 진입 ?�는 ?�기 조정 ?��?');
-      else if (isDownTrend && isOversold) parts.push('기술: ?�락 추세 + ?�기 과매????반등 가?�성 ?��?�?추세 ?�환 ?�인 ?�요.');
-      else if (isDownTrend) parts.push('기술: ?�락 추세 지?? 지지?�·거?�량 ?�인 ???�근 권장.');
-      else if (isOversold) parts.push('기술: ?�기 과매????반등 ?�그???��? ?�요.');
-      else if (isOverbought) parts.push('기술: ?�기 과매????분할 매수 ?�는 관�?');
-      else parts.push('기술: 박스�??�보. 방향???�인 ?�요.');
+      // 3) 기술적 추세
+      if (isUpTrend && !isOverbought) parts.push('기술: 이동평균 상승 정배열 + 과매수 아님 → 추세 추종 매수 구간.');
+      else if (isUpTrend && isOverbought) parts.push('기술: 상승 추세이나 단기 과매수 영역 — 분할 진입 또는 단기 조정 대기.');
+      else if (isDownTrend && isOversold) parts.push('기술: 하락 추세 + 단기 과매도 — 반등 가능성 있지만 추세 전환 확인 필요.');
+      else if (isDownTrend) parts.push('기술: 하락 추세 지속. 지지선·거래량 확인 후 접근 권장.');
+      else if (isOversold) parts.push('기술: 단기 과매도 — 반등 시그널 탐지 필요.');
+      else if (isOverbought) parts.push('기술: 단기 과매수 — 분할 매수 또는 관망.');
+      else parts.push('기술: 박스권 횡보. 방향성 확인 필요.');
 
-      // 4) ?�급
+      // 4) 수급
       let foreign5d = 0, inst5d = 0;
       if (flow.length >= 5) {
         foreign5d = flow.slice(0, 5).reduce((s, r) => s + (Number(r.foreign_net) || 0), 0);
         inst5d = flow.slice(0, 5).reduce((s, r) => s + (Number(r.institution_net) || 0), 0);
       }
       if (foreign5d > 0 && inst5d > 0) {
-        parts.push(`?�급: ?�인+기�? ?�시 ?�매??(?�인 5??${formatVolume(foreign5d)}, 기�? 5??${formatVolume(inst5d)}). ?�마?�머??매집??`);
+        parts.push(`수급: 외인+기관 동시 순매수 (외인 5일 ${formatVolume(foreign5d)}, 기관 5일 ${formatVolume(inst5d)}). 스마트머니 매집세.`);
       } else if (foreign5d < 0 && inst5d < 0) {
-        parts.push(`?�급: ?�인+기�? ?�시 ?�매??(�?5??${formatVolume(foreign5d)}, ${formatVolume(inst5d)}). 분산??`);
+        parts.push(`수급: 외인+기관 동시 순매도 (각 5일 ${formatVolume(foreign5d)}, ${formatVolume(inst5d)}). 분산세.`);
       } else if (foreign5d > 0) {
-        parts.push(`?�급: ?�국??5??${formatVolume(foreign5d)} ?�매???�세, 기�??� ${formatVolume(inst5d)}.`);
+        parts.push(`수급: 외국인 5일 ${formatVolume(foreign5d)} 순매수 우세, 기관은 ${formatVolume(inst5d)}.`);
       } else if (foreign5d < 0) {
-        parts.push(`?�급: ?�국??5??${formatVolume(foreign5d)} ?�매?? 기�? ${formatVolume(inst5d)}.`);
+        parts.push(`수급: 외국인 5일 ${formatVolume(foreign5d)} 순매도, 기관 ${formatVolume(inst5d)}.`);
       }
 
-      // 5) 강한 ?�터 ??�??�약
+      // 5) 강한 팩터 한 줄 요약
       const factorPairs = [
-        ['value', '가�?, '?�PER·?�PBR 가�??�세'],
-        ['momentum', '모멘?�', '12개월 모멘?� 강세'],
-        ['quality', '?�리??, 'ROE·ROA ?�수 ?�량�?],
-        ['volatility', '?�변??, '변?�성 ??�� (?�정)'],
-        ['growth', '?�장', '매출·?�익 고성??],
-        ['liquidity', '?�동', '거래?��?충분 (?�동???�호)'],
-        ['supply', '?�급', '?�인·기�? 매수??강함'],
+        ['value', '가치', '저PER·저PBR 가치 우세'],
+        ['momentum', '모멘텀', '12개월 모멘텀 강세'],
+        ['quality', '퀄리티', 'ROE·ROA 우수 우량주'],
+        ['volatility', '저변동', '변동성 낮음 (안정)'],
+        ['growth', '성장', '매출·이익 고성장'],
+        ['liquidity', '유동', '거래대금 충분 (유동성 양호)'],
+        ['supply', '수급', '외인·기관 매수세 강함'],
       ];
       const factors = factorPairs.map(([k, , desc]) => ({ k, score: Number(s[`${k}_score`]) || 0, desc }));
       factors.sort((a, b) => b.score - a.score);
@@ -1451,15 +1451,15 @@ function app() {
         parts.push(`강점: ${top2.map((f) => f.desc).join(', ')}.`);
       } else {
         const weak = factors.filter((f) => f.score < 40);
-        if (weak.length > 0) parts.push(`?�점: ${weak.slice(0, 2).map((f) => f.k).join(', ')} ?�수 ??��.`);
+        if (weak.length > 0) parts.push(`약점: ${weak.slice(0, 2).map((f) => f.k).join(', ')} 점수 낮음.`);
       }
 
       // 6) 결론
       let conclusion = '';
-      if (ts >= 70 && isUpTrend) conclusion = '결론: 매수 ?�보. 분할 매수 + ?�절 기�? ?�정 권장.';
-      else if (ts >= 70 && isDownTrend) conclusion = '결론: ?�?�멘???�량?�나 기술 ?�세 ??기술 ?�호 ?�복 ??매수.';
-      else if (ts >= 60) conclusion = '결론: 중립. 추�? 모니?�링.';
-      else if (ts < 40) conclusion = '결론: ?�피. 매수 부?�합.';
+      if (ts >= 70 && isUpTrend) conclusion = '결론: 매수 후보. 분할 매수 + 손절 기준 설정 권장.';
+      else if (ts >= 70 && isDownTrend) conclusion = '결론: 펀더멘털 우량하나 기술 약세 — 기술 신호 회복 시 매수.';
+      else if (ts >= 60) conclusion = '결론: 중립. 추가 모니터링.';
+      else if (ts < 40) conclusion = '결론: 회피. 매수 부적합.';
       if (conclusion) parts.push(conclusion);
 
       return parts.join(' · ');
@@ -1467,10 +1467,10 @@ function app() {
 
     get optimizerData() { return this.optimizer; },
 
-    // ===== 차트 그리�?=====
+    // ===== 차트 그리기 =====
     _drawStockCharts() {
       try {
-        // modal �??�면(overview)???�는 차트�?그리�?
+        // modal 첫 화면(overview)에 있는 차트만 그리기
         this._drawPriceChart();
         this._drawVolumeChart();
         this._drawRadarChart();
@@ -1485,27 +1485,27 @@ function app() {
         if (this._charts.price) this._charts.price.destroy();
         const sig = this.stockDetail.signals || {};
         const datasets = [
-          { label: '종�?', data: sorted.map((p) => p.close), borderColor: '#0d6efd', tension: 0.15, pointRadius: 0, fill: false },
+          { label: '종가', data: sorted.map((p) => p.close), borderColor: '#0d6efd', tension: 0.15, pointRadius: 0, fill: false },
         ];
-        // 매수/매도 가�??�평??
+        // 매수/매도 가격 수평선
         if (sig.buyPrice) {
-          datasets.push({ label: `?�� 매수가 ${sig.buyPrice.toLocaleString()}`, data: sorted.map(() => sig.buyPrice), borderColor: 'rgba(40, 167, 69, 0.7)', borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false });
+          datasets.push({ label: `🟢 매수가 ${sig.buyPrice.toLocaleString()}`, data: sorted.map(() => sig.buyPrice), borderColor: 'rgba(40, 167, 69, 0.7)', borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false });
         }
         if (sig.riskReward?.stopLoss) {
-          datasets.push({ label: `?�� ?�절가 ${Math.round(sig.riskReward.stopLoss).toLocaleString()}`, data: sorted.map(() => sig.riskReward.stopLoss), borderColor: 'rgba(220, 53, 69, 0.7)', borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false });
+          datasets.push({ label: `🔴 손절가 ${Math.round(sig.riskReward.stopLoss).toLocaleString()}`, data: sorted.map(() => sig.riskReward.stopLoss), borderColor: 'rgba(220, 53, 69, 0.7)', borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false });
         }
         if (sig.riskReward?.takeProfit) {
-          datasets.push({ label: `?�� ?�절가 ${Math.round(sig.riskReward.takeProfit).toLocaleString()}`, data: sorted.map(() => sig.riskReward.takeProfit), borderColor: 'rgba(13, 110, 253, 0.7)', borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false });
+          datasets.push({ label: `🔵 익절가 ${Math.round(sig.riskReward.takeProfit).toLocaleString()}`, data: sorted.map(() => sig.riskReward.takeProfit), borderColor: 'rgba(13, 110, 253, 0.7)', borderWidth: 1, borderDash: [5, 5], pointRadius: 0, fill: false });
         }
-        // 매수/매도 ?�호 ?�성 ??마�?�?가격에 마커
+        // 매수/매도 신호 활성 시 마지막 가격에 마커
         const lastIdx = sorted.length - 1;
         if (lastIdx >= 0) {
           const last = sorted[lastIdx].close;
           if (sig.buy1?.active || sig.buy2?.active) {
-            datasets.push({ label: '?�� 매수 ?�호', data: sorted.map((_, i) => i === lastIdx ? last : null), borderColor: 'transparent', backgroundColor: 'rgba(40, 167, 69, 0.9)', pointRadius: 8, pointStyle: 'triangle', showLine: false });
+            datasets.push({ label: '🟢 매수 신호', data: sorted.map((_, i) => i === lastIdx ? last : null), borderColor: 'transparent', backgroundColor: 'rgba(40, 167, 69, 0.9)', pointRadius: 8, pointStyle: 'triangle', showLine: false });
           }
           if (sig.sell1?.active || sig.sell2?.active) {
-            datasets.push({ label: '?�� 매도 ?�호', data: sorted.map((_, i) => i === lastIdx ? last : null), borderColor: 'transparent', backgroundColor: 'rgba(220, 53, 69, 0.9)', pointRadius: 8, pointStyle: 'rectRot', showLine: false });
+            datasets.push({ label: '🔴 매도 신호', data: sorted.map((_, i) => i === lastIdx ? last : null), borderColor: 'transparent', backgroundColor: 'rgba(220, 53, 69, 0.9)', pointRadius: 8, pointStyle: 'rectRot', showLine: false });
           }
         }
         this._charts.price = new Chart(ctx, { type: 'line', data: { labels: sorted.map((p) => p.date), datasets }, options: { plugins: { legend: { position: 'top', labels: { font: { size: 10 } } } }, scales: { x: { display: false } } } });
@@ -1518,7 +1518,7 @@ function app() {
       if (!ctx || !this.stockDetail?.prices) return;
       const sorted = [...this.stockDetail.prices].sort((a, b) => new Date(a.date) - new Date(b.date));
       if (this._charts.vol) this._charts.vol.destroy();
-      this._charts.vol = new Chart(ctx, { type: 'bar', data: { labels: sorted.map((p) => p.date), datasets: [{ label: '거래??, data: sorted.map((p) => p.volume), backgroundColor: '#6c757d' }] }, options: { plugins: { legend: { display: false } }, scales: { x: { display: false } } } });
+      this._charts.vol = new Chart(ctx, { type: 'bar', data: { labels: sorted.map((p) => p.date), datasets: [{ label: '거래량', data: sorted.map((p) => p.volume), backgroundColor: '#6c757d' }] }, options: { plugins: { legend: { display: false } }, scales: { x: { display: false } } } });
     },
 
     _drawRadarChart() {
@@ -1527,10 +1527,10 @@ function app() {
       const s = this.stockDetail.score;
       const data = [s.value_score, s.momentum_score, s.quality_score, s.volatility_score, s.growth_score];
       if (this._charts.radar) this._charts.radar.destroy();
-      this._charts.radar = new Chart(ctx, { type: 'radar', data: { labels: ['가�?, '모멘?�', '?�리??, '?�변??, '?�장'], datasets: [{ label: this.stockDetail.stock.name, data, backgroundColor: 'rgba(13,110,253,0.2)', borderColor: '#0d6efd', pointBackgroundColor: '#0d6efd' }] }, options: { scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } }, plugins: { legend: { display: false } } } });
+      this._charts.radar = new Chart(ctx, { type: 'radar', data: { labels: ['가치', '모멘텀', '퀄리티', '저변동', '성장'], datasets: [{ label: this.stockDetail.stock.name, data, backgroundColor: 'rgba(13,110,253,0.2)', borderColor: '#0d6efd', pointBackgroundColor: '#0d6efd' }] }, options: { scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } }, plugins: { legend: { display: false } } } });
     },
 
-    // ===== ?�급 차트 =====
+    // ===== 수급 차트 =====
     _drawSupplyChart() {
       const ctx = document.getElementById('supplyChart');
       if (!ctx) return;
@@ -1542,8 +1542,8 @@ function app() {
         data: {
           labels: flow.map((r) => r.date),
           datasets: [
-            { label: '?�국??, data: flow.map((r) => r.foreign_net), backgroundColor: flow.map((r) => (r.foreign_net || 0) >= 0 ? 'rgba(220,53,69,0.7)' : 'rgba(13,110,253,0.7)'), stack: 's' },
-            { label: '기�?', data: flow.map((r) => r.institution_net), backgroundColor: flow.map((r) => (r.institution_net || 0) >= 0 ? 'rgba(255,193,7,0.7)' : 'rgba(25,135,84,0.7)'), stack: 's' },
+            { label: '외국인', data: flow.map((r) => r.foreign_net), backgroundColor: flow.map((r) => (r.foreign_net || 0) >= 0 ? 'rgba(220,53,69,0.7)' : 'rgba(13,110,253,0.7)'), stack: 's' },
+            { label: '기관', data: flow.map((r) => r.institution_net), backgroundColor: flow.map((r) => (r.institution_net || 0) >= 0 ? 'rgba(255,193,7,0.7)' : 'rgba(25,135,84,0.7)'), stack: 's' },
           ],
         },
         options: {
@@ -1561,7 +1561,7 @@ function app() {
       if (this._charts.holding) this._charts.holding.destroy();
       this._charts.holding = new Chart(ctx, {
         type: 'line',
-        data: { labels: flow.map((r) => r.date), datasets: [{ label: '?�국??보유??%)', data: flow.map((r) => r.foreign_holding_ratio), borderColor: '#0d6efd', backgroundColor: 'rgba(13,110,253,0.1)', fill: true, tension: 0.2, pointRadius: 2 }] },
+        data: { labels: flow.map((r) => r.date), datasets: [{ label: '외국인 보유율(%)', data: flow.map((r) => r.foreign_holding_ratio), borderColor: '#0d6efd', backgroundColor: 'rgba(13,110,253,0.1)', fill: true, tension: 0.2, pointRadius: 2 }] },
         options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: (v) => v + '%' } } } },
       });
     },
@@ -1575,7 +1575,7 @@ function app() {
       const { dates, closes, series } = t.indicators;
       if (this._charts.ma) this._charts.ma.destroy();
       const datasets = [
-        { label: '종�?', data: closes, borderColor: '#212529', borderWidth: 1.5, pointRadius: 0, tension: 0.1 },
+        { label: '종가', data: closes, borderColor: '#212529', borderWidth: 1.5, pointRadius: 0, tension: 0.1 },
       ];
       const maColors = { ma5: '#dc3545', ma20: '#fd7e14', ma60: '#0d6efd', ma120: '#6f42c1' };
       for (const k of ['ma5', 'ma20', 'ma60', 'ma120']) {
@@ -1648,17 +1648,17 @@ function app() {
         data: {
           labels: dates,
           datasets: [
-            { label: '?�단', data: series.bb_upper, borderColor: 'rgba(220,53,69,0.5)', borderWidth: 1, pointRadius: 0, fill: '+1', backgroundColor: 'rgba(108,117,125,0.1)' },
+            { label: '상단', data: series.bb_upper, borderColor: 'rgba(220,53,69,0.5)', borderWidth: 1, pointRadius: 0, fill: '+1', backgroundColor: 'rgba(108,117,125,0.1)' },
             { label: '중심(SMA20)', data: series.bb_mid, borderColor: '#6c757d', borderWidth: 1, pointRadius: 0 },
-            { label: '?�단', data: series.bb_lower, borderColor: 'rgba(13,110,253,0.5)', borderWidth: 1, pointRadius: 0, fill: false },
-            { label: '종�?', data: closes, borderColor: '#212529', borderWidth: 1.5, pointRadius: 0, tension: 0.1 },
+            { label: '하단', data: series.bb_lower, borderColor: 'rgba(13,110,253,0.5)', borderWidth: 1, pointRadius: 0, fill: false },
+            { label: '종가', data: closes, borderColor: '#212529', borderWidth: 1.5, pointRadius: 0, tension: 0.1 },
           ],
         },
         options: { plugins: { legend: { position: 'top' } }, scales: { x: { display: false } } },
       });
     },
 
-    // ===== ?��? 차트 =====
+    // ===== 회귀 차트 =====
     _drawWeightChart() {
       const ctx = document.getElementById('weightChart');
       if (!ctx) return;
@@ -1667,7 +1667,7 @@ function app() {
       this._charts.weight = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: ['가�?, '모멘?�', '?�리??, '?�변??, '?�장'],
+          labels: ['가치', '모멘텀', '퀄리티', '저변동', '성장'],
           datasets: [{ data: [w.value, w.momentum, w.quality, w.volatility, w.growth], backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#6c757d', '#dc3545'] }],
         },
         options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, max: 50, ticks: { callback: (v) => v + '%' } } } },
@@ -1683,7 +1683,7 @@ function app() {
       this._charts.contrib = new Chart(ctx, {
         type: 'doughnut',
         data: {
-          labels: ['가�?, '모멘?�', '?�리??, '?�변??, '?�장'],
+          labels: ['가치', '모멘텀', '퀄리티', '저변동', '성장'],
           datasets: [{ data: [c.value, c.momentum, c.quality, c.volatility, c.growth], backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#6c757d', '#dc3545'] }],
         },
         options: { plugins: { legend: { position: 'right' }, tooltip: { callbacks: { label: (ctx) => ctx.label + ': ' + ctx.parsed + '%' } } } },
@@ -1694,12 +1694,12 @@ function app() {
       const ctx = document.getElementById('factorImportanceChart');
       if (!ctx) return;
       const imp = this.optimizer?.regression?.importance;
-      if (!imp) { this._showNoData(ctx, '?�직 ?��?분석 ?�이?��? 충분?��? ?�습?�다 (최소 30???�이???�요)'); return; }
+      if (!imp) { this._showNoData(ctx, '아직 회귀분석 데이터가 충분하지 않습니다 (최소 30일 데이터 필요)'); return; }
       if (this._charts.imp) this._charts.imp.destroy();
       this._charts.imp = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: ['가�?, '모멘?�', '?�리??, '?�변??, '?�장'],
+          labels: ['가치', '모멘텀', '퀄리티', '저변동', '성장'],
           datasets: [{ data: [imp.value, imp.momentum, imp.quality, imp.volatility, imp.growth], backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#6c757d', '#dc3545'] }],
         },
         options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: (v) => v + '%' } } } },
@@ -1713,7 +1713,7 @@ function app() {
       c.fillStyle = '#999';
       c.font = '14px sans-serif';
       c.textAlign = 'center';
-      c.fillText(msg || '?�이???�음 (?�직 충분???�이지 ?�음)', ctx.width / 2, ctx.height / 2);
+      c.fillText(msg || '데이터 없음 (아직 충분히 쌓이지 않음)', ctx.width / 2, ctx.height / 2);
     },
 
     async triggerUpdate() {
@@ -1724,7 +1724,7 @@ function app() {
         if (r.ok && data.ok) {
           setTimeout(() => this._silentRefresh(), 90_000);
         } else {
-          alert(data.fallback || data.error || '?�데?�트 ?�청 ?�패');
+          alert(data.fallback || data.error || '업데이트 요청 실패');
         }
         this.state.updating = false;
       } catch (e) {
@@ -1733,7 +1733,7 @@ function app() {
       }
     },
 
-    // ===== 관?�종�?(Watchlist) =====
+    // ===== 관심종목 (Watchlist) =====
     isWatch(code) { return this.watchlist.includes(code); },
     toggleWatch(r) {
       const code = r.code;
@@ -1753,7 +1753,7 @@ function app() {
     toggleCompare(r, on) {
       if (on) {
         if (this.compareSet.length >= 5) {
-          alert('최�? 5개까지 비교 가??);
+          alert('최대 5개까지 비교 가능');
           r._compareOn = false;
           return;
         }
@@ -1766,57 +1766,57 @@ function app() {
       return this.all.filter((r) => this.compareSet.includes(r.code));
     },
     openCompare() {
-      if (this.compareSet.length < 2) { alert('2�??�상 ?�택?�주?�요'); return; }
+      if (this.compareSet.length < 2) { alert('2개 이상 선택해주세요'); return; }
       this.tab = 'all';
       // TODO: 별도 모달
     },
 
-    // ===== ?�크모드 =====
+    // ===== 다크모드 =====
     toggleDark() { this.darkMode = !this.darkMode; },
 
-    // ===== ?�이버증�??�음증권 ??�?=====
+    // ===== 네이버증권/다음증권 새 창 =====
     openNaver(code) {
       if (!code) return;
       window.open(`https://finance.naver.com/item/main.naver?code=${code}`, '_blank');
     },
     openDaum(code) {
       if (!code) return;
-      // ?�음증권 (Daum 증권, 2024 리브?�딩 ?�에??finance.daum.net ?�메???�용)
-      // 모바?��? m.finance.daum.net, ?�스?�탑?� finance.daum.net
+      // 다음증권 (Daum 증권, 2024 리브랜딩 후에도 finance.daum.net 도메인 사용)
+      // 모바일은 m.finance.daum.net, 데스크탑은 finance.daum.net
       window.open(`https://finance.daum.net/quotes/A${code}`, '_blank');
     },
 
-    // ===== ?�축???��?�?=====
+    // ===== 단축키 도움말 =====
     showShortcuts() {
       const el = document.getElementById('helpModal');
       if (!this._helpModal) this._helpModal = new bootstrap.Modal(el);
       this._helpModal.show();
     },
 
-    // ===== ?�동 ?�장 브리??=====
+    // ===== 자동 시장 브리핑 =====
     _generateBriefing() {
       const idx = this.indices || [];
       const kospi = idx.find((i) => i.market === 'KOSPI');
       const kosdaq = idx.find((i) => i.market === 'KOSDAQ');
       const lines = [];
       if (kospi) {
-        const sign = kospi.change >= 0 ? '?? : '??;
-        lines.push(`코스??${sign} ${Math.abs(kospi.change).toFixed(2)}pt (${(kospi.changePct >= 0 ? '+' : '') + kospi.changePct.toFixed(2)}%) ${kospi.asOf || ''} 종�? ${kospi.value.toFixed(2)}.`);
+        const sign = kospi.change >= 0 ? '▲' : '▼';
+        lines.push(`코스피 ${sign} ${Math.abs(kospi.change).toFixed(2)}pt (${(kospi.changePct >= 0 ? '+' : '') + kospi.changePct.toFixed(2)}%) ${kospi.asOf || ''} 종가 ${kospi.value.toFixed(2)}.`);
       }
       if (kosdaq) {
-        const sign = kosdaq.change >= 0 ? '?? : '??;
-        lines.push(`코스??${sign} ${Math.abs(kosdaq.change).toFixed(2)}pt (${(kosdaq.changePct >= 0 ? '+' : '') + kosdaq.changePct.toFixed(2)}%).`);
+        const sign = kosdaq.change >= 0 ? '▲' : '▼';
+        lines.push(`코스닥 ${sign} ${Math.abs(kosdaq.change).toFixed(2)}pt (${(kosdaq.changePct >= 0 ? '+' : '') + kosdaq.changePct.toFixed(2)}%).`);
       }
       if (this.top.length > 0) {
-        lines.push(`7?�터 종합 ?�위??${this.top[0].name}(${this.top[0].code}, ${this.top[0].total_score.toFixed(1)}??.`);
+        lines.push(`7팩터 종합 상위는 ${this.top[0].name}(${this.top[0].code}, ${this.top[0].total_score.toFixed(1)}점).`);
       }
       if (this.meta?.factor_stats) {
         const s = this.meta.factor_stats;
         if (s.halt + s.zeroVolume > 0) {
-          lines.push(`?�� 거래?��?·거래?? ${s.halt + s.zeroVolume}�??�동 ?�외.`);
+          lines.push(`🚫 거래정지·거래량0 ${s.halt + s.zeroVolume}개 자동 제외.`);
         }
         if (this.marketFilter === 'KOSPI' && s.kosdaq > 0) {
-          lines.push(`KOSDAQ ${s.kosdaq}개는 메인?�서 ?�외. ?market=KOSDAQ ?�로 ?�인.`);
+          lines.push(`KOSDAQ ${s.kosdaq}개는 메인에서 제외. ?market=KOSDAQ 으로 확인.`);
         }
       }
       this.briefing = lines.join(' ');
@@ -1825,15 +1825,15 @@ function app() {
     // ===== 급등/급락 =====
     async loadMovers() {
       if (this.all.length === 0) await this.loadAll();
-      // 1???�락�?계산 (간단 버전: change_pct ?�드가 ?�으�??�용, ?�으�?daily_prices?�서 계산)
+      // 1일 등락률 계산 (간단 버전: change_pct 필드가 있으면 사용, 없으면 daily_prices에서 계산)
       const sorted = [...this.all].filter((r) => r.total_score > 0);
-      // change_pct ?�드가 ?�다�??�용
+      // change_pct 필드가 있다면 활용
       if (sorted[0] && sorted[0].change_pct !== undefined) {
         const byChange = [...sorted].sort((a, b) => (b.change_pct || 0) - (a.change_pct || 0));
         this.gainers = byChange.slice(0, 10);
         this.losers = byChange.slice(-10).reverse();
       } else {
-        // change_pct ?�으�?daily prices?�서 fetch (lazy)
+        // change_pct 없으면 daily prices에서 fetch (lazy)
         this.gainers = [];
         this.losers = [];
         this._loadMoversFromPrices();
@@ -1845,14 +1845,14 @@ function app() {
         if (r && !r.__error) {
           this.gainers = r.gainers || [];
           this.losers = r.losers || [];
-          // ?�이???�점 ?�벨
+          // 데이터 시점 라벨
           this.moversAsOf = r.asOf || '';
           this.moversPeriod = r.period || '';
         }
       } catch (e) { /* ignore */ }
     },
 
-    // ===== ?�고가/?��?가 =====
+    // ===== 신고가/신저가 =====
     async loadHighLow() {
       if (this.all.length === 0) await this.loadAll();
       try {
@@ -1864,7 +1864,7 @@ function app() {
       } catch (e) { /* ignore */ }
     },
 
-    // ===== ?�급 ?�상 =====
+    // ===== 수급 이상 =====
     async loadSupplySignals() {
       if (this.all.length === 0) await this.loadAll();
       try {
@@ -1892,14 +1892,14 @@ function app() {
       } catch (e) { console.error('[dynamicPortfolio]', e); }
     },
 
-    // stock detail???�적 ?�트?�리???�력 조회
+    // stock detail의 동적 포트폴리오 이력 조회
     dynamicPortfolioFor(code) {
       if (!this.dynamicPortfolio || !this.dynamicPortfolio.byStock) return null;
       return this.dynamicPortfolio.byStock[code] || null;
     },
 
     async loadAnalytics(force = false) {
-      // 캐시: ??�??�공?�면 ?�호�?????(?�동 ?�로고침?� force=true)
+      // 캐시: 한 번 성공하면 재호출 안 함 (수동 새로고침은 force=true)
       if (this.analytics && !force) return this.analytics;
       this.analyticsLoading = true;
       try {
@@ -1921,13 +1921,13 @@ function app() {
 
     _drawAnalyticsCharts() {
       if (!this.analytics || !window.Chart) {
-        console.warn('[analytics] 차트 그리�??�킵:', { hasData: !!this.analytics, hasChart: !!window.Chart });
+        console.warn('[analytics] 차트 그리기 스킵:', { hasData: !!this.analytics, hasChart: !!window.Chart });
         return;
       }
       this._destroyAnalyticsCharts();
       const a = this.analytics;
 
-      // 모바???�?�능 기기 ?�?? 차트 1개씩 setTimeout?�로 분산 (메인 ?�레??블로??방�?)
+      // 모바일/저성능 기기 대응: 차트 1개씩 setTimeout으로 분산 (메인 스레드 블로킹 방지)
       const drawLag1 = () => {
         try {
           const c1 = document.getElementById('chartLag1');
@@ -1948,8 +1948,8 @@ function app() {
             data: {
               labels: labels1,
               datasets: [
-                { label: 'lag-1 (?�확)', data: totals1, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
-                { label: '즉시 매수 (과�??��?)', data: instant, backgroundColor: 'rgba(255, 99, 132, 0.5)' },
+                { label: 'lag-1 (정확)', data: totals1, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
+                { label: '즉시 매수 (과대평가)', data: instant, backgroundColor: 'rgba(255, 99, 132, 0.5)' },
               ],
             },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(0) + '%' } } }, scales: { y: { ticks: { callback: (v) => v + '%' } } } },
@@ -1993,8 +1993,8 @@ function app() {
             data: {
               labels: labels3,
               datasets: [
-                { label: 'Bootstrap 분위??(%)', data: data3, backgroundColor: data3.map((v, i) => i === 4 ? 'rgba(255, 99, 132, 0.7)' : 'rgba(54, 162, 235, 0.7)') },
-                { label: `?�샤?� ${insample.toFixed(0)}%`, data: [insample, insample, insample, insample, insample], type: 'line', borderColor: 'rgba(0, 200, 0, 0.8)', borderWidth: 2, fill: false, pointRadius: 0 },
+                { label: 'Bootstrap 분위수 (%)', data: data3, backgroundColor: data3.map((v, i) => i === 4 ? 'rgba(255, 99, 132, 0.7)' : 'rgba(54, 162, 235, 0.7)') },
+                { label: `인샤풀 ${insample.toFixed(0)}%`, data: [insample, insample, insample, insample, insample], type: 'line', borderColor: 'rgba(0, 200, 0, 0.8)', borderWidth: 2, fill: false, pointRadius: 0 },
               ],
             },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(0) + '%' } } }, scales: { y: { ticks: { callback: (v) => v + '%' } } } },
@@ -2021,13 +2021,13 @@ function app() {
                 { label: `Sideways (12개월)`, data: sidewaysData, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
               ],
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '%/?? } } }, scales: { y: { ticks: { callback: (v) => v + '%' } } } },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '%/월' } } }, scales: { y: { ticks: { callback: (v) => v + '%' } } } },
           });
           console.log('[chartRegime] OK');
         } catch (e) { console.error('[chartRegime] error:', e); }
       };
 
-      // === 차트 5: ?�일 ?�터 OOS Sharpe ===
+      // === 차트 5: 단일 팩터 OOS Sharpe ===
       const drawSingleFactor = async () => {
         try {
           const c5 = document.getElementById('chartSingleFactor');
@@ -2042,7 +2042,7 @@ function app() {
             data: {
               labels,
               datasets: [
-                { label: 'Sharpe (?�샤?� 13개월)', data: sharpeData, backgroundColor: sharpeData.map((v) => v >= 1.4 ? 'rgba(75, 192, 75, 0.7)' : v >= 1.0 ? 'rgba(54, 162, 235, 0.7)' : 'rgba(255, 99, 132, 0.7)'), yAxisID: 'y' },
+                { label: 'Sharpe (인샤풀 13개월)', data: sharpeData, backgroundColor: sharpeData.map((v) => v >= 1.4 ? 'rgba(75, 192, 75, 0.7)' : v >= 1.0 ? 'rgba(54, 162, 235, 0.7)' : 'rgba(255, 99, 132, 0.7)'), yAxisID: 'y' },
                 { label: 'Total (%)', data: totalData, type: 'line', borderColor: 'rgba(255, 159, 64, 0.8)', borderWidth: 2, fill: false, pointRadius: 4, yAxisID: 'y1' },
               ],
             },
@@ -2056,7 +2056,7 @@ function app() {
         } catch (e) { console.error('[chartSingleFactor] error:', e); }
       };
 
-      // === 차트 6: ?��? 가중치 비교 (5�??�략) ===
+      // === 차트 6: 회귀 가중치 비교 (5개 전략) ===
       const drawWeights = () => {
         try {
           const c6 = document.getElementById('chartWeights');
@@ -2077,14 +2077,14 @@ function app() {
         } catch (e) { console.error('[chartWeights] error:', e); }
       };
 
-      // === 차트 7: ?�적 ?�트?�리??3?�략 ?��? ===
+      // === 차트 7: 동적 포트폴리오 3전략 시뮬 ===
       const drawDynamic = async () => {
         try {
           const c7 = document.getElementById('chartDynamic');
           if (!c7 || c7.clientWidth === 0) return;
           const dp = await window.apiGet('/api/dynamic-portfolio');
           if (!dp || dp.__error || !dp.strategies) { console.warn('[chartDynamic] no data'); return; }
-          // �??�략??monthlyRet?� simulate?�서 ?????�음. overfit-audit??strategies�??��?
+          // 각 전략의 monthlyRet은 simulate에서 알 수 없음. overfit-audit의 strategies로 대체
           const audit = await window.apiGet('/api/overfit-audit');
           const lag1 = audit?.lag1Simulation;
           if (!lag1) return;
@@ -2099,7 +2099,7 @@ function app() {
               datasets: [
                 { label: 'Total (%)', data: totals.map((v) => v * 100), backgroundColor: 'rgba(54, 162, 235, 0.7)', yAxisID: 'y' },
                 { label: 'Sharpe × 50', data: sharpes.map((v) => v * 50), backgroundColor: 'rgba(75, 192, 75, 0.7)', yAxisID: 'y' },
-                { label: 'MDD (%, ?�수)', data: mdds, backgroundColor: 'rgba(255, 99, 132, 0.7)', yAxisID: 'y' },
+                { label: 'MDD (%, 음수)', data: mdds, backgroundColor: 'rgba(255, 99, 132, 0.7)', yAxisID: 'y' },
               ],
             },
             options: {
@@ -2119,25 +2119,25 @@ function app() {
           if (!c8 || c8.clientWidth === 0) return;
           const audit = await window.apiGet('/api/overfit-audit');
           if (!audit || audit.__error) return;
-          // tradeLog??dynamic-portfolio???�음
+          // tradeLog는 dynamic-portfolio에 있음
           const dp = await window.apiGet('/api/dynamic-portfolio');
           const trades = dp?.strategies?.sell2?.trades || 0;
-          // lag-1 ?��???sell2 tradeLog??internal. ?�략: lag1Simulation.sell2.trades
+          // lag-1 시뮬의 sell2 tradeLog는 internal. 정략: lag1Simulation.sell2.trades
           const sell2Trades = audit.lag1Simulation?.sell2?.trades || 0;
-          // 차트: ?�절/?�절 추정 (?�제 tradeLog ?�으�?placeholder)
+          // 차트: 익절/손절 추정 (실제 tradeLog 없으면 placeholder)
           this._analyticsCharts.sell2Dist = new Chart(c8, {
             type: 'doughnut',
             data: {
-              labels: ['?�절 (+21% 3R)', '?�절 (-7% 1R)'],
+              labels: ['익절 (+21% 3R)', '손절 (-7% 1R)'],
               datasets: [{ data: [9, 45], backgroundColor: ['rgba(75, 192, 75, 0.7)', 'rgba(255, 99, 132, 0.7)'] }],
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' }, tooltip: { callbacks: { label: (ctx) => ctx.label + ': ' + ctx.parsed + '??(13개월)' } } } },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' }, tooltip: { callbacks: { label: (ctx) => ctx.label + ': ' + ctx.parsed + '회 (13개월)' } } } },
           });
           console.log('[chartSell2Dist] OK');
         } catch (e) { console.error('[chartSell2Dist] error:', e); }
       };
 
-      // 1개씩 50ms 간격?�로 그리�?(모바???�?�능 ?�??
+      // 1개씩 50ms 간격으로 그리기 (모바일/저성능 대응)
       setTimeout(drawLag1, 0);
       setTimeout(drawKfold, 100);
       setTimeout(drawBootstrap, 200);
@@ -2148,11 +2148,11 @@ function app() {
       setTimeout(drawSell2Dist, 700);
     },
 
-    // ===== ?�호 추적 (1�?2�?매수·매도) =====
+    // ===== 신호 추적 (1차/2차 매수·매도) =====
     async loadSignalPerformance(force = false) {
       if (this.signalPerformance && !force) return this.signalPerformance;
       try {
-        // KOSPI + KOSDAQ ????로드 (병렬)
+        // KOSPI + KOSDAQ 둘 다 로드 (병렬)
         const [kospi, kosdaq] = await Promise.all([
           window.apiGet('/api/signal-performance').catch(() => null),
           window.apiGet('/api/signal-performance-kosdaq').catch(() => null),
@@ -2165,7 +2165,7 @@ function app() {
 
     _drawSignalCharts() {
       if (!this.signalPerformance || !window.Chart) {
-        console.warn('[signalCharts] ?�킵:', { hasData: !!this.signalPerformance, hasChart: !!window.Chart });
+        console.warn('[signalCharts] 스킵:', { hasData: !!this.signalPerformance, hasChart: !!window.Chart });
         return;
       }
       const s = this.signalPerformance;
@@ -2174,7 +2174,7 @@ function app() {
         if (this._charts[k]) { try { this._charts[k].destroy(); } catch (_) {} this._charts[k] = null; }
       }
 
-      // 차트 1: ?�호 종류�?+10?????�균 ?�익�?(KOSPI vs KOSDAQ)
+      // 차트 1: 신호 종류별 +10일 후 평균 수익률 (KOSPI vs KOSDAQ)
       setTimeout(() => {
         try {
           const c1 = document.getElementById('signalAvgReturnChart');
@@ -2191,10 +2191,10 @@ function app() {
             data: {
               labels,
               datasets: [
-                { label: 'KOSPI +10??, data: kospi10d, backgroundColor: kospi10d.map((v) => v >= 0 ? 'rgba(220, 53, 69, 0.8)' : 'rgba(13, 110, 253, 0.8)') },
-                { label: 'KOSPI +20??, data: kospi20d, backgroundColor: kospi20d.map((v) => v >= 0 ? 'rgba(220, 53, 69, 0.4)' : 'rgba(13, 110, 253, 0.4)') },
-                { label: 'KOSDAQ +10??, data: kosdaq10d, backgroundColor: kosdaq10d.map((v) => v >= 0 ? 'rgba(255, 99, 71, 0.6)' : 'rgba(70, 130, 180, 0.6)') },
-                { label: 'KOSDAQ +20??, data: kosdaq20d, backgroundColor: kosdaq20d.map((v) => v >= 0 ? 'rgba(255, 99, 71, 0.3)' : 'rgba(70, 130, 180, 0.3)') },
+                { label: 'KOSPI +10일', data: kospi10d, backgroundColor: kospi10d.map((v) => v >= 0 ? 'rgba(220, 53, 69, 0.8)' : 'rgba(13, 110, 253, 0.8)') },
+                { label: 'KOSPI +20일', data: kospi20d, backgroundColor: kospi20d.map((v) => v >= 0 ? 'rgba(220, 53, 69, 0.4)' : 'rgba(13, 110, 253, 0.4)') },
+                { label: 'KOSDAQ +10일', data: kosdaq10d, backgroundColor: kosdaq10d.map((v) => v >= 0 ? 'rgba(255, 99, 71, 0.6)' : 'rgba(70, 130, 180, 0.6)') },
+                { label: 'KOSDAQ +20일', data: kosdaq20d, backgroundColor: kosdaq20d.map((v) => v >= 0 ? 'rgba(255, 99, 71, 0.3)' : 'rgba(70, 130, 180, 0.3)') },
               ],
             },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + '%' } } }, scales: { y: { ticks: { callback: (v) => v + '%' } } } },
@@ -2202,7 +2202,7 @@ function app() {
         } catch (e) { console.error('[signalAvgReturnChart]', e); }
       }, 0);
 
-      // 차트 2: 매수 ?�호 ?�률
+      // 차트 2: 매수 신호 승률
       setTimeout(() => {
         try {
           const c2 = document.getElementById('signalWinRateChart');
@@ -2217,9 +2217,9 @@ function app() {
             data: {
               labels: labels2,
               datasets: [
-                { label: '+5???�률 (+1%)', data: wr5, backgroundColor: 'rgba(108, 117, 125, 0.7)' },
-                { label: '+10???�률 (+2%)', data: wr10, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
-                { label: '+20???�률 (+3%)', data: wr20, backgroundColor: 'rgba(75, 192, 75, 0.7)' },
+                { label: '+5일 승률 (+1%)', data: wr5, backgroundColor: 'rgba(108, 117, 125, 0.7)' },
+                { label: '+10일 승률 (+2%)', data: wr10, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
+                { label: '+20일 승률 (+3%)', data: wr20, backgroundColor: 'rgba(75, 192, 75, 0.7)' },
               ],
             },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '%' } } }, scales: { y: { ticks: { callback: (v) => v + '%' }, max: 100 } } },
@@ -2227,7 +2227,7 @@ function app() {
         } catch (e) { console.error('[signalWinRateChart]', e); }
       }, 100);
 
-      // 차트 3 (O): KOSDAQ ?�독 ???�호�?+10d/+20d ?�균 ?�익�?+ ?�률
+      // 차트 3 (O): KOSDAQ 단독 — 신호별 +10d/+20d 평균 수익률 + 승률
       setTimeout(() => {
         try {
           const c3 = document.getElementById('signalKosdaqChart');
@@ -2245,17 +2245,17 @@ function app() {
             data: {
               labels,
               datasets: [
-                { type: 'bar',  label: '+10???�균', data: avg10, backgroundColor: avg10.map((v) => v >= 0 ? 'rgba(220, 53, 69, 0.7)' : 'rgba(13, 110, 253, 0.7)'), yAxisID: 'y' },
-                { type: 'bar',  label: '+20???�균', data: avg20, backgroundColor: avg20.map((v) => v >= 0 ? 'rgba(220, 53, 69, 0.4)' : 'rgba(13, 110, 253, 0.4)'), yAxisID: 'y' },
-                { type: 'line', label: '+10???�률 (%)', data: wr, borderColor: '#fbbf24', backgroundColor: '#fbbf24', yAxisID: 'y1', tension: 0.3, pointRadius: 5 },
+                { type: 'bar',  label: '+10일 평균', data: avg10, backgroundColor: avg10.map((v) => v >= 0 ? 'rgba(220, 53, 69, 0.7)' : 'rgba(13, 110, 253, 0.7)'), yAxisID: 'y' },
+                { type: 'bar',  label: '+20일 평균', data: avg20, backgroundColor: avg20.map((v) => v >= 0 ? 'rgba(220, 53, 69, 0.4)' : 'rgba(13, 110, 253, 0.4)'), yAxisID: 'y' },
+                { type: 'line', label: '+10일 승률 (%)', data: wr, borderColor: '#fbbf24', backgroundColor: '#fbbf24', yAxisID: 'y1', tension: 0.3, pointRadius: 5 },
               ],
             },
             options: {
               responsive: true, maintainAspectRatio: false,
-              plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + (ctx.dataset.label.includes('?�률') ? ctx.parsed.y.toFixed(1) + '%' : ctx.parsed.y.toFixed(2) + '%') } } },
+              plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + (ctx.dataset.label.includes('승률') ? ctx.parsed.y.toFixed(1) + '%' : ctx.parsed.y.toFixed(2) + '%') } } },
               scales: {
-                y: { type: 'linear', position: 'left', ticks: { callback: (v) => v + '%' }, title: { display: true, text: '?�균 ?�익�? } },
-                y1: { type: 'linear', position: 'right', min: 0, max: 100, ticks: { callback: (v) => v + '%' }, title: { display: true, text: '?�률' }, grid: { drawOnChartArea: false } },
+                y: { type: 'linear', position: 'left', ticks: { callback: (v) => v + '%' }, title: { display: true, text: '평균 수익률' } },
+                y1: { type: 'linear', position: 'right', min: 0, max: 100, ticks: { callback: (v) => v + '%' }, title: { display: true, text: '승률' }, grid: { drawOnChartArea: false } },
               },
             },
           });
@@ -2263,7 +2263,7 @@ function app() {
       }, 200);
     },
 
-    // ===== 매트�?�� 검�??�이??로드 =====
+    // ===== 매트릭스 검증 데이터 로드 =====
     async loadMatrixVerify(force = false) {
       if (this.matrixVerifyKospi && this.matrixVerifyKosdaq && !force) return;
       try {
@@ -2276,7 +2276,7 @@ function app() {
       } catch (e) { console.error('[matrix-verify]', e); }
     },
 
-    // ===== ?�장 ?��? ?�수 로드 =====
+    // ===== 시장 평가 점수 로드 =====
     async loadMarketRegime(force = false) {
       if (this.marketRegime && !force) return;
       if (this.marketRegimeLoading) return;
@@ -2288,19 +2288,19 @@ function app() {
       finally { this.marketRegimeLoading = false; }
     },
 
-    // ===== 매트�?�� ?�급 (A/B/C/D/F) =====
+    // ===== 매트릭스 등급 (A/B/C/D/F) =====
     matrixGrade(score) {
-      if (score >= 90) return { grade: 'A', color: 'bg-danger text-white', emoji: '?��' };
-      if (score >= 75) return { grade: 'B', color: 'bg-warning text-dark', emoji: '?��' };
-      if (score >= 60) return { grade: 'C', color: 'bg-info text-white', emoji: '?��' };
-      if (score >= 40) return { grade: 'D', color: 'bg-secondary text-white', emoji: '�? };
-      return { grade: 'F', color: 'bg-light text-dark border', emoji: '?��' };
+      if (score >= 90) return { grade: 'A', color: 'bg-danger text-white', emoji: '🟥' };
+      if (score >= 75) return { grade: 'B', color: 'bg-warning text-dark', emoji: '🟨' };
+      if (score >= 60) return { grade: 'C', color: 'bg-info text-white', emoji: '🟦' };
+      if (score >= 40) return { grade: 'D', color: 'bg-secondary text-white', emoji: '⬜' };
+      return { grade: 'F', color: 'bg-light text-dark border', emoji: '🟫' };
     },
 
-    // ===== 매트�?�� ?�수 + ?�장 ?��? 가�?(0.8/0.2) =====
-    // raw: 매트�?�� ?�수 (-100~+100 ?�는 0~100)
-    // marketScore: ?�장 ?��? ?�수 (1~95)
-    // 가�??�수 = raw * 0.8 + market * 0.2 (0~100 ?�램??
+    // ===== 매트릭스 점수 + 시장 평가 가중 (0.8/0.2) =====
+    // raw: 매트릭스 점수 (-100~+100 또는 0~100)
+    // marketScore: 시장 평가 점수 (1~95)
+    // 가중 점수 = raw * 0.8 + market * 0.2 (0~100 클램프)
     matrixAdjusted(raw) {
       const marketScore = this.marketRegime?.score || 50;
       if (raw === null || raw === undefined) return null;
@@ -2308,7 +2308,7 @@ function app() {
       return Math.max(0, Math.min(100, Math.round(adj * 10) / 10));
     },
 
-    // ===== ?�급�??�호 ?�익�?=====
+    // ===== 등급별 신호 수익률 =====
     async loadGradePerformance(force = false) {
       if (this.gradePerformance && !force) return;
       if (this.gradePerformanceLoading) return;
@@ -2320,7 +2320,7 @@ function app() {
       finally { this.gradePerformanceLoading = false; }
     },
 
-    // ===== ?�장 ?��? ?�수 ?�계??=====
+    // ===== 시장 평가 점수 시계열 =====
     async loadMarketRegimeHistory(force = false) {
       if (this.marketRegimeHistory && !force) return;
       try {
@@ -2329,30 +2329,30 @@ function app() {
       } catch (e) { console.error('[market-regime-history]', e); }
     },
 
-    // ?�급�?차트 ?�이??(?�재 ?�터 ?�장)
+    // 등급별 차트 데이터 (현재 필터 시장)
     gradeChartData() {
       if (!this.gradePerformance) return null;
       const market = this.matrixMarketFilter === 'KOSDAQ' ? 'kosdaq' : 'kospi';
       const data = this.gradePerformance[market] || {};
       const grades = ['A', 'B', 'C', 'D', 'F'];
-      // sell1 +10d ?�균 (?�절 ??추�??�락 ???�수가 ?�수�??�한 ?�절)
+      // sell1 +10d 평균 (손절 후 추가하락 — 음수가 클수록 잘한 손절)
       const sell1Data = grades.map((g) => {
         const d = data[g];
         if (!d || !d.byType || !d.byType.sell1) return 0;
         return d.byType.sell1.avgReturn10d;
       });
-      // buy1 +10d ?�균 (매수 ???�승 ???�수가 ?�수�??�한 매수)
+      // buy1 +10d 평균 (매수 후 상승 — 양수가 클수록 잘한 매수)
       const buy1Data = grades.map((g) => {
         const d = data[g];
         if (!d || !d.byType || !d.byType.buy1) return 0;
         return d.byType.buy1.avgReturn10d;
       });
-      // ?�급�??�호 ??
+      // 등급별 신호 수
       const countData = grades.map((g) => (data[g]?.signalCount || 0));
       return { grades, sell1: sell1Data, buy1: buy1Data, count: countData };
     },
 
-    // ===== 매트�?�� ?�수 분포 (?�급�?카운?? =====
+    // ===== 매트릭스 점수 분포 (등급별 카운트) =====
     matrixGradeDistribution(items) {
       const dist = { A: 0, B: 0, C: 0, D: 0, F: 0 };
       if (!Array.isArray(items)) return dist;
@@ -2367,11 +2367,11 @@ function app() {
       return dist;
     },
 
-    // ===== 매트�?�� 분석 ???�재 ?�터 기�? ?�이??=====
+    // ===== 매트릭스 분석 — 현재 필터 기준 데이터 =====
     matrixCurrentData() {
       if (this.matrixMarketFilter === 'KOSPI') return this.matrixVerifyKospi;
       if (this.matrixMarketFilter === 'KOSDAQ') return this.matrixVerifyKosdaq;
-      // compare: KOSPI + KOSDAQ ?�합
+      // compare: KOSPI + KOSDAQ 통합
       const k = this.matrixVerifyKospi;
       const q = this.matrixVerifyKosdaq;
       if (!k && !q) return null;
@@ -2391,13 +2391,13 @@ function app() {
       };
     },
 
-    // ===== 매트�?�� 차트 그리�?=====
+    // ===== 매트릭스 차트 그리기 =====
     _drawMatrixCharts() {
       if (!window.Chart) return;
       const data = this.matrixCurrentData();
       if (!data) return;
 
-      // 차트 1: ?�급 분포 (KOSPI vs KOSDAQ)
+      // 차트 1: 등급 분포 (KOSPI vs KOSDAQ)
       try {
         const c1 = document.getElementById('matrixGradeChart');
         if (c1 && c1.clientWidth > 0) {
@@ -2420,7 +2420,7 @@ function app() {
               responsive: true, maintainAspectRatio: false,
               plugins: {
                 legend: { position: 'top' },
-                tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y + '�? } },
+                tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y + '개' } },
               },
               scales: { y: { ticks: { stepSize: 1, precision: 0 }, beginAtZero: true } },
             },
@@ -2428,7 +2428,7 @@ function app() {
         }
       } catch (e) { console.error('[matrixGradeChart]', e); }
 
-      // 차트 2: 매트�?�� ?�수 분포 (?�스?�그??
+      // 차트 2: 매트릭스 점수 분포 (히스토그램)
       try {
         const c2 = document.getElementById('matrixScoreHistChart');
         if (c2 && c2.clientWidth > 0) {
@@ -2444,10 +2444,10 @@ function app() {
           const labels = buckets.map((_, i) => `${i*10}-${i*10+9}`);
           this._charts.matrixScoreHist = new Chart(c2, {
             type: 'bar',
-            data: { labels, datasets: [{ label: '종목 ??, data: buckets, backgroundColor: 'rgba(99, 102, 241, 0.7)' }] },
+            data: { labels, datasets: [{ label: '종목 수', data: buckets, backgroundColor: 'rgba(99, 102, 241, 0.7)' }] },
             options: {
               responsive: true, maintainAspectRatio: false,
-              plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ctx.parsed.y + '�? } } },
+              plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ctx.parsed.y + '개' } } },
               scales: { y: { ticks: { stepSize: 1, precision: 0 }, beginAtZero: true } },
             },
           });
@@ -2455,7 +2455,7 @@ function app() {
       } catch (e) { console.error('[matrixScoreHistChart]', e); }
     },
 
-    // ===== 매트�?�� ?�급�?1차매???�성 카운??=====
+    // ===== 매트릭스 등급별 1차매수 활성 카운트 =====
     matrixGradeBuy1Stats() {
       const items = this.matrixCurrentData()?.items || this.matrixCurrentData()?.top || [];
       const groups = { A: { total: 0, active: 0 }, B: { total: 0, active: 0 }, C: { total: 0, active: 0 }, D: { total: 0, active: 0 }, F: { total: 0, active: 0 } };
@@ -2472,7 +2472,7 @@ function app() {
       return groups;
     },
 
-    // ===== ?�급�?차트 그리�?=====
+    // ===== 등급별 차트 그리기 =====
     _drawGradeChart() {
       if (!window.Chart) return;
       const data = this.gradeChartData();
@@ -2486,8 +2486,8 @@ function app() {
           data: {
             labels: data.grades,
             datasets: [
-              { label: '1차매??+10d (?�수=?�한 ?�절)', data: data.sell1, backgroundColor: data.sell1.map((v) => v <= 0 ? 'rgba(220, 53, 69, 0.7)' : 'rgba(13, 110, 253, 0.7)') },
-              { label: '1차매??+10d (?�수=?�한 매수)', data: data.buy1, backgroundColor: data.buy1.map((v) => v >= 0 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(13, 110, 253, 0.7)') },
+              { label: '1차매도 +10d (음수=잘한 손절)', data: data.sell1, backgroundColor: data.sell1.map((v) => v <= 0 ? 'rgba(220, 53, 69, 0.7)' : 'rgba(13, 110, 253, 0.7)') },
+              { label: '1차매수 +10d (양수=잘한 매수)', data: data.buy1, backgroundColor: data.buy1.map((v) => v >= 0 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(13, 110, 253, 0.7)') },
             ],
           },
           options: {
@@ -2499,7 +2499,7 @@ function app() {
       } catch (e) { console.error('[gradePerformanceChart]', e); }
     },
 
-    // ===== ?�장 ?��? ?�수 ?�계??차트 =====
+    // ===== 시장 평가 점수 시계열 차트 =====
     _drawMarketHistoryChart() {
       if (!window.Chart || !this.marketRegimeHistory) return;
       try {
@@ -2516,7 +2516,7 @@ function app() {
           data: {
             labels,
             datasets: [
-              { label: '?�장 ?��? ?�수', data: scores, borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.2)', fill: true, tension: 0.3, pointRadius: 2, yAxisID: 'y' },
+              { label: '시장 평가 점수', data: scores, borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.2)', fill: true, tension: 0.3, pointRadius: 2, yAxisID: 'y' },
               { label: '추세 (25%)', data: trends, borderColor: '#ef4444', tension: 0.3, pointRadius: 0, yAxisID: 'y' },
               { label: 'Breadth (25%)', data: breadths, borderColor: '#10b981', tension: 0.3, pointRadius: 0, yAxisID: 'y' },
               { label: '중립 (50)', data: scores.map(() => 50), borderColor: '#9ca3af', borderDash: [5, 5], pointRadius: 0, yAxisID: 'y' },
@@ -2526,7 +2526,7 @@ function app() {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + (ctx.parsed.y || 0).toFixed(1) } } },
             scales: {
-              y: { min: 0, max: 100, ticks: { callback: (v) => v + '?? }, title: { display: true, text: '?�수' } },
+              y: { min: 0, max: 100, ticks: { callback: (v) => v + '점' }, title: { display: true, text: '점수' } },
             },
           },
         });
@@ -2538,33 +2538,33 @@ function app() {
       if (!s) return {};
       const sum = s.summary || {};
       const k = this.signalPerformanceKosdaq?.summary || {}; // KOSDAQ KPI
-      const fmt = (v) => (v === null || v === undefined) ? '?? : (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+      const fmt = (v) => (v === null || v === undefined) ? '—' : (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
       const mkCard = (t, label, sub, color) => ({
         label,
         main: fmt(sum[t]?.avgReturn10d),
-        sub: `${sum[t]?.total || 0}�?· KOSPI`,
+        sub: `${sum[t]?.total || 0}건 · KOSPI`,
         color,
-        kosdaqMain: k[t]?.avgReturn10d !== undefined ? `KOSDAQ ${fmt(k[t].avgReturn10d)}` : 'KOSDAQ ??,
-        kosdaqSub: k[t] ? `${k[t].total}�? : '',
+        kosdaqMain: k[t]?.avgReturn10d !== undefined ? `KOSDAQ ${fmt(k[t].avgReturn10d)}` : 'KOSDAQ —',
+        kosdaqSub: k[t] ? `${k[t].total}건` : '',
       });
       return {
-        buy1: mkCard('buy1', '?? 1차매??, '+10???�균', (sum.buy1?.avgReturn10d || 0) >= 0 ? 'text-danger' : 'text-primary'),
-        buy2: mkCard('buy2', '?�� 2차매??, '+10???�균', (sum.buy2?.avgReturn10d || 0) >= 0 ? 'text-danger' : 'text-primary'),
-        sell1: mkCard('sell1', '?�� 1차매??(?�절)', '?�절 ??추�??�락', 'text-primary'),
-        sell2: mkCard('sell2', '?�� 2차매??(?�절)', '?�절 ??추�??�승', 'text-muted'),
+        buy1: mkCard('buy1', '🚀 1차매수', '+10일 평균', (sum.buy1?.avgReturn10d || 0) >= 0 ? 'text-danger' : 'text-primary'),
+        buy2: mkCard('buy2', '🛒 2차매수', '+10일 평균', (sum.buy2?.avgReturn10d || 0) >= 0 ? 'text-danger' : 'text-primary'),
+        sell1: mkCard('sell1', '🛑 1차매도 (손절)', '손절 후 추가하락', 'text-primary'),
+        sell2: mkCard('sell2', '💰 2차매도 (익절)', '익절 후 추가상승', 'text-muted'),
       };
     },
 
     signalTypeLabel(t) {
-      return { buy1: '1차매??, buy2: '2차매??, sell1: '1차매??, sell2: '2차매?? }[t] || t;
+      return { buy1: '1차매수', buy2: '2차매수', sell1: '1차매도', sell2: '2차매도' }[t] || t;
     },
 
     signalTypeDesc(t) {
       return {
-        buy1: '골든?�로???�배??,
-        buy2: '?�림�??�봉',
-        sell1: '?�절 -7%',
-        sell2: '?�절 +21%',
+        buy1: '골든크로스+정배열',
+        buy2: '눌림목+양봉',
+        sell1: '손절 -7%',
+        sell2: '익절 +21%',
       }[t] || '';
     },
 
@@ -2572,9 +2572,9 @@ function app() {
       return { buy1: 'bg-danger', buy2: 'bg-warning text-dark', sell1: 'bg-primary', sell2: 'bg-success' }[t] || 'bg-secondary';
     },
 
-    // ===== 가중치 ?�라?�더 (?�시�? =====
+    // ===== 가중치 슬라이더 (실시간) =====
     updateWeight(key, value) {
-      // ?�라?�더 변�????�규??
+      // 슬라이더 변경 시 정규화
       this.currentWeights = { ...this.currentWeights, [key]: Number(value) };
     },
     normalizeWeights() {
@@ -2593,11 +2593,11 @@ function app() {
       };
     },
 
-    // CSV ?�운로드 (??종목 ?�수) ???�른 ?�???�?�보?��? 차별??
+    // CSV 다운로드 (전 종목 점수) — 다른 퀀트 대시보드와 차별화
     downloadCsv() {
       if (!this.all || this.all.length === 0) return;
-      const rows = [['?�위', '코드', '종목�?, '?�장', '?�터', '?�급', '가�?, '모멘?�', '?�리??, '?�변??, '?�장', '?�동', '?�급', '총점', '?�태']];
-      // ?�렬: total_score desc
+      const rows = [['순위', '코드', '종목명', '시장', '섹터', '등급', '가치', '모멘텀', '퀄리티', '저변동', '성장', '유동', '수급', '총점', '상태']];
+      // 정렬: total_score desc
       const sorted = [...this.all].sort((a, b) => (b.total_score || 0) - (a.total_score || 0));
       for (const r of sorted) {
         rows.push([
@@ -2619,7 +2619,7 @@ function app() {
         ]);
       }
       const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-      // BOM 추�? (?��? ?��? 깨짐 방�?)
+      // BOM 추가 (엑셀 한글 깨짐 방지)
       const bom = '\uFEFF';
       const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -2634,10 +2634,10 @@ function app() {
       URL.revokeObjectURL(url);
     },
 
-    // ??10종목 분산 ?�트?�리??CSV ?�운로드
+    // ★ 10종목 분산 포트폴리오 CSV 다운로드
     downloadPortfolioCsv() {
       if (!this.portfolio?.items?.length) return;
-      const rows = [['?�위', '코드', '종목�?, '?�장', '?�터', '?�급', '총점', '비중(%)', '?�재가', '?�인 5??, '기�? 5??]];
+      const rows = [['순위', '코드', '종목명', '시장', '섹터', '등급', '총점', '비중(%)', '현재가', '외인 5일', '기관 5일']];
       for (const p of this.portfolio.items) {
         rows.push([
           p.rank, p.code, p.name || '', p.market || '', p.sector || '',
