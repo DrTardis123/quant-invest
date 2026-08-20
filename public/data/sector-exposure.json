@@ -1,0 +1,57 @@
+{
+  "asOf": "2026-08-15T13:30:17.663Z",
+  "nSectors": 10,
+  "nStocks": 10,
+  "sectors": [
+    {
+      "sector": "손해보험",
+      "count": 1,
+      "weight": 10
+    },
+    {
+      "sector": "은행",
+      "count": 1,
+      "weight": 10
+    },
+    {
+      "sector": "섬유,의류,신발,호화품",
+      "count": 1,
+      "weight": 10
+    },
+    {
+      "sector": "화학",
+      "count": 1,
+      "weight": 10
+    },
+    {
+      "sector": "증권",
+      "count": 1,
+      "weight": 10
+    },
+    {
+      "sector": "철강",
+      "count": 1,
+      "weight": 10
+    },
+    {
+      "sector": "생명보험",
+      "count": 1,
+      "weight": 10
+    },
+    {
+      "sector": "식품",
+      "count": 1,
+      "weight": 10
+    },
+    {
+      "sector": "자동차부품",
+      "count": 1,
+      "weight": 10
+    },
+    {
+      "sector": "비철금속",
+      "count": 1,
+      "weight": 10
+    }
+  ]
+}

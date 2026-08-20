@@ -1,0 +1,91 @@
+{
+  "asOf": "2026-08-15T13:30:17.663Z",
+  "nStocks": 10,
+  "weightingScheme": "equal-weight (1/N=10.0%)",
+  "nFactors": 7,
+  "factors": [
+    {
+      "key": "value",
+      "label": "가치",
+      "color": "#0d6efd",
+      "raw": 77.85,
+      "zScore": 1.638,
+      "direction": "long"
+    },
+    {
+      "key": "momentum",
+      "label": "모멘텀",
+      "color": "#198754",
+      "raw": 76.14,
+      "zScore": 1.538,
+      "direction": "long"
+    },
+    {
+      "key": "quality",
+      "label": "퀄리티",
+      "color": "#fd7e14",
+      "raw": 94.0,
+      "zScore": 2.588,
+      "direction": "long"
+    },
+    {
+      "key": "volatility",
+      "label": "저변동",
+      "color": "#6f42c1",
+      "raw": 75.35,
+      "zScore": 1.491,
+      "direction": "long"
+    },
+    {
+      "key": "growth",
+      "label": "성장",
+      "color": "#dc3545",
+      "raw": 82.0,
+      "zScore": 1.882,
+      "direction": "long"
+    },
+    {
+      "key": "liquidity",
+      "label": "유동성",
+      "color": "#20c997",
+      "raw": 61.45,
+      "zScore": 0.673,
+      "direction": "long"
+    },
+    {
+      "key": "supply",
+      "label": "수급",
+      "color": "#ffc107",
+      "raw": 78.13,
+      "zScore": 1.655,
+      "direction": "long"
+    }
+  ],
+  "hhi": {
+    "value": 0.1575,
+    "equalBaseline": 0.1429,
+    "equalBaseline13": 0.0769,
+    "concentratedThreshold": 0.2143,
+    "level": "moderate",
+    "levelLabel": "보통",
+    "riskBadge": "⚠️ 보통"
+  },
+  "topConcentration": {
+    "top1": 0.1,
+    "top3": 0.3,
+    "top5": 0.5
+  },
+  "metadata": {
+    "note": "7팩터 시스템 (요청 13팩터와 다름). z-score: (raw-50)/17 가정. long/short 부호는 raw>50 ⇒ long.",
+    "factorKeys": [
+      "value",
+      "momentum",
+      "quality",
+      "volatility",
+      "growth",
+      "liquidity",
+      "supply"
+    ],
+    "asOf": "2026-08-15T13:30:17.663Z"
+  }
+}
