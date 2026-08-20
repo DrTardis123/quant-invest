@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 // 퀀트 투자 대시보드
 // - 호스팅(Vercel): /api/* → /data/*.json 리라이트 (정적 데이터)
@@ -12,8 +12,8 @@ function app() {
     // 페이지 감지: 'main' | 'explore' | 'analysis'
     page: (() => {
       const p = (typeof location !== 'undefined' ? location.pathname : '/');
-      if (p.endsWith('/explore.html')) return 'explore';
-      if (p.endsWith('/analysis.html')) return 'analysis';
+      if (p.endsWith('/explore')) return 'explore';
+      if (p.endsWith('/analysis')) return 'analysis';
       return 'main';
     })(),
     hosted: false,
@@ -1273,7 +1273,7 @@ function app() {
         // 분석 페이지에서는 모달이 없으므로 메인으로 이동 (?code=XXX)
         if (this.page === 'analysis') {
           const market = this.marketFilter || 'KOSPI';
-          location.href = '/index.html?code=' + encodeURIComponent(code) + '&market=' + encodeURIComponent(market);
+          location.href = '/?code=' + encodeURIComponent(code) + '&market=' + encodeURIComponent(market);
           return;
         }
         const r = await window.apiGet('/api/stock/' + encodeURIComponent(code));

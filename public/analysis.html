@@ -28,7 +28,7 @@
       <small class="text-muted fs-6">— 분포·상관·최적화·백테스트·포트폴리오·진단</small>
     </span>
     <div class="d-flex gap-2 align-items-center flex-wrap">
-      <a href="/index.html" class="btn btn-sm btn-outline-info">← 메인으로</a>
+      <a href="/" class="btn btn-sm btn-outline-info">← 메인으로</a>
       <a href="?market=KOSPI" class="btn btn-sm" :class="marketFilter==='KOSPI' ? 'btn-primary' : 'btn-outline-light'">📈 KOSPI</a>
       <a href="?market=KOSDAQ" class="btn btn-sm" :class="marketFilter==='KOSDAQ' ? 'btn-primary' : 'btn-outline-light'">📊 KOSDAQ</a>
       <select class="form-select form-select-sm" style="width:auto" x-model="strategyKey" @change="onStrategyChange()">
@@ -110,7 +110,7 @@
   <div class="alert alert-info mb-3" role="alert">
     <strong>📊 분석 페이지</strong> — 메인 페이지에서 7개 무거운 분석 탭을 분리했습니다.
     초기 로드 후 각 탭 클릭 시 데이터 lazy fetch. 모바일/PC 모두 부드럽게 동작합니다.
-    <a href="/index.html" class="alert-link">← 메인으로 돌아가기</a>
+    <a href="/" class="alert-link">← 메인으로 돌아가기</a>
   </div>
 
   <!-- ===== 시장 평가 점수 (헤더 다음) ===== -->
@@ -1068,7 +1068,7 @@
             <strong>💡 분석 페이지 팁</strong><br>
             • 각 탭 클릭 시 해당 데이터 lazy fetch (Chart.js 1회만 로드)<br>
             • 1.2년치 (14개월) 백테스트 데이터 기반 — KIS API 8년치 받으면 ±20% 이내로 정밀<br>
-            • 메인 페이지 (TOP 20)는 <a href="/index.html">여기</a>
+            • 메인 페이지 (TOP 20)는 <a href="/">여기</a>
           </div>
         </div>
       </div>

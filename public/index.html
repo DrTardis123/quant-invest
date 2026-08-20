@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
@@ -223,7 +223,7 @@
                 </div>
               </template>
             </div>
-            <a href="/analysis.html?tab=signals" class="btn btn-sm btn-outline-primary">📊 매트릭스 분석 →</a>
+            <a href="/analysis?tab=signals" class="btn btn-sm btn-outline-primary">📊 매트릭스 분석 →</a>
           </div>
         </div>
       </div>
@@ -235,8 +235,8 @@
     <li class="nav-item"><a class="nav-link" :class="{active: tab==='top'}" href="#" @click.prevent="setTab('top')">🏆 TOP <kbd>T</kbd></a></li>
     <li class="nav-item"><a class="nav-link" :class="{active: tab==='watchlist'}" href="#" @click.prevent="setTab('watchlist')">⭐ 관심종목 <span class="badge bg-warning text-dark" x-text="watchlist.length" x-show="watchlist.length > 0"></span></a></li>
     <li class="nav-item"><a class="nav-link" :class="{active: tab==='portfolio'}" href="#" @click.prevent="setTab('portfolio')">💼 10종목 <kbd>P</kbd></a></li>
-    <li class="nav-item ms-auto"><a class="nav-link text-secondary" href="/explore.html">🔍 탐색 페이지 →</a></li>
-    <li class="nav-item"><a class="nav-link text-info fw-bold" href="/analysis.html">📊 분석 페이지 →</a></li>
+    <li class="nav-item ms-auto"><a class="nav-link text-secondary" href="/explore">🔍 탐색 페이지 →</a></li>
+    <li class="nav-item"><a class="nav-link text-info fw-bold" href="/analysis">📊 분석 페이지 →</a></li>
   </ul>
 
   <!-- ===== TOP 픽 ===== -->
@@ -509,8 +509,8 @@
       <div class="card-body py-4">
         <h5>다른 페이지로 이동</h5>
         <div class="d-flex gap-2 justify-content-center flex-wrap mt-3">
-          <a href="/explore.html" class="btn btn-outline-secondary btn-lg">🔍 탐색 페이지 →</a>
-          <a href="/analysis.html" class="btn btn-primary btn-lg">📊 분석 페이지 →</a>
+          <a href="/explore" class="btn btn-outline-secondary btn-lg">🔍 탐색 페이지 →</a>
+          <a href="/analysis" class="btn btn-primary btn-lg">📊 분석 페이지 →</a>
         </div>
         <div class="mt-3 small text-muted">탐색: 🚀 급등/급락 · 📈 신고/신저 · 🟥 히트맵 · 📈 전체 · 🏷️ 섹터 · 💰 수급이상</div>
         <div class="small text-muted">분석: 📊 분포 · 🔗 상관 · 🎯 최적화 · ⏪ 백테스트 · 🔍 진단 · 📋 로그</div>
