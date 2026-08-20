@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /data/realtime.json
+
+Sitemap: https://tardisquantinvest.vercel.app/sitemap.xml
