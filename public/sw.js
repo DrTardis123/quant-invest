@@ -6,18 +6,18 @@
 //   - /api/* (Vercel): network-first (실시간성 우선), 실패 시 캐시 fallback
 //
 // 캐시 버전: 캐시 구조 변경 시 BUMP
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';  // v5: cleanUrls (no .html) — 캐시 키도 변경
 const APP_SHELL_CACHE = `app-shell-${CACHE_VERSION}`;
 const DATA_CACHE = `data-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
 const CDN_CACHE = `cdn-${CACHE_VERSION}`;
 
 // App shell (오프라인에서도 동작할 핵심 자산)
+// cleanUrls: true → .html 없는 경로가 캐시 키
 const APP_SHELL = [
   '/',
-  '/index.html',
-  '/explore.html',
-  '/analysis.html',
+  '/explore',
+  '/analysis',
   '/manifest.json',
   '/css/style.css',
   '/js/app.js',
@@ -133,7 +133,7 @@ async function cacheFirst(request, cacheName) {
   } catch (e) {
     // 오프라인이고 캐시도 없으면 index.html fallback (SPA 라우팅)
     if (request.mode === 'navigate') {
-      const fallback = await cache.match('/index.html');
+      const fallback = await cache.match('/');
       if (fallback) return fallback;
     }
     return new Response('Offline', { status: 503 });
