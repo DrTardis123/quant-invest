@@ -6,7 +6,7 @@
 //   - /api/* (Vercel): network-first (실시간성 우선), 실패 시 캐시 fallback
 //
 // 캐시 버전: 캐시 구조 변경 시 BUMP
-const CACHE_VERSION = 'v5';  // v5: cleanUrls (no .html) — 캐시 키도 변경
+const CACHE_VERSION = 'v6';  // v6: JS/CSS/HTML minify 적용 — cache busting
 const APP_SHELL_CACHE = `app-shell-${CACHE_VERSION}`;
 const DATA_CACHE = `data-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
@@ -26,6 +26,7 @@ const APP_SHELL = [
   '/js/api.js',
   '/js/reweight.js',
   '/js/chart-loader.js',
+  '/js/notifications.js',
   '/icons/icon.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png'
