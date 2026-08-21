@@ -417,9 +417,9 @@
   "regime": {
     "as_of": "2026-08-21",
     "regime": "GREEN",
-    "direction": "OUTFLOW",
-    "flow_1d_avg_billion_usd": -0.45,
-    "flow_5d_total_krw": -585000000000,
+    "direction": "INFLOW",
+    "flow_1d_avg_billion_usd": 0.379,
+    "flow_5d_total_krw": 2462902442838,
     "position_scale": 1.0,
     "thresholds": {
       "green_to_yellow": 0.6,
@@ -428,7 +428,15 @@
     },
     "color": "#198754",
     "emoji": "🟢",
-    "note": "외국인 일일 순유출 .45B (평균 대비 안정). 포지션 100%. 임계값은 KOSPI 2021-25 quantile 기준.",
-    "auto_update_pending": true
+    "note": "외인 일일 순유입 $0.38B (auto, stocks/44개 종목의 investor_flow 5일치 close×foreign_net 합산 (hit 42/miss 2)). 환율 1,300 KRW/USD 가정. 임계값 KOSPI 2021-25 quantile.",
+    "history": [
+      {
+        "date": "2026-08-21",
+        "flow_1d_avg_billion_usd": 0.379,
+        "regime": "GREEN"
+      }
+    ],
+    "auto_update_pending": false,
+    "source": "stocks/44개 종목의 investor_flow 5일치 close×foreign_net 합산 (hit 42/miss 2)"
   }
 }
