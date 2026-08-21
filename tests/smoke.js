@@ -12,15 +12,28 @@
   const cfg = require('../src/config');
   ok(cfg.port === 3000, 'config.port 기본값 3000');
   ok(cfg.data.markets.includes('KOSPI'), 'config.data.markets 에 KOSPI');
-  // 7팩터 가중치 (2026-08-13, 13개월 시뮬 기반 Sharpe 최적)
+  // 7팩터 가중치: 특정 숫자를 박아두지 않고 "지켜야 할 계약" 을 검증한다.
+  //  (1) cfg.factors.weights 는 strategies.balanced 와 동일해야 한다.
+  //      → scripts/update.js 가 만드는 total_score 와 대시보드 기본 프로파일이 어긋나지 않게.
+  //  (2) 모든 프로파일의 가중치 합은 100 이어야 한다.
+  //  (3) 7개 팩터 키가 빠짐없이 있어야 한다. (빠지면 reweight 에서 조용히 0점 처리됨)
+  const strategies = require('../src/strategies');
+  const FACTOR_KEYS = ['value', 'momentum', 'quality', 'volatility', 'growth', 'liquidity', 'supply'];
   const W = cfg.factors.weights;
-  ok(W.value === 10, `가치 가중치 10 (현재 ${W.value})`);
-  ok(W.momentum === 25, `모멘텀 가중치 25 (현재 ${W.momentum})`);
-  ok(W.quality === 25, `퀄리티 가중치 25 (현재 ${W.quality})`);
-  ok(W.volatility === 15, `저변동 가중치 15 (현재 ${W.volatility})`);
-  ok(W.growth === 15, `성장 가중치 15 (현재 ${W.growth})`);
-  ok(W.liquidity === 5, `유동 가중치 5 (현재 ${W.liquidity})`);
-  ok(W.supply === 5, `수급 가중치 5 (현재 ${W.supply})`);
+  const B = strategies.get('balanced').weights;
+  ok(
+    FACTOR_KEYS.every((k) => W[k] === B[k]),
+    `cfg.factors.weights === strategies.balanced (${JSON.stringify(W)})`,
+  );
+  for (const s of strategies.list()) {
+    const keys = Object.keys(s.weights);
+    ok(
+      FACTOR_KEYS.every((k) => Number.isFinite(s.weights[k])),
+      `'${s.key}' 프로파일에 7팩터 키 모두 존재 (${keys.length}개)`,
+    );
+    const sum = FACTOR_KEYS.reduce((a, k) => a + s.weights[k], 0);
+    ok(sum === 100, `'${s.key}' 가중치 합 100 (현재 ${sum})`);
+  }
   ok(typeof cfg.isKisEnabled === 'function', 'isKisEnabled 함수 존재');
 
   const { initSchema } = require('../src/db/init');

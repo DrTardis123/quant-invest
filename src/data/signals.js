@@ -64,9 +64,10 @@ function calculateSignals(prices, technical) {
   const volLast = volumes[volumes.length - 1];
   const closePrev = closes[closes.length - 2];
 
-  // 60일 고가
-  const last60 = closes.slice(-60);
-  const high60 = Math.max(...last60);
+  // 60일 고가 — 종가가 아니라 실제 고가(high) 기준. high 가 없으면 close 로 폴백.
+  const highs = prices.map((p) => Number(p.high) || Number(p.close) || 0);
+  const lows = prices.map((p) => Number(p.low) || Number(p.close) || 0);
+  const high60 = Math.max(...highs.slice(-60));
   // 20일 변동성 (ATR-like)
   const rets = [];
   for (let i = closes.length - 20; i < closes.length; i++) {
@@ -201,9 +202,11 @@ function calculateSignals(prices, technical) {
   if (ma20RisingFor2) { buy2Score += 5; buy2Reasons.push('20일선 우상향 (추세 유지)'); buy2Contribs.push({label: 'ma20↑', pts: 5}); }
   if (aboveMa60) { buy2Score += 5; buy2Reasons.push('60일선 위 (장기 추세)'); buy2Contribs.push({label: 'ma60위', pts: 5}); }
   // 매물대 (2차매수가 ma60 ≈ POC/지지선)
+  // 60일선이 매물대(POC)/지지선과 겹치면 눌림목 매수 신뢰도가 올라간다.
+  // (실제 2차매수가는 아래 buy2Price 에서 정하지만, 이 점수는 "ma60 지지" 자체에 대한 가산)
   if (vpEarly) {
-    if (vpEarly.poc && Math.abs(ma60 - vpEarly.poc.price) / ma60 <= 0.10) { buy2Score += 7; buy2Reasons.push(`POC 부근 2차매수가`); buy2Contribs.push({label: 'POC', pts: 7}); }
-    if (vpEarly.supportLines && vpEarly.supportLines.some((p) => Math.abs(ma60 - p) / ma60 <= 0.10)) { buy2Score += 5; buy2Reasons.push('지지선 부근 2차매수가'); buy2Contribs.push({label: '지지선', pts: 5}); }
+    if (vpEarly.poc && Math.abs(ma60 - vpEarly.poc.price) / ma60 <= 0.10) { buy2Score += 7; buy2Reasons.push('60일선이 POC 부근 (매물대 지지)'); buy2Contribs.push({label: 'POC', pts: 7}); }
+    if (vpEarly.supportLines && vpEarly.supportLines.some((p) => Math.abs(ma60 - p) / ma60 <= 0.10)) { buy2Score += 5; buy2Reasons.push('60일선이 지지선 부근'); buy2Contribs.push({label: '지지선', pts: 5}); }
   }
   // ADX
   if (adxStrong && adxUpTrend) { buy2Score += 5; buy2Reasons.push(`ADX 강한 상승 추세 (눌림 적지)`); buy2Contribs.push({label: 'ADX↑', pts: 5}); }
@@ -272,20 +275,46 @@ function calculateSignals(prices, technical) {
   // 손절: max(이평선-10%, 매입가-2×ATR) — ATR 기반 동적 손절
   // 매트릭스 (정배열): 2차매수 < 1차매수 < 현재가 < 1차매도 < 2차매도
   const buy1Price = ma20;   // 1차매수가: 20일선 (스윙 추세 진입)
-  const buy2Price = ma60;   // 2차매수가: 60일선 (스윙 눌림목, 깊은 지지)
+  // 2차매수가: 1차매수가 **아래** 지지 후보 중 가장 가까운(최대) 값.
+  // 예전에는 무조건 ma60 이었는데, 하락 추세(역배열)에서는 ma60 > ma20 이라
+  // "2차 추가매수가 > 1차 매수가" 가 되어 분할매수 사다리가 뒤집혔다.
+  // (문서상 매트릭스는 2차매수 < 1차매수 < 현재가 < 1차매도 < 2차매도)
+  const buy2CandList = [
+    { name: 'MA60', price: ma60 },
+    { name: 'BB하단', price: bbLower },
+    { name: '52주신저', price: low52 },
+    ...(fib ? [{ name: '피보 78.6%', price: fib.level_786 }] : []),
+  ].filter((c) => Number.isFinite(c.price) && c.price > 0);
+  const buy2Below = buy2CandList.filter((c) => c.price < buy1Price);
+  const buy2Pick = buy2Below.length
+    ? buy2Below.reduce((m, c) => (c.price > m.price ? c : m))   // 아래 후보 중 가장 가까운 = 최대
+    : { name: '1차매수-7%', price: buy1Price * 0.93 };          // 전부 위에 있으면 고정 하향폭
+  const buy2Price = buy2Pick.price;
   const buyPrice = last;    // 매도/손익비 계산용 (현재가)
 
   // === 1차매도 (1차 익절) — 5개 요소 종합: ma20+15% / BB상단 / 52주고가-3% / 피보나치 38.2% / 피보나치 61.8% 중 보수적 ===
   // 5개 저항선 후보 중 가장 가까운(최소) 값 → 보수적 매도가
   // 단, 매수가(ma20)보다 작아지면 안 됨 → 최소 +10% 수익 보장
-  const sell1Cand1 = buy1Price * 1.15;        // 1차매수가(ma20) +15% (1차 익절)
-  const sell1Cand2 = bbUpper;                  // 볼린저밴드 상단 (저항)
-  const sell1Cand3 = high52 * 0.97;           // 52주고가 -3% (강한 저항)
-  const sell1Cand4 = fib ? fib.level_382 : last * 1.20; // 피보나치 38.2% 되돌림 (저항)
-  const sell1Cand5 = fib ? fib.level_618 : last * 1.25; // 피보나치 61.8% 되돌림 (저항)
-  const sell1Raw = Math.min(sell1Cand1, sell1Cand2, sell1Cand3, sell1Cand4, sell1Cand5);
-  // 보정: 매수가보다 낮으면 매수가+10% (손실 방지)
+  const sell1Cand1 = buy1Price * 1.15;                    // 1차매수가(ma20) +15% (1차 익절)
+  const sell1Cand2 = bbUpper;                              // 볼린저밴드 상단 (저항)
+  const sell1Cand3 = high52 * 0.97;                        // 52주고가 -3% (강한 저항)
+  const sell1Cand4 = fib ? fib.ext_1272 : last * 1.272;    // 피보나치 127.2% 확장 (1차 목표)
+  const sell1CandList = [
+    { name: 'MA20+15%', price: sell1Cand1 },
+    { name: 'BB상단', price: sell1Cand2 },
+    { name: '52주고-3%', price: sell1Cand3 },
+    { name: '피보 127.2%', price: sell1Cand4 },
+  ].filter((c) => Number.isFinite(c.price) && c.price > 0);
+  // "가장 가까운 저항" 은 현재가 **위** 에 있는 후보 중 최소값이어야 한다.
+  // 현재가 아래 후보는 이미 뚫린 레벨이므로 저항이 아니다 (예전엔 이걸 안 걸러서
+  // 항상 최저 후보가 뽑히고 매번 보정으로 덮였다).
+  const sell1Above = sell1CandList.filter((c) => c.price > last);
+  const sell1Pick = (sell1Above.length ? sell1Above : sell1CandList)
+    .reduce((m, c) => (c.price < m.price ? c : m));
+  const sell1Raw = sell1Pick.price;
+  // 보정: 매수가+10% 미만이면 손익비가 안 나오므로 하한 적용
   const sell1Price = Math.max(sell1Raw, buy1Price * 1.10);
+  const sell1Adjusted = sell1Raw < buy1Price * 1.10;
 
   // 손절 트리거 (가격 X, 추세 붕괴 또는 ATR 손절)
   const belowMa20 = last < ma20 * 0.97; // 20일선 -3% 종가 이탈 (추세 붕괴)
@@ -294,12 +323,13 @@ function calculateSignals(prices, technical) {
 
   let sell1Score = 0;
   const sell1Reasons = [];
+  // 익절 도달 구간은 배타적으로 (예전엔 +15% 이상일 때 50점과 30점이 같이 붙어 80점이 됐다)
   if (profitPctFromBuy1 >= 15) { sell1Score += 50; sell1Reasons.push(`1차매수가 +15% 도달 (1차 익절, +${profitPctFromBuy1.toFixed(1)}%)`); }
-  if (profitPctFromBuy1 >= 10) { sell1Score += 30; sell1Reasons.push(`1차매수가 +10% 도달 (1차 익절 임박, +${profitPctFromBuy1.toFixed(1)}%)`); }
-  if (sell1Price === sell1Cand2) { sell1Score += 10; sell1Reasons.push(`BB상단(${Math.round(bbUpper).toLocaleString()}원) = 1차 매도 적지`); }
-  if (sell1Price === sell1Cand3) { sell1Score += 10; sell1Reasons.push(`52주고가 -3% (${Math.round(high52 * 0.97).toLocaleString()}원) = 강한 저항`); }
-  if (fib && sell1Price === sell1Cand4) { sell1Score += 10; sell1Reasons.push(`피보나치 38.2% (${Math.round(sell1Cand4).toLocaleString()}원) = 저항`); }
-  if (fib && sell1Price === sell1Cand5) { sell1Score += 10; sell1Reasons.push(`피보나치 61.8% (${Math.round(sell1Cand5).toLocaleString()}원) = 강한 저항`); }
+  else if (profitPctFromBuy1 >= 10) { sell1Score += 30; sell1Reasons.push(`1차매수가 +10% 도달 (1차 익절 임박, +${profitPctFromBuy1.toFixed(1)}%)`); }
+  // 어떤 저항선이 선택됐는지는 sell1Pick 으로 판정 (보정으로 덮인 경우는 가산 없음)
+  if (!sell1Adjusted && sell1Pick.name === 'BB상단') { sell1Score += 10; sell1Reasons.push(`BB상단(${Math.round(bbUpper).toLocaleString()}원) = 1차 매도 적지`); }
+  if (!sell1Adjusted && sell1Pick.name === '52주고-3%') { sell1Score += 10; sell1Reasons.push(`52주고가 -3% (${Math.round(high52 * 0.97).toLocaleString()}원) = 강한 저항`); }
+  if (!sell1Adjusted && sell1Pick.name === '피보 127.2%') { sell1Score += 10; sell1Reasons.push(`피보나치 127.2% 확장 (${Math.round(sell1Cand4).toLocaleString()}원) = 1차 목표`); }
   if (belowMa20) { sell1Score += 50; sell1Reasons.push('20일선 -3% 종가 이탈 (추세 붕괴 → 손절)'); }
   if (lossPctFromBuy1 <= -8) { sell1Score += 20; sell1Reasons.push(`1차매수가 -8%↓ (${lossPctFromBuy1.toFixed(1)}%)`); }
   if (volumes.length >= 3 && last < closePrev && volumes[volumes.length - 2] < volumes[volumes.length - 1]) {
@@ -328,12 +358,22 @@ function calculateSignals(prices, technical) {
 
   // === 2차매도 (2차 익절) — 4개 요소 종합: ma20+30% / 52주고가-1% / 피보나치 23.6% / 120일선 터치 중 보수적 ===
   const ma120 = ma120Arr[ma120Arr.length - 1] || ma60;
-  const sell2Cand1 = buy1Price * 1.30;        // 1차매수가(ma20) +30% (2차 익절)
-  const sell2Cand2 = high52 * 0.99;           // 52주고가 -1% (강한 저항)
-  const sell2Cand3 = fib ? fib.level_236 : last * 1.35; // 피보나치 23.6% (저항)
-  const sell2Raw = Math.min(sell2Cand1, sell2Cand2, sell2Cand3);
-  // 보정: 매수가보다 낮으면 매수가+20% (2차 익절은 더 큰 수익 기대)
-  const sell2Price = Math.max(sell2Raw, buy1Price * 1.20);
+  const sell2Cand1 = buy1Price * 1.30;                  // 1차매수가(ma20) +30% (2차 익절)
+  const sell2Cand2 = high52 * 0.99;                     // 52주고가 -1% (강한 저항)
+  const sell2Cand3 = fib ? fib.ext_1618 : last * 1.618; // 피보나치 161.8% 확장 (2차 목표)
+  const sell2CandList = [
+    { name: 'MA20+30%', price: sell2Cand1 },
+    { name: '52주고-1%', price: sell2Cand2 },
+    { name: '피보 161.8%', price: sell2Cand3 },
+  ].filter((c) => Number.isFinite(c.price) && c.price > 0);
+  // 2차매도가는 1차매도가보다 위에 있어야 한다 (매트릭스 순서 보장)
+  const sell2Above = sell2CandList.filter((c) => c.price > sell1Price);
+  const sell2Pick = (sell2Above.length ? sell2Above : sell2CandList)
+    .reduce((m, c) => (c.price < m.price ? c : m));
+  const sell2Raw = sell2Pick.price;
+  // 보정: 매수가+20% 미만이면 하한 적용 (2차 익절은 더 큰 수익 기대)
+  const sell2Price = Math.max(sell2Raw, buy1Price * 1.20, sell1Price * 1.05);
+  const sell2Adjusted = sell2Raw < buy1Price * 1.20;
 
   const profitPctFromBuy2 = (last - buy2Price) / buy2Price * 100;
   const touchedMa120 = last >= ma120 * 0.99 && last <= ma120 * 1.02;
@@ -343,8 +383,8 @@ function calculateSignals(prices, technical) {
   if (profitPctFromBuy1 >= 30) { sell2Score += 50; sell2Reasons.push(`1차매수가 +30% 도달 (2차 익절, +${profitPctFromBuy1.toFixed(1)}%)`); }
   else if (profitPctFromBuy1 >= 25) { sell2Score += 30; sell2Reasons.push(`1차매수가 +25% 도달 (2차 익절 임박, +${profitPctFromBuy1.toFixed(1)}%)`); }
   else if (profitPctFromBuy1 >= 20) { sell2Score += 20; sell2Reasons.push(`1차매수가 +20% 도달 (+${profitPctFromBuy1.toFixed(1)}%)`); }
-  if (sell2Price === sell2Cand2) { sell2Score += 10; sell2Reasons.push(`52주고가 -1% (${Math.round(high52 * 0.99).toLocaleString()}원) = 강한 저항`); }
-  if (fib && sell2Price === sell2Cand3) { sell2Score += 10; sell2Reasons.push(`피보나치 23.6% (${Math.round(sell2Cand3).toLocaleString()}원) = 강한 저항`); }
+  if (!sell2Adjusted && sell2Pick.name === '52주고-1%') { sell2Score += 10; sell2Reasons.push(`52주고가 -1% (${Math.round(high52 * 0.99).toLocaleString()}원) = 강한 저항`); }
+  if (!sell2Adjusted && sell2Pick.name === '피보 161.8%') { sell2Score += 10; sell2Reasons.push(`피보나치 161.8% 확장 (${Math.round(sell2Cand3).toLocaleString()}원) = 2차 목표`); }
   if (touchedMa120) { sell2Score += 30; sell2Reasons.push('120일선 터치 (장기 저항)'); }
   if (vol20 > 0.04 && profitPctFromBuy1 > 20) { sell2Score += 10; sell2Reasons.push('변동성 4%+ (고점 경고)'); }
   // RSI/MACD 가산 (극단 과매수/모멘텀 다이버전스)
@@ -362,18 +402,26 @@ function calculateSignals(prices, technical) {
   const dynamicStopLoss = Math.max(stopLossPrice, stopLossByAtr); // 둘 중 큰 값 (더 위에 = 손실 적음)
 
   // === 손익비 (1차매수가(ma20) 기준 — 매수 시점 손익비) ===
-  // 1차매수가 → 1차매도가: 매입가 +15% (1차 익절 리워드)
-  // 1차매수가 → 2차매도가: 매입가 +30% (2차 익절 리워드)
-  // 손절: ma20 -3% 종가 이탈 시 즉시 매도 (별도 트리거, 가격 X)
-  const profit1 = sell1Price - buy1Price; // +15%
-  const profit2 = sell2Price - buy1Price; // +30%
-  const risk = buy1Price * 0.10; // 손절: 매입가 -10% (예약 손절가)
-  const riskRewardRatio = risk > 0 ? profit2 / risk : 0; // 30% / 10% = 3.0
+  // 리스크는 위에서 구한 실제 손절가(dynamicStopLoss)까지의 거리로 잡는다.
+  // 예전엔 risk 를 buy1Price×0.10 으로 하드코딩해서, ATR 손절이 더 타이트하게 잡힌
+  // 종목도 손익비가 항상 3.0 으로 나왔다.
+  const risk = Math.max(buy1Price - dynamicStopLoss, buy1Price * 0.01); // 0 나눗셈 방지
+  const riskPct = (risk / buy1Price) * 100;
+  const profit1 = sell1Price - buy1Price; // 1차 익절까지의 리워드
+  const profit2 = sell2Price - buy1Price; // 2차 익절까지의 리워드
+  const riskRewardRatio = profit1 / risk;  // 1차 익절 기준 (보수적)
+  const riskRewardRatio2 = profit2 / risk; // 2차 익절 기준
 
   // === 포지션 사이징 (R 기반) ===
-  // R = 1% 계좌, 매매당 1R = -7% → 1매매당 14% (R/0.07), 10개 분산 시 1종목 14%/10 = 1.4%
+  // 1매매당 감수할 손실 = 계좌의 1R(=1%). 손절폭이 riskPct% 이므로
+  //   1종목 최대 비중 = 1% / riskPct% (손절폭이 넓을수록 비중을 줄인다).
+  // 예전엔 손절폭 -7% 가정으로 14% 를 상수로 박아뒀는데 실제 손절은 -10%/ATR 기준이라 어긋났다.
+  const ACCOUNT_RISK_PCT = 1; // 1매매당 계좌 1% 리스크
+  // 손절폭 -10% → 1/0.10 = 계좌의 10%,  -7% → 14.3%.  2~20% 로 캡.
+  const positionSizePerTrade = Math.round(
+    Math.min(20, Math.max(2, ACCOUNT_RISK_PCT / (riskPct / 100))) * 10,
+  ) / 10;
   // 분할 매수 3회: 1차 50% + 2차 30% + 3차 20%
-  const positionSizePerTrade = 14; // 1매매당 최대 14%
   const split1 = 50; // 1차매수 비중
   const split2 = 30; // 2차매수 비중
   const split3 = 20; // 3차매수 비중 (향후 추가)
@@ -390,46 +438,58 @@ function calculateSignals(prices, technical) {
       reasons: buy1Reasons,
       contribs: buy1Contribs, // 점수 기여도 [{label, pts}]
       action: buy1Active ? 'BUY' : 'WAIT',
-      description: '5일↑20일 골든크로스 + 정배열 (5>20>60) + 20일선 우상향 + 거래량 1.5x↑',
+      description: '(정배열/골든크로스 + 지지선 2곳 + OBV↑) OR (강한 상승캔들 + ADX≥25 상승 + OBV↑) OR (지지선 역전환 + 상승캔들 + ADX≥25 + OBV↑). 거래량은 20일 평균 1.0x↑',
     },
     buy2: {
       active: buy2Active,
       score: Math.min(100, buy2Score),
       price: Math.round(buy2Price),
+      pickedBy: buy2Pick.name,
       reasons: buy2Reasons,
       contribs: buy2Contribs,
       action: buy2Active ? 'BUY' : 'WAIT',
-      description: '5일선/20일선 눌림 + 양봉 + 거래량 0.8x↓ + 20일선 우상향 + 60일선 위',
+      description: '(5일선±2% 또는 20일선 -5%~+2% 눌림 + 양봉 + 거래량 5일평균 0.9x↓ + 20일선 우상향 + 60일선 위) OR (POC/지지선 + 강한 상승캔들 + OBV↑)',
     },
     sell1: {
       active: sell1Active,
       score: Math.min(100, sell1Score),
       price: round2(sell1Price),
-      lossPct: round2((sell1Price - buyPrice) / buyPrice * 100),
+      // 1차매도가는 "1차 익절가" 다 (손절가는 아래 riskReward.stopLoss 참조).
+      // 예전 lossPct 는 이름과 달리 항상 양수 익절률을 담고 있었다 → profitPct 로 정정.
+      profitPct: round2((sell1Price - buyPrice) / buyPrice * 100),
+      pickedBy: sell1Pick.name,
+      adjusted: sell1Adjusted,
       reasons: sell1Reasons,
       action: sell1Active ? 'SELL' : 'HOLD',
-      description: '매입가 -7% (오닐) OR 5일선 종가 -2% 이탈',
+      description: '1차 익절 = 현재가 위 저항 중 가장 가까운 값 (MA20+15% / BB상단 / 52주고-3% / 피보 127.2%), 하한 매수가+10%. 손절 트리거는 MA20 -3% 종가 이탈 또는 매수가 -8%',
     },
     sell2: {
       active: sell2Active,
       score: Math.min(100, sell2Score),
       price: round2(sell2Price),
       profitPct: round2((sell2Price - buyPrice) / buyPrice * 100),
+      pickedBy: sell2Pick.name,
+      adjusted: sell2Adjusted,
       reasons: sell2Reasons,
       action: sell2Active ? 'SELL' : 'HOLD',
-      description: '+21% (3R) OR +8% (단기) OR 60일선 터치',
+      description: '2차 익절 = 1차매도가 위 저항 중 가장 가까운 값 (MA20+30% / 52주고-1% / 피보 161.8%), 하한 매수가+20%. 또는 120일선 터치 / RSI≥80',
     },
     riskReward: {
-      ratio: round2(riskRewardRatio),
+      ratio: round2(riskRewardRatio),        // 1차 익절 기준 (보수적)
+      ratio2: round2(riskRewardRatio2),      // 2차 익절 기준
       risk: round2(risk),
-      reward: round2(profit2),
-      stopLoss: round2(sell1Price),
-      takeProfit: round2(sell2Price),
+      riskPct: round2(riskPct),
+      reward: round2(profit1),
+      reward2: round2(profit2),
+      // stopLoss 는 손절가여야 한다. 예전엔 여기에 1차 **익절가**(sell1Price)가 들어가 있었다.
+      stopLoss: round2(dynamicStopLoss),
+      takeProfit: round2(sell1Price),
+      takeProfit2: round2(sell2Price),
     },
     positionSizing: {
       perTradePct: positionSizePerTrade,
       split: { first: split1, second: split2, third: split3 },
-      note: 'R=1% 가정, 1매매 -7% 손실 시 1R (14%), 10종목 분산 시 1.4%',
+      note: `계좌 1R=1% 기준, 손절폭 -${round2(riskPct)}% → 1종목 최대 ${positionSizePerTrade}%`,
     },
     context: {
       isAligned,
@@ -523,38 +583,39 @@ function calculateSignals(prices, technical) {
         final: Math.round(buy1Price),
       },
       buy2: {
-        // 2차매수가 = ma60 (메인), 보조: BB하단, 52주신저, 피보나치 78.6%
-        candidates: [
-          { name: 'MA60', price: Math.round(ma60), selected: true },
-          { name: 'BB하단', price: Math.round(bbLower), selected: false },
-          { name: '52주신저', price: Math.round(low52), selected: false },
-          ...(fib ? [{ name: '피보 78.6%', price: Math.round(fib.level_786), selected: false }] : []),
-        ],
+        // 2차매수가 = 1차매수가 아래 지지 후보 중 가장 가까운 값
+        candidates: buy2CandList.map((c) => ({
+          name: c.name,
+          price: Math.round(c.price),
+          belowBuy1: c.price < buy1Price,   // 1차매수가 아래에 있는 "실제 추가매수 구간" 인지
+          selected: c.name === buy2Pick.name,
+        })),
         final: Math.round(buy2Price),
+        pickedBy: buy2Pick.name,
       },
       sell1: {
-        // 1차매도 = 5개 요소 중 보수적(최소), 단 매수가+10% 이상 보장
-        // selected: 보정 전 raw 최소값 표시 → 어떤 저항선이 가장 가까운지
-        // final: 보정 후 실제 매도가 (매수가+10% 이상)
-        candidates: [
-          { name: 'MA20+15%', price: Math.round(sell1Cand1), selected: sell1Raw === sell1Cand1 },
-          { name: 'BB상단', price: Math.round(sell1Cand2), selected: sell1Raw === sell1Cand2 },
-          { name: '52주고-3%', price: Math.round(sell1Cand3), selected: sell1Raw === sell1Cand3 },
-          ...(fib ? [{ name: '피보 38.2%', price: Math.round(sell1Cand4), selected: sell1Raw === sell1Cand4 }] : []),
-          ...(fib ? [{ name: '피보 61.8%', price: Math.round(sell1Cand5), selected: sell1Raw === sell1Cand5 }] : []),
-        ],
+        // 1차매도 = 현재가 **위** 저항 후보 중 가장 가까운(최소) 값, 단 매수가+10% 이상 보장
+        // selected: 실제로 선택된 저항선,  abovePrice: 현재가 위에 있는지
+        // final: 보정 후 실제 매도가
+        candidates: sell1CandList.map((c) => ({
+          name: c.name,
+          price: Math.round(c.price),
+          abovePrice: c.price > last,       // 현재가 위에 있는 "실제 저항" 인지
+          selected: c.name === sell1Pick.name,
+        })),
         final: round2(sell1Price),
-        adjusted: sell1Raw < buy1Price * 1.10, // 보정 여부
+        adjusted: sell1Adjusted, // 보정 여부
       },
       sell2: {
         // 2차매도 = 3개 요소 중 보수적(최소), 단 매수가+20% 이상 보장
-        candidates: [
-          { name: 'MA20+30%', price: Math.round(sell2Cand1), selected: sell2Raw === sell2Cand1 },
-          { name: '52주고-1%', price: Math.round(sell2Cand2), selected: sell2Raw === sell2Cand2 },
-          ...(fib ? [{ name: '피보 23.6%', price: Math.round(sell2Cand3), selected: sell2Raw === sell2Cand3 }] : []),
-        ],
+        candidates: sell2CandList.map((c) => ({
+          name: c.name,
+          price: Math.round(c.price),
+          abovePrice: c.price > sell1Price,
+          selected: c.name === sell2Pick.name,
+        })),
         final: round2(sell2Price),
-        adjusted: sell2Raw < buy1Price * 1.20,
+        adjusted: sell2Adjusted,
       },
       stopLoss: {
         // 손절 = max(매입가-10%, 매입가-2×ATR) = 둘 중 큰 값 (손실 적은 값)
@@ -670,13 +731,15 @@ function calculateBollingerBands(prices, period = 20, stddev = 2) {
 // 강한 저항(52주고가) / 최후 지지(52주신저가)
 function calculate52Week(prices, days = 250) {
   if (!prices || prices.length < 20) return null;
-  const closes = prices.slice(-days).map((p) => Number(p.close) || 0);
-  const valid = closes.filter((c) => c > 0);
-  if (valid.length === 0) return null;
+  // 52주 고가/저가는 장중 고가·저가 기준이 표준. high/low 가 없을 때만 close 로 폴백.
+  const win = prices.slice(-days);
+  const highs = win.map((p) => Number(p.high) || Number(p.close) || 0).filter((c) => c > 0);
+  const lows = win.map((p) => Number(p.low) || Number(p.close) || 0).filter((c) => c > 0);
+  if (highs.length === 0 || lows.length === 0) return null;
   return {
-    high: Math.max(...valid),
-    low: Math.min(...valid),
-    period: valid.length,
+    high: Math.max(...highs),
+    low: Math.min(...lows),
+    period: highs.length,
   };
 }
 
@@ -686,20 +749,21 @@ function calculate52Week(prices, days = 250) {
 function calculateRSI(prices, period = 14) {
   if (!prices || prices.length < period + 1) return null;
   const closes = prices.map((p) => Number(p.close) || 0);
+  // 하루당 gain / loss 를 "같은 인덱스"로 유지해야 한다.
+  // 예전 구현은 상승일만 gains 에, 하락일만 losses 에 push 해서 두 배열의 i 번째가
+  // 서로 다른 날짜를 가리켰다 (길이도 달라짐) → Wilder 평활이 완전히 다른 구간을 섞었다.
   const gains = [];
   const losses = [];
   for (let i = 1; i < closes.length; i++) {
     const diff = closes[i] - closes[i - 1];
-    if (diff > 0) gains.push(diff);
-    else losses.push(-diff);
+    gains.push(diff > 0 ? diff : 0);
+    losses.push(diff < 0 ? -diff : 0);
   }
   if (gains.length < period) return null;
   // Wilder's smoothing
   let avgGain = gains.slice(0, period).reduce((s, v) => s + v, 0) / period;
   let avgLoss = losses.slice(0, period).reduce((s, v) => s + v, 0) / period;
-  // gains/losses 길이 비대칭 가능 → min length 사용
-  const minLen = Math.min(gains.length, losses.length);
-  for (let i = period; i < minLen; i++) {
+  for (let i = period; i < gains.length; i++) {
     avgGain = (avgGain * (period - 1) + gains[i]) / period;
     avgLoss = (avgLoss * (period - 1) + losses[i]) / period;
   }
@@ -754,10 +818,13 @@ function calculateMACD(prices, fast = 12, slow = 26, signal = 9) {
   };
 }
 
-// === 피보나치 되돌림 (Fibonacci Retracement) ===
-// 60일 고점/저점 기준 23.6%, 38.2%, 61.8%, 78.6% 되돌림 레벨
-// 상승 추세: 38.2%, 61.8% = 지지선
-// 하락 추세: 38.2%, 61.8% = 저항선
+// === 피보나치 되돌림 + 확장 (Retracement / Extension) ===
+// 되돌림(level_*) = 고점 - range×비율 → 항상 60일 고점 **아래**. 상승 추세에서는 "지지/매수 구간".
+// 확장(ext_*)     = 저점 + range×비율 → 60일 고점 **위**. 상승 추세에서의 "목표가/저항".
+// 주의: 되돌림 레벨을 익절 목표(저항)로 쓰면 안 된다.
+//       예전 구현은 level_382 / level_618 을 1차매도 후보로 넣었는데, 이 값들은 정의상
+//       고점보다 낮고 대개 현재가보다도 낮아서 min() 후보 중 항상 최소값이 되었고,
+//       결국 sell1 은 매번 "매수가+10%" 보정으로 덮여 5개 후보 설계가 무력화돼 있었다.
 function calculateFibonacci(prices, period = 60) {
   if (!prices || prices.length < period) return null;
   const last = prices.slice(-period);
@@ -774,6 +841,9 @@ function calculateFibonacci(prices, period = 60) {
     level_500: high - range * 0.500, // 50% 되돌림 (절반)
     level_618: high - range * 0.618, // 61.8% 되돌림 (깊은 조정, 황금비)
     level_786: high - range * 0.786, // 78.6% 되돌림 (매우 깊은)
+    // 확장(목표가) — 상승 추세 익절 레벨로 쓰는 표준 비율
+    ext_1272: low + range * 1.272,   // 127.2% 확장 (1차 목표)
+    ext_1618: low + range * 1.618,   // 161.8% 확장 (2차 목표, 황금비)
   };
 }
 

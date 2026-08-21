@@ -222,7 +222,13 @@ async function backtest({ topN = 20, lookbackMonths = 12 } = {}) {
 // (실제 점수 DB는 마지막 갱신 시의 가중치 그대로 유지)
 
 function recomputeWithWeights(rows, weights) {
-  const W = weights;
+  const W = weights || {};
+  // 가중치 합으로 나눔 (합이 100이 아닌 커스텀 가중치도 정상 스케일 유지)
+  // public/js/reweight.js 의 recomputeWithWeights 와 동일한 식이어야 함.
+  const wsum = (
+    (W.value || 0) + (W.momentum || 0) + (W.quality || 0) + (W.volatility || 0) +
+    (W.growth || 0) + (W.liquidity || 0) + (W.supply || 0)
+  ) || 100;
   const out = rows.map((r) => {
     // 7팩터 (liquidity/supply가 없으면 0 처리)
     const total = (
@@ -233,7 +239,7 @@ function recomputeWithWeights(rows, weights) {
       (r.growth_score || 0) * (W.growth || 0) +
       (r.liquidity_score || 0) * (W.liquidity || 0) +
       (r.supply_score || 0) * (W.supply || 0)
-    ) / 100;
+    ) / wsum;
     return { ...r, recomputed_total: Math.round(total * 100) / 100 };
   });
   out.sort((a, b) => b.recomputed_total - a.recomputed_total);

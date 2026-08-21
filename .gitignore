@@ -29,3 +29,6 @@ push-now.sh
 
 # Local data derivatives
 data/indices-5y.json
+
+# 임시 작업 스크립트
+scratch/

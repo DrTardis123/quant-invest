@@ -2,3 +2,6 @@
 # stock/*.json은 3,921개 × 150KB = 약 588MB로 Vercel deploy를 멎게 함
 # → serverless function (api/stock/[code].js)이 github raw에서 동적 fetch
 public/data/stock/
+
+# 로컬 분석용 CSV 캐시 — 웹에서 안 씀 (3.5MB)
+public/data/csv-cache/

@@ -9,116 +9,272 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "redirects": [
-    { "source": "/explore.html",   "destination": "/explore",   "statusCode": 301 },
-    { "source": "/analysis.html",  "destination": "/analysis",  "statusCode": 301 },
-    { "source": "/index.html",     "destination": "/",          "statusCode": 301 },
-    { "source": "/(.*)\\.html",    "destination": "/$1",        "statusCode": 301 }
+    {
+      "source": "/explore.html",
+      "destination": "/explore",
+      "statusCode": 301
+    },
+    {
+      "source": "/analysis.html",
+      "destination": "/analysis",
+      "statusCode": 301
+    },
+    {
+      "source": "/index.html",
+      "destination": "/",
+      "statusCode": 301
+    },
+    {
+      "source": "/(.*)\\.html",
+      "destination": "/$1",
+      "statusCode": 301
+    }
   ],
   "rewrites": [
-    { "source": "/api/top",         "destination": "/data/top.json" },
-    { "source": "/api/scores",      "destination": "/data/all.json" },
-    { "source": "/api/sectors",     "destination": "/data/sectors.json" },
-    { "source": "/api/heatmap",     "destination": "/data/heatmap.json" },
-    { "source": "/api/correlation", "destination": "/data/correlation.json" },
-    { "source": "/api/distribution","destination": "/data/distribution.json" },
-    { "source": "/api/kosdaq-top",  "destination": "/data/kosdaq-top.json" },
-    { "source": "/api/log",         "destination": "/data/log.json" },
-    { "source": "/api/strategies",  "destination": "/data/strategies-static.json" },
-    { "source": "/api/indices",     "destination": "/data/indices.json" },
-    { "source": "/api/optimizer",   "destination": "/data/optimizer.json" },
-    { "source": "/api/backtest",    "destination": "/data/backtest.json" },
-    { "source": "/api/movers",      "destination": "/data/movers.json" },
-    { "source": "/api/highlow",     "destination": "/data/highlow.json" },
-    { "source": "/api/supply-signals", "destination": "/data/supply-signals.json" },
-    { "source": "/api/portfolio",   "destination": "/data/portfolio.json" },
-    { "source": "/api/overfit-audit", "destination": "/data/overfit-audit.json" },
-    { "source": "/api/dynamic-portfolio", "destination": "/data/dynamic-portfolio.json" },
-    { "source": "/api/signal-performance", "destination": "/data/signal-performance.json" },
-    { "source": "/api/signal-performance-kosdaq", "destination": "/data/signal-performance-kosdaq.json" },
-    { "source": "/api/matrix-verify-kosdaq", "destination": "/data/matrix-verify-kosdaq.json" },
-    { "source": "/api/matrix-verify-top200", "destination": "/data/matrix-verify-top200.json" },
-    { "source": "/api/market-regime",        "destination": "/data/market-regime.json" },
-    { "source": "/api/grade-performance",    "destination": "/data/grade-performance.json" },
-    { "source": "/api/market-regime-history", "destination": "/data/market-regime-history.json" },
-    { "source": "/api/matrix-backfill-200",     "destination": "/data/matrix-backfill-200.json" },
-    { "source": "/api/matrix-backfill-200-kosdaq", "destination": "/data/matrix-backfill-200-kosdaq.json" },
-    { "source": "/api/single-factor", "destination": "/data/single-factor.json" },
-    { "source": "/api/regression-2", "destination": "/data/regression-2.json" },
-    { "source": "/api/realtime",   "destination": "/data/realtime.json" }
+    {
+      "source": "/api/meta",
+      "destination": "/data/meta.json"
+    },
+    {
+      "source": "/api/health",
+      "destination": "/data/health.json"
+    },
+    {
+      "source": "/api/top",
+      "destination": "/data/top.json"
+    },
+    {
+      "source": "/api/scores",
+      "destination": "/data/all.json"
+    },
+    {
+      "source": "/api/sectors",
+      "destination": "/data/sectors.json"
+    },
+    {
+      "source": "/api/heatmap",
+      "destination": "/data/heatmap.json"
+    },
+    {
+      "source": "/api/correlation",
+      "destination": "/data/correlation.json"
+    },
+    {
+      "source": "/api/distribution",
+      "destination": "/data/distribution.json"
+    },
+    {
+      "source": "/api/kosdaq-top",
+      "destination": "/data/kosdaq-top.json"
+    },
+    {
+      "source": "/api/log",
+      "destination": "/data/log.json"
+    },
+    {
+      "source": "/api/strategies",
+      "destination": "/data/strategies-static.json"
+    },
+    {
+      "source": "/api/indices",
+      "destination": "/data/indices.json"
+    },
+    {
+      "source": "/api/optimizer",
+      "destination": "/data/optimizer.json"
+    },
+    {
+      "source": "/api/backtest",
+      "destination": "/data/backtest.json"
+    },
+    {
+      "source": "/api/movers",
+      "destination": "/data/movers.json"
+    },
+    {
+      "source": "/api/highlow",
+      "destination": "/data/highlow.json"
+    },
+    {
+      "source": "/api/supply-signals",
+      "destination": "/data/supply-signals.json"
+    },
+    {
+      "source": "/api/portfolio",
+      "destination": "/data/portfolio.json"
+    },
+    {
+      "source": "/api/overfit-audit",
+      "destination": "/data/overfit-audit.json"
+    },
+    {
+      "source": "/api/dynamic-portfolio",
+      "destination": "/data/dynamic-portfolio.json"
+    },
+    {
+      "source": "/api/signal-performance",
+      "destination": "/data/signal-performance.json"
+    },
+    {
+      "source": "/api/signal-performance-kosdaq",
+      "destination": "/data/signal-performance-kosdaq.json"
+    },
+    {
+      "source": "/api/matrix-verify-kosdaq",
+      "destination": "/data/matrix-verify-kosdaq.json"
+    },
+    {
+      "source": "/api/matrix-verify-top200",
+      "destination": "/data/matrix-verify-top200.json"
+    },
+    {
+      "source": "/api/market-regime",
+      "destination": "/data/market-regime.json"
+    },
+    {
+      "source": "/api/grade-performance",
+      "destination": "/data/grade-performance.json"
+    },
+    {
+      "source": "/api/market-regime-history",
+      "destination": "/data/market-regime-history.json"
+    },
+    {
+      "source": "/api/matrix-backfill-200",
+      "destination": "/data/matrix-backfill-200.json"
+    },
+    {
+      "source": "/api/matrix-backfill-200-kosdaq",
+      "destination": "/data/matrix-backfill-200-kosdaq.json"
+    },
+    {
+      "source": "/api/single-factor",
+      "destination": "/data/single-factor.json"
+    },
+    {
+      "source": "/api/regression-2",
+      "destination": "/data/regression-2.json"
+    },
+    {
+      "source": "/api/realtime",
+      "destination": "/data/realtime.json"
+    }
   ],
   "headers": [
     {
       "source": "/data/realtime.json",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=30, s-maxage=60, stale-while-revalidate=120" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=30, s-maxage=60, stale-while-revalidate=120"
+        }
       ]
     },
     {
-      "source": "/data/(top|all|distribution|correlation|portfolio|backtest|optimizer|overfit-audit|dynamic-portfolio|single-factor|regression-2|indices|heatmap|sectors|strategies-static|movers|highlow|supply-signals|kosdaq-top|value-top|mom-top|quality-top|lowvol-top|meta).json",
+      "source": "/data/(top|all|distribution|correlation|portfolio|backtest|optimizer|overfit-audit|dynamic-portfolio|single-factor|regression-2|indices|heatmap|sectors|strategies-static|movers|highlow|supply-signals|kosdaq-top|value-top|mom-top|quality-top|lowvol-top|meta|health).json",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=60, s-maxage=600, stale-while-revalidate=300" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800"
+        }
       ]
     },
     {
-      "source": "/data/(log|distribution).json",
+      "source": "/data/log.json",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=30, s-maxage=300, stale-while-revalidate=60" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
+        }
       ]
     },
     {
       "source": "/data/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=60, s-maxage=300, stale-while-revalidate=60" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800"
+        }
       ]
     },
     {
       "source": "/js/(app|common|strategies|api|reweight|chart-loader).js",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=300, s-maxage=86400, stale-while-revalidate=86400" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, s-maxage=86400, stale-while-revalidate=86400"
+        }
       ]
     },
     {
       "source": "/css/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=300, s-maxage=86400, stale-while-revalidate=86400" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, s-maxage=86400, stale-while-revalidate=86400"
+        }
       ]
     },
     {
       "source": "/(index|explore|analysis|sw)\\.html",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, s-maxage=300, stale-while-revalidate=600" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, s-maxage=86400, stale-while-revalidate=604800"
+        }
       ]
     },
     {
       "source": "/(.*)\\.html",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, s-maxage=60, stale-while-revalidate=300" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, s-maxage=60, stale-while-revalidate=300"
+        }
       ]
     },
     {
       "source": "/sw.js",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/manifest.json",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=300, s-maxage=86400" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, s-maxage=86400"
+        }
       ]
     },
     {
       "source": "/icons/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=86400, s-maxage=2592000" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, s-maxage=2592000"
+        }
       ]
     },
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        }
       ]
     }
   ],

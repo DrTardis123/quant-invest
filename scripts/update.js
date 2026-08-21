@@ -611,9 +611,16 @@ async function exportStatic() {
       r.market = s.market;
       r.sector = s.sector || '';
       r.industry = s.industry || '';
-      r.grade = scoring.gradeFor(r.total_score);
+      // grade / date 는 여기서 굽지 않는다.
+      //   - grade: 프론트가 _recomputeAndSet() 에서 가중치 재계산 후 QUANT_GRADE 로 다시 만든다.
+      //            (서버가 넣어준 값은 100% 덮어써지는 죽은 필드였다 — 2,350행 × ~60B ≈ 140KB)
+      //   - date : 전 행이 같은 값이라 파일 상단 asOf 로 한 번만 보낸다.
+      delete r.grade;
+      delete r.date;
     }
   }
+  // all.json 은 첫 화면을 막는 가장 큰 페이로드다 (2,350행). 죽은 필드를 빼서
+  // 다운로드/JSON.parse 비용을 줄인다. 배열 형태는 유지 (프론트가 배열/{rows} 둘 다 받음).
   writeJson('all.json', allRowsRaw);
 
   // 섹터 통계 (DB에서 직접 계산)
@@ -1264,6 +1271,22 @@ async function exportStatic() {
   // 로그
   const logs = await db.all(`SELECT * FROM update_log ORDER BY id DESC LIMIT 10`);
   writeJson('log.json', logs);
+
+  // health.json — 예전엔 Vercel serverless function (api/health.js) 이 매 요청마다
+  // Cache-Control: no-store 로 응답했다. CDN 이 절대 캐시하지 못해 페이지를 열 때마다
+  // 함수 콜드스타트(측정 1.0~1.4s)를 그대로 물었고, 그 요청이 첫 화면 렌더를 막는
+  // Promise.all 안에 있었다. 내용은 전부 meta.json/log.json 에서 나오는 정적 값이므로
+  // 빌드 시점에 파일로 굽고 vercel.json rewrite 로 CDN 에서 바로 내보낸다.
+  writeJson('health.json', {
+    ok: true,
+    hosted: true,
+    generatedAt: new Date().toISOString(),
+    lastUpdate: logs[0] ? String(logs[0].run_at) : null,
+    lastStatus: logs[0] ? logs[0].status : null,
+    lastPriceDate: metaObj.last_price_date,
+    lastScoreDate: metaObj.last_score_date,
+    stockCount: metaObj.stock_count,
+  });
 
   // 백테스트 (daily_prices 기반 historical 13개월 시뮬)
   try {

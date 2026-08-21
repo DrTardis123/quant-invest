@@ -52,10 +52,12 @@ const cfg = {
   },
 
   factors: {
-    // 7팩터 가중치 (2026-08-13 업데이트)
-    // 13개월 백테스트 결과 Sharpe 최적 (Sharpe 1.61, Total 60%, MDD -14%)
-    // strategies.js의 'balanced'와 동기화
-    weights: { value: 10, momentum: 25, quality: 25, volatility: 15, growth: 15, liquidity: 5, supply: 5 },
+    // 7팩터 기본 가중치 = strategies.js 의 'balanced' 프로파일 (단일 진실 공급원)
+    // scripts/update.js 가 calculateAll(undefined) 로 호출하므로, 이 값이 all.json/top.json 의
+    // total_score 를 결정한다. 대시보드 기본 프로파일과 어긋나면 서버 랭킹과 화면 랭킹이 달라진다.
+    get weights() {
+      return require('../strategies').get('balanced').weights;
+    },
   },
 
   // KIS 키가 모두 있으면 자동으로 KIS 모드

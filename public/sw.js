@@ -6,7 +6,9 @@
 //   - /api/* (Vercel): network-first (실시간성 우선), 실패 시 캐시 fallback
 //
 // 캐시 버전: 캐시 구조 변경 시 BUMP
-const CACHE_VERSION = 'v6';  // v6: JS/CSS/HTML minify 적용 — cache busting
+// ⚠ App Shell 은 cache-first 라서, /js/*.js 를 고치면 여기 버전을 반드시 올려야
+//   기존 방문자에게 새 파일이 나간다. (안 올리면 옛 JS가 영구히 캐시된다)
+const CACHE_VERSION = 'v7';  // v7: reweight 7팩터 수정 + script defer + Alpine 순서 변경
 const APP_SHELL_CACHE = `app-shell-${CACHE_VERSION}`;
 const DATA_CACHE = `data-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `runtime-${CACHE_VERSION}`;
@@ -82,7 +84,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 4) App Shell (HTML/CSS/JS) → cache-first, 네트워크 fallback
+  // 4) HTML 내비게이션 → stale-while-revalidate
+  //    cache-first 로 두면 새로 배포해도 재방문자는 계속 옛 HTML을 본다.
+  //    SWR 이면 캐시본으로 즉시 그리고, 백그라운드로 최신본을 받아 다음 방문에 반영된다.
+  if (url.origin === location.origin && event.request.mode === 'navigate') {
+    event.respondWith(staleWhileRevalidate(event.request, APP_SHELL_CACHE));
+    return;
+  }
+
+  // 5) 그 외 자체 자산 (CSS/JS/아이콘) → cache-first, 네트워크 fallback
+  //    (버전 갱신은 위 CACHE_VERSION bump 로 처리)
   if (url.origin === location.origin) {
     event.respondWith(cacheFirst(event.request, APP_SHELL_CACHE));
     return;

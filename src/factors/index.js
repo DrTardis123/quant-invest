@@ -64,12 +64,21 @@ function percentileScore(values, higherIsBetter = true) {
   const sorted = [...valid].sort((a, b) => higherIsBetter ? b.raw - a.raw : a.raw - b.raw);
   const n = sorted.length;
   const rankMap = new Map();
-  sorted.forEach((v, i) => {
-    // i=0 (1등) → ~94, i=n-1 (꼴찌) → ~1
-    let score = ((n - i) / n) * 94;  // 0~94 (1등=93.x)
+  // 동점(tie) 은 평균 순위로 같은 점수를 준다.
+  // 예전 구현은 정렬 순서(불안정) 그대로 i 를 썼기 때문에, raw 가 완전히 같은 종목들이
+  // 배열에 담긴 순서만으로 1점 ~ 94점까지 흩어졌다. 연속형 팩터에서는 티가 안 났지만
+  // 값이 이산적인 팩터(mock 퀄리티/성장)에서는 점수가 사실상 난수가 된다.
+  let i = 0;
+  while (i < n) {
+    let j = i;
+    while (j + 1 < n && sorted[j + 1].raw === sorted[i].raw) j++;
+    // i..j 가 동점 구간 → 구간 평균 순위로 동일 점수
+    const midRank = (i + j) / 2;
+    let score = ((n - midRank) / n) * 94;  // 0~94 (1등=93.x)
     score = Math.max(1, Math.min(94, score));  // 절대 95 이상 안 됨
-    rankMap.set(v.code, score);
-  });
+    for (let k = i; k <= j; k++) rankMap.set(sorted[k].code, score);
+    i = j + 1;
+  }
   // 원래 입력에 없는/유효하지 않은 code는 50(중립)
   const out = new Map();
   for (const v of values) {
@@ -161,7 +170,10 @@ function calcQuality(fundamentals) {
     if (dvr !== null && dvr > 4) score += 8;
     mockQualityRows.push({ code: f.code, raw: Math.max(5, Math.min(94, score)) });
   }
-  const mockMap = new Map(mockQualityRows.map((r) => [r.code, r.raw]));
+  // mock 점수(5~94 휴리스틱 원점수)를 실측 팩터와 같은 백분위 스케일로 변환.
+  // 원점수를 그대로 섞으면 "PER<8 & PBR<0.5" 같은 조합이 전부 94점에 몰려버려
+  // (실측 604종목이 정확히 94점) 퀄리티 팩터가 랭킹 정보를 거의 못 준다.
+  const mockMap = percentileScore(mockQualityRows, true);
 
   // 실제 + mock 통합
   const allCodes = new Set([...roeMap.keys(), ...roaMap.keys(), ...debtMap.keys(), ...mockMap.keys()]);
@@ -215,16 +227,27 @@ function calcGrowth(fundamentals, prevFundamentals) {
       // 배당 안정 = 점수 중립 (보너스 없음)
       mockRows.push({ code: f.code, raw: Math.max(5, Math.min(94, score)) });
     }
-    const out = new Map();
-    for (const r of mockRows) out.set(r.code, r.raw);
-    return out;
+    // 실측 매출 성장률이 없을 때의 대체 휴리스틱.
+    // 원점수는 값이 9종류밖에 안 나오므로(50/62/82/...) 그대로 쓰면 팩터가 사실상 상수가 된다.
+    // → 실측 경로와 동일하게 백분위로 변환해 스케일과 분산을 맞춘다.
+    return percentileScore(mockRows, true);
   }
   return percentileScore(growthRows, true);
 }
 
+// 거래일 기준 상수 (1년 ≈ 252 거래일, 1개월 ≈ 21 거래일)
+const TRADING_DAYS_1M = 21;
+const TRADING_DAYS_12M = 252;
+
 function calcMomentum(prices) {
-  // 12개월 수익률 - 최근 1개월 (Jegadeesh-Titman 모멘텀)
-  // 각 code별 종가를 시간순으로 정렬 후 추출
+  // Jegadeesh-Titman (1993) 12-1 모멘텀
+  //   = t-252일 종가 → t-21일 종가 수익률
+  //     (최근 1개월은 단기 반전(short-term reversal)·호가 스프레드 노이즈 때문에 제외)
+  //
+  // 이전 구현은 두 군데가 틀려 있었다:
+  //   (1) 기준가로 arr[0] = "쿼리가 가져온 가장 오래된 봉" 을 썼는데,
+  //       fetchPricesForFactors 가 15개월치를 가져오므로 실제로는 15개월 모멘텀이었다.
+  //   (2) (12M 수익률 − 1M 수익률) 로 계산했는데, 표준 정의는 "최근 1개월을 건너뛴 구간 수익률".
   const byCode = new Map();
   for (const r of prices) {
     if (!byCode.has(r.code)) byCode.set(r.code, []);
@@ -232,14 +255,13 @@ function calcMomentum(prices) {
   }
   const rows = [];
   for (const [code, arr] of byCode) {
-    if (arr.length < 30) continue;
-    const last = Number(arr[arr.length - 1].close);
-    const monthAgo = Number(arr[Math.max(0, arr.length - 21)].close);
-    const yearAgo = Number(arr[0].close);
-    if (!last || !monthAgo || !yearAgo) continue;
-    const ret12 = (last - yearAgo) / yearAgo;
-    const ret1 = (last - monthAgo) / monthAgo;
-    rows.push({ code, raw: ret12 - ret1 });
+    // 12-1 을 계산하려면 최소 12개월치 봉 필요 (신규 상장주는 제외 → 중립 50점 처리)
+    if (arr.length < TRADING_DAYS_12M + 1) continue;
+    const n = arr.length;
+    const pEnd = Number(arr[n - 1 - TRADING_DAYS_1M].close);    // t-21일 (스킵 구간 시작점)
+    const pStart = Number(arr[n - 1 - TRADING_DAYS_12M].close); // t-252일
+    if (!pEnd || !pStart || pStart <= 0) continue;
+    rows.push({ code, raw: (pEnd - pStart) / pStart });
   }
   return percentileScore(rows, true);
 }
@@ -416,7 +438,9 @@ async function fetchLiquidity() {
              ROW_NUMBER() OVER (PARTITION BY code ORDER BY date DESC) AS rn
       FROM daily_prices
     )
-    SELECT code, AVG(volume * close) FILTER (WHERE rn <= 20) AS turnover_20d
+    SELECT code,
+           AVG(volume * close) FILTER (WHERE rn <= 20) AS turnover_20d,
+           AVG(volume)         FILTER (WHERE rn <= 20) AS avg_volume_20d
     FROM recent
     GROUP BY code
   `);
@@ -461,14 +485,25 @@ async function fetchSupply() {
   `);
 }
 
-function calcSupply(supply) {
-  // 외인+기관 5일 누적 백분위 (높을수록 좋음)
-  const rows = supply
-    .filter((r) => r.foreign_5d != null)
-    .map((r) => ({
-      code: r.code,
-      raw: (Number(r.foreign_5d) || 0) + (Number(r.inst_5d) || 0),
-    }));
+function calcSupply(supply, liquidity = []) {
+  // 외인+기관 5일 누적 순매수 백분위 (높을수록 좋음)
+  //
+  // investor_flow.foreign_net / institution_net 는 "순매매 **주식 수**" 다 (schema.sql 참조).
+  // 절대 주식 수를 그대로 백분위화하면 주당 단가가 낮아 잔주가 많이 도는 종목이 무조건 상위로
+  // 올라오고, 단가 높은 대형주는 같은 금액을 사도 하위로 밀린다 → 순수한 스케일 편향.
+  // → 같은 단위(주식 수)인 20일 평균 거래량으로 나눠
+  //   "평균 거래량 며칠치를 순매수했나" 라는 scale-free 지표로 정규화한다.
+  const volMap = new Map(
+    liquidity.map((r) => [r.code, Number(r.avg_volume_20d) || 0]),
+  );
+  const rows = [];
+  for (const r of supply) {
+    if (r.foreign_5d == null && r.inst_5d == null) continue;
+    const net = (Number(r.foreign_5d) || 0) + (Number(r.inst_5d) || 0);
+    const avgVol = volMap.get(r.code) || 0;
+    if (avgVol <= 0) continue; // 거래량 0 → 수급 판단 불가, 중립(50)으로 남김
+    rows.push({ code: r.code, raw: net / avgVol });
+  }
   return percentileScore(rows, true);
 }
 
@@ -507,7 +542,7 @@ async function calculateAll(weights = null, options = {}) {
   const lv = calcLowVol(filteredPrices);
   const g = calcGrowth(filteredFunda, prevFundamentals);
   const liq = calcLiquidity(filteredLiq);
-  const sup = calcSupply(filteredSupply);
+  const sup = calcSupply(filteredSupply, filteredLiq);
 
   // status 분류
   const statusMap = classifyStatus(filteredStatus);

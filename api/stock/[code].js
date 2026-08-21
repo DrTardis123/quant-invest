@@ -30,8 +30,10 @@ module.exports = async (req, res) => {
     }
     const data = await r.json();
 
-    // 강한 CDN 캐시 (정적 asset과 동일하게)
-    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=60');
+    // 이 함수는 MISS 마다 콜드스타트 + GitHub raw 왕복(실측 ~1.2s)을 문다.
+    // 종목 상세 JSON 은 일 1회만 갱신되므로 엣지에서 하루 잡아두고,
+    // 만료 후에도 SWR 로 캐시본을 즉시 주고 백그라운드에서 갱신한다.
+    res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=86400, stale-while-revalidate=604800');
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.status(200).json(data);
   } catch (e) {
