@@ -1,9 +1,9 @@
 name: Daily Data Update
 
 on:
-  # 평일 17:00 KST = 08:00 UTC
+  # 평일 17:30 KST = 08:30 UTC
   schedule:
-    - cron: '0 8 * * 1-5'
+    - cron: '30 8 * * 1-5'
   # 수동 트리거 (GitHub UI 의 Actions 탭에서 "Run workflow")
   workflow_dispatch:
     inputs:
@@ -69,6 +69,12 @@ jobs:
             export FULL=1
           else
             echo "증분 모드"
+          fi
+          echo "=== KIS 5년치 일봉 증분 fetch (DB의 MAX(date) +1일부터) ==="
+          if [ -n "$KIS_APP_KEY" ]; then
+            INCREMENTAL=true N=300 MARKET=BOTH CONCURRENCY=3 node scripts/fetch-kis-5y.js 2>&1 | tee logs/kis-5y.log
+          else
+            echo "KIS_APP_KEY 없음 — KIS fetch 스킵 (Naver로만 진행)"
           fi
           echo "=== npm run update 시작 ==="
           npm run update 2>&1 | tee logs/run.log

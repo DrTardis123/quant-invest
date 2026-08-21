@@ -107,28 +107,66 @@ async function getDailyPrice(code, fromDate, toDate) {
   }
 }
 
-// 5년치 일봉 fetch (페이지네이션)
-async function fetch5y(code) {
+// 5년치 일봉 fetch (페이지네이션 + rate-limit retry)
+// sinceDate: 'YYYY-MM-DD' 또는 'YYYYMMDD' 형식. 지정하면 그 날짜부터만 (증분 fetch)
+async function fetch5y(code, sinceDate) {
   // KIS 일봉은 1회 100건 cap
   const out = [];
   const today = new Date();
-  const toDate = today.toISOString().slice(0, 10).replace(/-/g, '');
   const fiveYearsAgo = new Date(today.getTime() - 5 * 365 * 86400 * 1000);
-  const fromDate = fiveYearsAgo.toISOString().slice(0, 10).replace(/-/g, '');
+
+  // sinceDate 정규화 (YYYYMMDD)
+  let sinceYYYYMMDD = null;
+  if (sinceDate) {
+    sinceYYYYMMDD = String(sinceDate).replace(/-/g, '').slice(0, 8);
+  }
 
   // 한 번에 5년치 = 1,260 거래일. 1회 100일 → 13페이지
-  // KIS는 1회 max 100건이라 페이지네이션 필요
-  let cursor = fiveYearsAgo;
+  let cursor = sinceYYYYMMDD
+    ? new Date(
+        Date.UTC(
+          parseInt(sinceYYYYMMDD.slice(0, 4)),
+          parseInt(sinceYYYYMMDD.slice(4, 6)) - 1,
+          parseInt(sinceYYYYMMDD.slice(6, 8))
+        )
+      )
+    : fiveYearsAgo;
+  // 증분 모드: 100건 cap 내에서 1페이지만 받기
+  const singlePage = !!sinceYYYYMMDD;
+
+  let pageNum = 0;
   while (cursor < today) {
+    pageNum++;
     const end = new Date(Math.min(cursor.getTime() + 100 * 86400 * 1000 * 1.4, today.getTime()));
     const from = cursor.toISOString().slice(0, 10).replace(/-/g, '');
     const to = end.toISOString().slice(0, 10).replace(/-/g, '');
-    const rows = await getDailyPrice(code, from, to);
+
+    // 페이지 호출 (rate-limit 발생 시 retry)
+    let rows = [];
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        rows = await getDailyPrice(code, from, to);
+        break;
+      } catch (e) {
+        const msg = e.message || '';
+        const isRateLimit = /초당 거래건수/.test(msg) || /EGW00/.test(msg);
+        if (isRateLimit && attempt < 3) {
+          const wait = 3000 * (attempt + 1); // 3s, 6s, 9s
+          console.log(`[kis] ${code} page ${pageNum} rate-limit, ${wait}ms 대기 후 재시도 (${attempt+1}/3)`);
+          await new Promise((r) => setTimeout(r, wait));
+          continue;
+        }
+        throw e;
+      }
+    }
     if (rows.length === 0) break;
     for (const r of rows) out.push(r);
     cursor = end;
     if (rows.length < 50) break;
-    await new Promise((r) => setTimeout(r, 100));
+    // 증분 모드면 페이지 1개만
+    if (singlePage) break;
+    // 페이지 간 1초 슬립 (초당 거래건수 회피)
+    await new Promise((r) => setTimeout(r, 1000));
   }
   // 중복 제거 (날짜 기준) + 정렬
   const seen = new Set();

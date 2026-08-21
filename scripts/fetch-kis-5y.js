@@ -10,6 +10,7 @@ const { fetch5y, isPaper } = require('../src/data/kis');
 const N = parseInt(process.env.N || '300', 10);
 const MARKET = process.env.MARKET || 'BOTH'; // KOSPI | KOSDAQ | BOTH
 const CONCURRENCY = parseInt(process.env.CONCURRENCY || '3', 10);
+const INCREMENTAL = process.env.INCREMENTAL === 'true'; // true면 DB의 MAX(date) + 1일부터만 (매일 cron용)
 
 async function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
@@ -20,15 +21,26 @@ function dateToStr(d) {
   return String(d).slice(0, 10);
 }
 
+function addOneDay(yyyymmdd) {
+  // 'YYYY-MM-DD' → 다음날 'YYYY-MM-DD'
+  const d = new Date(yyyymmdd + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 async function fetchAndStore(code, name) {
   const t0 = Date.now();
   try {
-    const rows = await fetch5y(code);
-    if (rows.length === 0) return { code, status: 'empty' };
-
-    // 기존 데이터 범위 확인
+    // 기존 데이터 범위 확인 (incremental 모드면 sinceDate 계산)
     const existing = await db.all(`SELECT MAX(date) AS m FROM daily_prices WHERE code = ?`, [code]);
     const lastExisting = existing[0]?.m ? dateToStr(existing[0].m) : null;
+    const sinceDate = (INCREMENTAL && lastExisting) ? addOneDay(lastExisting) : null;
+
+    // fetch5y 호출 (sinceDate 있으면 1페이지만 = 증분)
+    const rows = await fetch5y(code, sinceDate);
+    if (rows.length === 0) return { code, status: 'empty' };
+
+    // INCREMENTAL이 아니면 (1회성 5년치) 마지막 기존일자 이후만 insert
     const toInsert = lastExisting
       ? rows.filter((r) => r.date > lastExisting)
       : rows;
@@ -97,7 +109,7 @@ async function fetchAndStore(code, name) {
     for (const r of results) {
       done++;
       if (r.status === 'ok') { ok++; totalRows += r.inserted; }
-      else if (r.status === 'error') { fail++; console.log(`  ! ${r.code}: ${r.error}`); }
+      else if (r.status === 'error') { fail++; console.log(`  ! ${r.code}: ${r.error}`); if (fail === 1) console.log('     [hint] 일일 호출 한도(200건/일) 또는 초당 거래건수 초과일 수 있음. N을 줄이거나 며칠에 나눠 실행'); }
       else if (r.status === 'empty') { empty++; }
     }
     if (done % 10 === 0 || done === allStocks.length) {
