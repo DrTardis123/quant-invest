@@ -1,0 +1,35 @@
+chore: GitHub Actions 자동 갱신에 매트릭스 200 + 등급별 + 시계열 통합
+
+✅ scripts/update.js exportStatic()에 4개 백필 추가:
+   - 시장 평가 점수 시계열 (60일) - scratch/market-regime-history.js
+   - 등급별 신호 수익률 (quantile 기반) - scratch/grade-performance.js
+   - 매트릭스 200 백필 (KOSPI) - scripts/backfill-matrix-200.js
+   - 매트릭스 200 백필 (KOSDAQ) - scripts/backfill-matrix-200.js (BOTH 모드)
+
+✅ 자식 process에 DUCKDB_READ_ONLY=1 환경변수 추가
+   - DuckDB WAL lock 충돌 방지 (update.js가 write 모드 잡고 있을 때)
+
+✅ 자동 갱신 흐름:
+   - .github/workflows/daily.yml (평일 17:00 KST = 08:00 UTC)
+   - npm run update → update.js → exportStatic()
+   - 1. 신호 추적 백필
+   - 2. 시장 평가 (1-100, 5지표)
+   - 3. 시장 평가 시계열 (60일)
+   - 4. 등급별 신호 수익률
+   - 5. 매트릭스 200 백필 (KOSPI+KOSDAQ)
+   - 6. 분포/상관/포트폴리오 등 기존 export
+
+✅ GitHub Actions 동작:
+   - 평일 17:00 KST 자동 실행 (cron: '0 8 * * 1-5')
+   - 변경 있으면 자동 commit + push
+   - workflow_dispatch 수동 트리거 가능 (full=yes 옵션)
+
+근본 원인 해결: DuckDB stale WAL lock 회피
+- update.js는 DuckDB write 모드로 connection 유지
+- 자식 process는 read_only 모드로 새 connection 생성
+- 두 connection이 동시 존재해도 OK (read_only는 lock 안 잡음)
+
+다음 작업 후보:
+- Web Push 알림 (Service Worker + Notification API)
+- 매트릭스 분석 페이지 추가 UI (시계열, 추천 종목)
+- KIS API 5년치 fetch

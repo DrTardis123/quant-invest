@@ -1086,6 +1086,51 @@ async function exportStatic() {
     console.error('[export] 시장 평가 실패:', e.message);
   }
 
+  // === 시장 평가 점수 시계열 (60일) — CNN F&G 모델 일자별 재계산 ===
+  try {
+    console.log('[export] 시장 평가 시계열 시작...');
+    const t0 = Date.now();
+    const { execSync } = require('child_process');
+    execSync('node scratch/market-regime-history.js', {
+      stdio: 'pipe',
+      cwd: path.join(__dirname, '..'),
+      env: { ...process.env, DUCKDB_READ_ONLY: '1' },
+    });
+    console.log(`[export] 시장 평가 시계열 완료 (${((Date.now() - t0) / 1000).toFixed(1)}초)`);
+  } catch (e) {
+    console.error('[export] 시장 평가 시계열 실패:', e.message);
+  }
+
+  // === 등급별 신호 수익률 (Q. 등급별 수익률 검증) — quantile 기반 ===
+  try {
+    console.log('[export] 등급별 신호 수익률 시작...');
+    const t0 = Date.now();
+    const { execSync } = require('child_process');
+    execSync('node scratch/grade-performance.js', {
+      stdio: 'pipe',
+      cwd: path.join(__dirname, '..'),
+      env: { ...process.env, DUCKDB_READ_ONLY: '1' },
+    });
+    console.log(`[export] 등급별 신호 수익률 완료 (${((Date.now() - t0) / 1000).toFixed(1)}초)`);
+  } catch (e) {
+    console.error('[export] 등급별 신호 수익률 실패:', e.message);
+  }
+
+  // === 매트릭스 200 백필 (KOSPI/KOSDAQ) ===
+  try {
+    console.log('[export] 매트릭스 200 백필 시작...');
+    const t0 = Date.now();
+    const { execSync } = require('child_process');
+    execSync('node scripts/backfill-matrix-200.js', {
+      stdio: 'pipe',
+      cwd: path.join(__dirname, '..'),
+      env: { ...process.env, DUCKDB_READ_ONLY: '1' },
+    });
+    console.log(`[export] 매트릭스 200 백필 완료 (${((Date.now() - t0) / 1000).toFixed(1)}초)`);
+  } catch (e) {
+    console.error('[export] 매트릭스 200 백필 실패:', e.message);
+  }
+
   // 분포 (전체 점수, 10점 단위 bin + 등급 분포 + 평균/중앙값)
 
   // 분포 (전체 점수, 10점 단위 bin + 등급 분포 + 평균/중앙값 + 시장/섹터/팩터 평균)
