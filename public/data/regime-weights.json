@@ -1,0 +1,67 @@
+{
+  "regime_def": {
+    "method": "KOSPI 200 일일수익률 20일 rolling std × sqrt(252) 연율화",
+    "thresholds": {
+      "risk_on_max_vol": 0.12,
+      "risk_off_min_vol": 0.22
+    },
+    "market_score_mapping": {
+      "description": "marketRegime.score 기반 3-bucket 분류 (점수 높을수록 강세)",
+      "risk_on_score_min": 70,
+      "risk_off_score_max": 40
+    }
+  },
+  "current_regime": {
+    "regime": "risk_off",
+    "vol": 0.2313,
+    "asOf": "2025-12-30"
+  },
+  "regime_distribution_months": {
+    "risk_on": 10,
+    "normal": 58,
+    "risk_off": 15
+  },
+  "weights_by_regime": {
+    "risk_on": {
+      "value": 14.72,
+      "momentum": 18.58,
+      "quality": 20.19,
+      "volatility": 0.0,
+      "growth": 20.54,
+      "liquidity": 17.35,
+      "supply": 8.61
+    },
+    "normal": {
+      "value": 18.09,
+      "momentum": 13.2,
+      "quality": 9.82,
+      "volatility": 19.03,
+      "growth": 12.82,
+      "liquidity": 24.04,
+      "supply": 3.0
+    },
+    "risk_off": {
+      "value": 12.74,
+      "momentum": 21.92,
+      "quality": 0.0,
+      "volatility": 12.72,
+      "growth": 9.32,
+      "liquidity": 33.99,
+      "supply": 9.32
+    }
+  },
+  "performance": {
+    "uniform_baseline_cpcv_sharpe": 0.848,
+    "regime_conditioned_sharpe": 1.519,
+    "regime_conditioned_cagr": 0.2974,
+    "regime_conditioned_mdd": -0.1824,
+    "improvement_sharpe": 0.26,
+    "improvement_mdd_pct": 6.72
+  },
+  "source": {
+    "script": "10_regime_weights.py",
+    "data_period": "2019-01 ~ 2025-11",
+    "n_factors": 13,
+    "method": "월별 cross-section OLS + sign-stable t-stat + regime별 split"
+  }
+}
