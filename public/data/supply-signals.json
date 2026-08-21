@@ -1,60 +1,6 @@
 {
   "buy": [
     {
-      "code": "088350",
-      "name": "한화생명",
-      "market": "KOSPI",
-      "sector": "생명보험",
-      "total_score": 56.27,
-      "foreign_5d": 7225706,
-      "inst_5d": 270653
-    },
-    {
-      "code": "006360",
-      "name": "GS건설",
-      "market": "KOSPI",
-      "sector": "건설",
-      "total_score": 50.57,
-      "foreign_5d": 357636,
-      "inst_5d": 1537747
-    },
-    {
-      "code": "332570",
-      "name": "PS일렉트로닉스",
-      "market": "KOSDAQ",
-      "sector": "핸드셋",
-      "total_score": 52.37,
-      "foreign_5d": 1038154,
-      "inst_5d": 828177
-    },
-    {
-      "code": "009830",
-      "name": "한화솔루션",
-      "market": "KOSPI",
-      "sector": "에너지장비및서비스",
-      "total_score": 43,
-      "foreign_5d": 367954,
-      "inst_5d": 1266675
-    },
-    {
-      "code": "000660",
-      "name": "SK하이닉스",
-      "market": "KOSPI",
-      "sector": "반도체와반도체장비",
-      "total_score": 53.8,
-      "foreign_5d": 1460037,
-      "inst_5d": 154329
-    },
-    {
-      "code": "018880",
-      "name": "한온시스템",
-      "market": "KOSPI",
-      "sector": "자동차부품",
-      "total_score": 47.8,
-      "foreign_5d": 1396387,
-      "inst_5d": 169600
-    },
-    {
       "code": "316140",
       "name": "우리금융지주",
       "market": "KOSPI",
@@ -62,24 +8,6 @@
       "total_score": 59.89,
       "foreign_5d": 127905,
       "inst_5d": 1360612
-    },
-    {
-      "code": "066570",
-      "name": "LG전자",
-      "market": "KOSPI",
-      "sector": "전자제품",
-      "total_score": 51.84,
-      "foreign_5d": 668325,
-      "inst_5d": 353308
-    },
-    {
-      "code": "003350",
-      "name": "한국화장품제조",
-      "market": "KOSPI",
-      "sector": "화장품",
-      "total_score": 38.57,
-      "foreign_5d": 703411,
-      "inst_5d": 285538
     },
     {
       "code": "001450",
@@ -91,31 +19,22 @@
       "inst_5d": 806679
     },
     {
-      "code": "096770",
-      "name": "SK이노베이션",
+      "code": "088350",
+      "name": "한화생명",
       "market": "KOSPI",
-      "sector": "석유와가스",
-      "total_score": 52.36,
-      "foreign_5d": 527452,
-      "inst_5d": 173956
+      "sector": "생명보험",
+      "total_score": 56.27,
+      "foreign_5d": 7225706,
+      "inst_5d": 270653
     },
     {
-      "code": "252990",
-      "name": "샘씨엔에스",
-      "market": "KOSDAQ",
+      "code": "000660",
+      "name": "SK하이닉스",
+      "market": "KOSPI",
       "sector": "반도체와반도체장비",
-      "total_score": 52.88,
-      "foreign_5d": 480222,
-      "inst_5d": 101647
-    },
-    {
-      "code": "112610",
-      "name": "씨에스윈드",
-      "market": "KOSPI",
-      "sector": "에너지장비및서비스",
-      "total_score": 42.1,
-      "foreign_5d": 477511,
-      "inst_5d": 88024
+      "total_score": 53.8,
+      "foreign_5d": 1460037,
+      "inst_5d": 154329
     },
     {
       "code": "010170",
@@ -134,17 +53,168 @@
       "total_score": 53.02,
       "foreign_5d": 201253,
       "inst_5d": 304683
+    },
+    {
+      "code": "252990",
+      "name": "샘씨엔에스",
+      "market": "KOSDAQ",
+      "sector": "반도체와반도체장비",
+      "total_score": 52.88,
+      "foreign_5d": 480222,
+      "inst_5d": 101647
+    },
+    {
+      "code": "332570",
+      "name": "PS일렉트로닉스",
+      "market": "KOSDAQ",
+      "sector": "핸드셋",
+      "total_score": 52.37,
+      "foreign_5d": 1038154,
+      "inst_5d": 828177
+    },
+    {
+      "code": "096770",
+      "name": "SK이노베이션",
+      "market": "KOSPI",
+      "sector": "석유와가스",
+      "total_score": 52.36,
+      "foreign_5d": 527452,
+      "inst_5d": 173956
+    },
+    {
+      "code": "066570",
+      "name": "LG전자",
+      "market": "KOSPI",
+      "sector": "전자제품",
+      "total_score": 51.84,
+      "foreign_5d": 668325,
+      "inst_5d": 353308
+    },
+    {
+      "code": "006360",
+      "name": "GS건설",
+      "market": "KOSPI",
+      "sector": "건설",
+      "total_score": 50.57,
+      "foreign_5d": 357636,
+      "inst_5d": 1537747
+    },
+    {
+      "code": "034230",
+      "name": "파라다이스",
+      "market": "KOSPI",
+      "sector": "호텔,레스토랑,레저",
+      "total_score": 50.0,
+      "foreign_5d": 0,
+      "inst_5d": 0,
+      "_patched": "kospi200_rebal_2025_12_11"
+    },
+    {
+      "code": "064400",
+      "name": "LG씨엔에스",
+      "market": "KOSPI",
+      "sector": "IT서비스",
+      "total_score": 50.0,
+      "foreign_5d": 0,
+      "inst_5d": 0,
+      "_patched": "kospi200_rebal_2025_12_11"
+    },
+    {
+      "code": "062040",
+      "name": "산일전기",
+      "market": "KOSPI",
+      "sector": "전기장비",
+      "total_score": 50.0,
+      "foreign_5d": 0,
+      "inst_5d": 0,
+      "_patched": "kospi200_rebal_2025_12_11"
+    },
+    {
+      "code": "002030",
+      "name": "아세아",
+      "market": "KOSPI",
+      "sector": "산업재",
+      "total_score": 50.0,
+      "foreign_5d": 0,
+      "inst_5d": 0,
+      "_patched": "kospi200_rebal_2025_12_11"
+    },
+    {
+      "code": "007660",
+      "name": "이수페타시스",
+      "market": "KOSPI",
+      "sector": "전자장비와기기",
+      "total_score": 50.0,
+      "foreign_5d": 0,
+      "inst_5d": 0,
+      "_patched": "kospi200_rebal_2025_12_11"
+    },
+    {
+      "code": "307950",
+      "name": "현대오토에버",
+      "market": "KOSPI",
+      "sector": "소프트웨어",
+      "total_score": 50.0,
+      "foreign_5d": 0,
+      "inst_5d": 0,
+      "_patched": "kospi200_rebal_2025_12_11"
+    },
+    {
+      "code": "082740",
+      "name": "한화엔진",
+      "market": "KOSPI",
+      "sector": "기계",
+      "total_score": 50.0,
+      "foreign_5d": 0,
+      "inst_5d": 0,
+      "_patched": "kospi200_rebal_2025_12_11"
+    },
+    {
+      "code": "018880",
+      "name": "한온시스템",
+      "market": "KOSPI",
+      "sector": "자동차부품",
+      "total_score": 47.8,
+      "foreign_5d": 1396387,
+      "inst_5d": 169600
+    },
+    {
+      "code": "009830",
+      "name": "한화솔루션",
+      "market": "KOSPI",
+      "sector": "에너지장비및서비스",
+      "total_score": 43,
+      "foreign_5d": 367954,
+      "inst_5d": 1266675
+    },
+    {
+      "code": "112610",
+      "name": "씨에스윈드",
+      "market": "KOSPI",
+      "sector": "에너지장비및서비스",
+      "total_score": 42.1,
+      "foreign_5d": 477511,
+      "inst_5d": 88024
+    },
+    {
+      "code": "003350",
+      "name": "한국화장품제조",
+      "market": "KOSPI",
+      "sector": "화장품",
+      "total_score": 38.57,
+      "foreign_5d": 703411,
+      "inst_5d": 285538
     }
   ],
   "sell": [
     {
-      "code": "027360",
-      "name": "아주IB투자",
-      "market": "KOSDAQ",
-      "sector": "창업투자",
-      "total_score": 50.08,
-      "foreign_5d": -5810959,
-      "inst_5d": -74515
+      "code": "024110",
+      "name": "기업은행",
+      "market": "KOSPI",
+      "sector": "은행",
+      "total_score": 58.91,
+      "foreign_5d": -145112,
+      "inst_5d": -1029055
     },
     {
       "code": "015760",
@@ -165,78 +235,6 @@
       "inst_5d": -512228
     },
     {
-      "code": "382800",
-      "name": "지앤비에스 에코",
-      "market": "KOSDAQ",
-      "sector": "반도체와반도체장비",
-      "total_score": 46.24,
-      "foreign_5d": -1391541,
-      "inst_5d": -119895
-    },
-    {
-      "code": "035900",
-      "name": "JYP Ent.",
-      "market": "KOSDAQ",
-      "sector": "방송과엔터테인먼트",
-      "total_score": 45.53,
-      "foreign_5d": -888209,
-      "inst_5d": -540238
-    },
-    {
-      "code": "034230",
-      "name": "파라다이스",
-      "market": "KOSPI",
-      "sector": "호텔,레스토랑,레저",
-      "total_score": 47.38,
-      "foreign_5d": -191454,
-      "inst_5d": -1118074
-    },
-    {
-      "code": "024110",
-      "name": "기업은행",
-      "market": "KOSPI",
-      "sector": "은행",
-      "total_score": 58.91,
-      "foreign_5d": -145112,
-      "inst_5d": -1029055
-    },
-    {
-      "code": "062970",
-      "name": "한국첨단소재",
-      "market": "KOSDAQ",
-      "sector": "통신장비",
-      "total_score": 32.97,
-      "foreign_5d": -970998,
-      "inst_5d": -5393
-    },
-    {
-      "code": "203400",
-      "name": "에이비온",
-      "market": "KOSDAQ",
-      "sector": "제약",
-      "total_score": 33.29,
-      "foreign_5d": -957456,
-      "inst_5d": -11964
-    },
-    {
-      "code": "048410",
-      "name": "현대바이오",
-      "market": "KOSDAQ",
-      "sector": "화장품",
-      "total_score": 39.61,
-      "foreign_5d": -851236,
-      "inst_5d": -76691
-    },
-    {
-      "code": "033160",
-      "name": "엠케이전자",
-      "market": "KOSDAQ",
-      "sector": "반도체와반도체장비",
-      "total_score": 50.72,
-      "foreign_5d": -595179,
-      "inst_5d": -331912
-    },
-    {
       "code": "080220",
       "name": "제주반도체",
       "market": "KOSDAQ",
@@ -255,6 +253,104 @@
       "inst_5d": -4605
     },
     {
+      "code": "033160",
+      "name": "엠케이전자",
+      "market": "KOSDAQ",
+      "sector": "반도체와반도체장비",
+      "total_score": 50.72,
+      "foreign_5d": -595179,
+      "inst_5d": -331912
+    },
+    {
+      "code": "027360",
+      "name": "아주IB투자",
+      "market": "KOSDAQ",
+      "sector": "창업투자",
+      "total_score": 50.08,
+      "foreign_5d": -5810959,
+      "inst_5d": -74515
+    },
+    {
+      "code": "012630",
+      "name": "HDC",
+      "market": "KOSPI",
+      "sector": "건설",
+      "total_score": 50.0,
+      "foreign_5d": 0,
+      "inst_5d": 0,
+      "_patched": "kospi200_rebal_2025_12_11"
+    },
+    {
+      "code": "003620",
+      "name": "KG모빌리티",
+      "market": "KOSPI",
+      "sector": "자동차",
+      "total_score": 50.0,
+      "foreign_5d": 0,
+      "inst_5d": 0,
+      "_patched": "kospi200_rebal_2025_12_11"
+    },
+    {
+      "code": "456040",
+      "name": "OCI",
+      "market": "KOSPI",
+      "sector": "화학",
+      "total_score": 50.0,
+      "foreign_5d": 0,
+      "inst_5d": 0,
+      "_patched": "kospi200_rebal_2025_12_11"
+    },
+    {
+      "code": "002710",
+      "name": "TCC스틸",
+      "market": "KOSPI",
+      "sector": "철강",
+      "total_score": 50.0,
+      "foreign_5d": 0,
+      "inst_5d": 0,
+      "_patched": "kospi200_rebal_2025_12_11"
+    },
+    {
+      "code": "145720",
+      "name": "덴티움",
+      "market": "KOSPI",
+      "sector": "의료장비와서비스",
+      "total_score": 50.0,
+      "foreign_5d": 0,
+      "inst_5d": 0,
+      "_patched": "kospi200_rebal_2025_12_11"
+    },
+    {
+      "code": "039130",
+      "name": "하나투어",
+      "market": "KOSPI",
+      "sector": "호텔,레스토랑,레저",
+      "total_score": 50.0,
+      "foreign_5d": 0,
+      "inst_5d": 0,
+      "_patched": "kospi200_rebal_2025_12_11"
+    },
+    {
+      "code": "489790",
+      "name": "한화비전",
+      "market": "KOSPI",
+      "sector": "전자장비와기기",
+      "total_score": 50.0,
+      "foreign_5d": 0,
+      "inst_5d": 0,
+      "_patched": "kospi200_rebal_2025_12_11"
+    },
+    {
+      "code": "010620",
+      "name": "HD현대미포",
+      "market": "KOSPI",
+      "sector": "조선",
+      "total_score": 50.0,
+      "foreign_5d": 0,
+      "inst_5d": 0,
+      "_patched": "kospi200_rebal_2025_12_11"
+    },
+    {
       "code": "125490",
       "name": "한라캐스트",
       "market": "KOSDAQ",
@@ -264,6 +360,24 @@
       "inst_5d": -37455
     },
     {
+      "code": "382800",
+      "name": "지앤비에스 에코",
+      "market": "KOSDAQ",
+      "sector": "반도체와반도체장비",
+      "total_score": 46.24,
+      "foreign_5d": -1391541,
+      "inst_5d": -119895
+    },
+    {
+      "code": "035900",
+      "name": "JYP Ent.",
+      "market": "KOSDAQ",
+      "sector": "방송과엔터테인먼트",
+      "total_score": 45.53,
+      "foreign_5d": -888209,
+      "inst_5d": -540238
+    },
+    {
       "code": "014160",
       "name": "대영포장",
       "market": "KOSPI",
@@ -271,6 +385,33 @@
       "total_score": 43.78,
       "foreign_5d": -772178,
       "inst_5d": -76888
+    },
+    {
+      "code": "048410",
+      "name": "현대바이오",
+      "market": "KOSDAQ",
+      "sector": "화장품",
+      "total_score": 39.61,
+      "foreign_5d": -851236,
+      "inst_5d": -76691
+    },
+    {
+      "code": "203400",
+      "name": "에이비온",
+      "market": "KOSDAQ",
+      "sector": "제약",
+      "total_score": 33.29,
+      "foreign_5d": -957456,
+      "inst_5d": -11964
+    },
+    {
+      "code": "062970",
+      "name": "한국첨단소재",
+      "market": "KOSDAQ",
+      "sector": "통신장비",
+      "total_score": 32.97,
+      "foreign_5d": -970998,
+      "inst_5d": -5393
     }
   ],
   "regime": {
