@@ -1,149 +1,162 @@
-'use strict';
-
-// KIS (한국투자증권) Open API 클라이언트
-// .env에 KIS_APP_KEY, KIS_APP_SECRET 가 모두 있어야 활성화됩니다.
-// 활성화는 config.isKisEnabled() 로 확인.
+// KIS (한국투자증권) Open API 래퍼
+// - OAuth2 토큰 발급/갱신
+// - 국내 주식 일봉 (inquire-daily-itemchartprice)
+// - 5년치 장기 데이터 fetch 용
+//
+// 환경변수:
+//   KIS_APP_KEY    (필수) - 앱 키
+//   KIS_APP_SECRET (필수) - 앱 시크릿
+//   KIS_ACCOUNT_NO (선택) - 계좌번호 (필요 시)
+//   KIS_IS_PAPER   (선택) - 'true'면 모의, 기본은 실전
 
 const axios = require('axios');
-const cfg = require('../config');
+const fs = require('fs');
+const path = require('path');
+
+const BASE_REAL = 'https://openapi.koreainvestment.com:9443';
+const BASE_PAPER = 'https://openapivts.koreainvestment.com:29443';
 
 let _token = null;
-let _tokenExp = 0;
+let _tokenExpires = 0;
 
-const baseURL = () => (cfg.kis.isPaper ? cfg.kis.paperBaseUrl : cfg.kis.baseUrl);
+function getBase() {
+  return process.env.KIS_IS_PAPER === 'true' ? BASE_PAPER : BASE_REAL;
+}
 
-const http = axios.create({
-  baseURL: baseURL(),
-  timeout: 15000,
-  headers: { 'Content-Type': 'application/json; charset=utf-8' },
-});
+function isPaper() {
+  return process.env.KIS_IS_PAPER === 'true';
+}
 
+// OAuth2 토큰 발급
 async function getToken() {
-  if (_token && Date.now() < _tokenExp - 60_000) return _token;
-  const url = '/oauth2/tokenP';
+  const appKey = process.env.KIS_APP_KEY;
+  const appSecret = process.env.KIS_APP_SECRET;
+  if (!appKey || !appSecret) {
+    throw new Error('KIS_APP_KEY / KIS_APP_SECRET 환경변수 필요');
+  }
+  if (_token && Date.now() < _tokenExpires - 60000) {
+    return _token;
+  }
+  const url = `${getBase()}/oauth2/tokenP`;
   const body = {
     grant_type: 'client_credentials',
-    appkey: cfg.kis.appKey,
-    appsecret: cfg.kis.appSecret,
+    appkey: appKey,
+    appsecret: appSecret,
   };
-  const { data } = await http.post(url, body);
-  if (!data.access_token) throw new Error('KIS 토큰 발급 실패: ' + JSON.stringify(data));
-  _token = data.access_token;
-  _tokenExp = Date.now() + (Number(data.expires_in) || 86400) * 1000;
+  const resp = await axios.post(url, body, {
+    headers: { 'Content-Type': 'application/json' },
+    timeout: 10000,
+  });
+  if (!resp.data || !resp.data.access_token) {
+    throw new Error(`KIS 토큰 발급 실패: ${JSON.stringify(resp.data)}`);
+  }
+  _token = resp.data.access_token;
+  // KIS 토큰은 보통 24시간 유효
+  _tokenExpires = Date.now() + (resp.data.expires_in || 86400) * 1000;
+  console.log(`[kis] 토큰 발급 완료 (만료: ${new Date(_tokenExpires).toISOString()})`);
   return _token;
 }
 
-function trId(env = 'real') {
-  // 실전/모의 TR_ID 매핑
-  return env === 'paper' ? cfg.kis.isPaper : env;
-}
-
-async function listStocks(market) {
-  // KIS는 종목 마스터를 한 번에 주지 않으므로
-  // KOSPI/KOSDAQ 전체 종목코드를 내려받는 별도 엔드포인트는 제한적.
-  // 따라서 KIS 모드에서는 별도 종목리스트 파일을 사용하거나
-  // (가능하면) 네이버 마스터 + KIS 데이터 소스 하이브리드를 권장.
-  throw new Error('KIS 모드 종목 목록은 별도 캐시가 필요합니다. 네이버로 폴백하세요.');
-}
-
-async function getDailyPrices(code, { fromDate, toDate, maxPages = 100 } = {}) {
-  // /uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice
-  const out = [];
-  for (let page = 1; page <= maxPages; page++) {
-    const token = await getToken();
-    const url = '/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice';
-    const params = {
-      FID_COND_MRKT_DIV_CODE: 'J',
-      FID_INPUT_ISCD: code,
-      FID_INPUT_DATE_1: fromDate || '',
-      FID_INPUT_DATE_2: toDate || '',
-      FID_PERIOD_DIV_CODE: 'D',
-      FID_ORG_ADJ_PRC: '0',
-    };
-    const { data } = await http.get(url, {
+// 국내 주식 일봉 (장기)
+// inquire-daily-itemchartprice
+async function getDailyPrice(code, fromDate, toDate) {
+  const appKey = process.env.KIS_APP_KEY;
+  const appSecret = process.env.KIS_APP_SECRET;
+  const token = await getToken();
+  const url = `${getBase()}/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice`;
+  const trId = isPaper() ? 'FHKST03010100' : 'FHKST03010100';
+  const params = {
+    FID_COND_MRKT_DIV_CODE: 'J',
+    FID_INPUT_ISCD: code,
+    FID_INPUT_DATE_1: fromDate,  // YYYYMMDD
+    FID_INPUT_DATE_2: toDate,    // YYYYMMDD
+    FID_PERIOD_DIV_CODE: 'D',    // D=일봉, W=주봉, M=월봉
+    FID_ORG_ADJ_PRC: '1',        // 수정주가 반영
+  };
+  try {
+    const resp = await axios.get(url, {
       params,
       headers: {
+        'Content-Type': 'application/json',
         authorization: `Bearer ${token}`,
-        appkey: cfg.kis.appKey,
-        appsecret: cfg.kis.appSecret,
-        tr_id: 'FHKST03010100',
-        custtype: 'P',
+        appkey: appKey,
+        appsecret: appSecret,
+        tr_id: trId,
       },
+      timeout: 15000,
     });
-    const rows = data?.output2 || [];
-    if (rows.length === 0) break;
-    for (const r of rows) {
-      out.push({
-        date: normalizeDate(r.stck_bsop_date),
-        open: toInt(r.stck_oprc),
-        high: toInt(r.stck_hgpr),
-        low: toInt(r.stck_lwpr),
-        close: toInt(r.stck_clpr),
-        volume: toInt(r.acml_vol),
-        trading_value: null,
-        market_cap: null,
-      });
+    if (!resp.data || !Array.isArray(resp.data.output2)) {
+      return [];
     }
-    if (rows.length < 30) break;
+    return resp.data.output2.map((r) => ({
+      date: String(r.stck_bsop_date).slice(0, 4) + '-' + String(r.stck_bsop_date).slice(4, 6) + '-' + String(r.stck_bsop_date).slice(6, 8),
+      open: Number(r.stck_oprc),
+      high: Number(r.stck_hgpr),
+      low: Number(r.stck_lwpr),
+      close: Number(r.stck_clpr),
+      volume: Number(r.acml_vol),
+      trading_value: Number(r.acml_tr_pbmn) || null,
+    }));
+  } catch (e) {
+    if (e.response) {
+      const code = e.response.data?.rt_cd || e.response.status;
+      const msg = e.response.data?.msg1 || e.message;
+      throw new Error(`KIS 일봉 실패 (${code}): ${msg}`);
+    }
+    throw e;
   }
-  return out;
 }
 
-async function getFinance(code) {
-  const token = await getToken();
-  // financial-ratio (PER, PBR, ROE, ROA 등)
-  const url = '/uapi/domestic-stock/v1/finance/financial-ratio';
-  const { data } = await http.get(url, {
-    params: {
-      FID_DIV_CLS_CODE: '0',
-      fid_cond_mrkt_div_code: 'J',
-      fid_input_iscd: code,
-    },
-    headers: {
-      authorization: `Bearer ${token}`,
-      appkey: cfg.kis.appKey,
-      appsecret: cfg.kis.appSecret,
-      tr_id: 'FHKST66430100',
-      custtype: 'P',
-    },
-  });
-  // 응답에 여러 분기가 들어옴 (stac_yymm 기준)
-  const rows = Array.isArray(data?.output) ? data.output : [];
-  if (rows.length === 0) return null;
-  const latest = rows[0];
-  return {
-    period: `${String(latest.stac_yymm).slice(0, 4)}-Q${Math.ceil(Number(String(latest.stac_yymm).slice(4)) / 3) || 1}`,
-    per: toNum(latest.per),
-    pbr: toNum(latest.pbr),
-    psr: toNum(latest.pcr), // KIS는 psr이 없고 pcr(PSR) 사용
-    eps: toNum(latest.eps),
-    bps: toNum(latest.bps),
-    roe: toNum(latest.roe_val),
-    roa: toNum(latest.roa_val),
-    revenue: toInt(latest.sales),
-    operating_profit: toInt(latest.oper_profit),
-    net_profit: toInt(latest.curr_assets || latest.net_income),
-    debt_ratio: toNum(latest.lblt_rate),
-    dividend_yield: toNum(latest.dvdn_yld),
-  };
+// 5년치 일봉 fetch (페이지네이션)
+async function fetch5y(code) {
+  // KIS 일봉은 1회 100건 cap
+  const out = [];
+  const today = new Date();
+  const toDate = today.toISOString().slice(0, 10).replace(/-/g, '');
+  const fiveYearsAgo = new Date(today.getTime() - 5 * 365 * 86400 * 1000);
+  const fromDate = fiveYearsAgo.toISOString().slice(0, 10).replace(/-/g, '');
+
+  // 한 번에 5년치 = 1,260 거래일. 1회 100일 → 13페이지
+  // KIS는 1회 max 100건이라 페이지네이션 필요
+  let cursor = fiveYearsAgo;
+  while (cursor < today) {
+    const end = new Date(Math.min(cursor.getTime() + 100 * 86400 * 1000 * 1.4, today.getTime()));
+    const from = cursor.toISOString().slice(0, 10).replace(/-/g, '');
+    const to = end.toISOString().slice(0, 10).replace(/-/g, '');
+    const rows = await getDailyPrice(code, from, to);
+    if (rows.length === 0) break;
+    for (const r of rows) out.push(r);
+    cursor = end;
+    if (rows.length < 50) break;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  // 중복 제거 (날짜 기준) + 정렬
+  const seen = new Set();
+  const uniq = [];
+  for (const r of out) {
+    if (seen.has(r.date)) continue;
+    seen.add(r.date);
+    uniq.push(r);
+  }
+  uniq.sort((a, b) => (a.date < b.date ? -1 : 1));
+  return uniq;
 }
 
-function normalizeDate(s) {
-  if (!s) return null;
-  const m = /^(\d{4})(\d{2})(\d{2})$/.exec(String(s));
-  return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
-}
+module.exports = { getToken, getDailyPrice, fetch5y, isPaper, getBase };
 
-function toInt(v) {
-  if (v === null || v === undefined || v === '') return null;
-  const n = Number(String(v).replace(/[, ]/g, ''));
-  return Number.isFinite(n) ? Math.round(n) : null;
+if (require.main === module) {
+  // CLI 테스트
+  (async () => {
+    const code = process.argv[2] || '005930';
+    console.log(`[kis] ${code} 5년치 일봉 fetch...`);
+    const t0 = Date.now();
+    try {
+      const rows = await fetch5y(code);
+      console.log(`[kis] ${code}: ${rows.length}일 (${rows[0]?.date} ~ ${rows[rows.length-1]?.date})`);
+      console.log(`[kis] 완료. ${(Date.now() - t0) / 1000}s`);
+    } catch (e) {
+      console.error('[kis] 실패:', e.message);
+      process.exit(1);
+    }
+  })();
 }
-
-function toNum(v) {
-  if (v === null || v === undefined || v === '') return null;
-  const n = Number(String(v).replace(/[, %]/g, ''));
-  return Number.isFinite(n) ? n : null;
-}
-
-module.exports = { getToken, listStocks, getDailyPrices, getFinance };
