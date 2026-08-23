@@ -1,0 +1,365 @@
+/* Dark theme override for existing Bootstrap-based pages
+   — AlphaSignal style 다크 테마
+   — dashboard-redesign.css 위에 덮어쓰지 않도록 독립적 */
+
+/* ============================================
+   1) CSS 변수 정의 (대시보드 디자인 토큰)
+   ============================================ */
+:root {
+  --bg-primary: #0d0e10;
+  --bg-secondary: #16181c;
+  --bg-tertiary: #1c1e23;
+  --bg-elevated: #22252b;
+  --border: #2a2d34;
+  --border-light: #353841;
+  --text-primary: #e6e8eb;
+  --text-secondary: #9ca0a8;
+  --text-muted: #6c6f78;
+  --accent: #ff5722;
+  --accent-hover: #ff7043;
+  --positive: #10b981;
+  --negative: #ef4444;
+  --info: #3b82f6;
+  --warning: #f59e0b;
+  --sidebar-width: 240px;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+
+/* ============================================
+   2) Bootstrap 색상 토큰 override
+   ============================================ */
+body, body.bg-light, body.bg-white, body.bg-body {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+.text-dark { color: var(--text-primary) !important; }
+.text-muted { color: var(--text-muted) !important; }
+.text-secondary { color: var(--text-secondary) !important; }
+.text-body, p, li, td, th, label, span, div {
+  color: inherit;
+}
+
+h1, h2, h3, h4, h5, h6 { color: var(--text-primary); }
+
+/* Bootstrap 배경색 */
+.bg-white, .bg-light, .bg-body, .bg-body-tertiary, .bg-body-secondary {
+  background: var(--bg-secondary) !important;
+}
+
+.bg-body { background: var(--bg-primary) !important; }
+
+.card, .modal-content, .dropdown-menu, .list-group-item, .accordion-item, .accordion-button {
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border) !important;
+}
+
+.card-header, .card-footer, .modal-header, .modal-footer {
+  background: var(--bg-tertiary) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Navbar */
+.navbar {
+  background: var(--bg-secondary) !important;
+  border-bottom: 1px solid var(--border) !important;
+  box-shadow: var(--shadow) !important;
+}
+.navbar .navbar-brand,
+.navbar .nav-link,
+.navbar .navbar-text {
+  color: var(--text-primary) !important;
+}
+.navbar .nav-link:hover,
+.navbar .nav-link.active {
+  color: var(--accent) !important;
+  background: transparent !important;
+}
+
+/* Tables */
+.table, table {
+  color: var(--text-primary) !important;
+  --bs-table-bg: var(--bg-secondary);
+  --bs-table-striped-bg: var(--bg-tertiary);
+  --bs-table-hover-bg: var(--bg-elevated);
+  --bs-table-color: var(--text-primary);
+  --bs-table-border-color: var(--border);
+}
+.table > :not(caption) > * > * { background-color: var(--bs-table-bg) !important; color: var(--text-primary) !important; border-bottom-color: var(--border) !important; }
+.table-striped > tbody > tr:nth-of-type(odd) > * { background: var(--bg-tertiary) !important; }
+.table-hover > tbody > tr:hover > * { background: var(--bg-elevated) !important; }
+.table > thead { background: var(--bg-tertiary); color: var(--text-secondary); }
+.table > thead th { color: var(--text-secondary); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+
+/* Form controls */
+.form-control, .form-select, .form-control:focus, .form-select:focus {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
+}
+.form-control::placeholder { color: var(--text-muted) !important; }
+.form-control:focus, .form-select:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 0.2rem rgba(255, 87, 34, 0.15) !important;
+}
+.form-label, .form-text { color: var(--text-secondary) !important; }
+.input-group-text { background: var(--bg-elevated) !important; color: var(--text-secondary) !important; border-color: var(--border) !important; }
+.form-check-label { color: var(--text-primary) !important; }
+.form-check-input { background-color: var(--bg-tertiary) !important; border-color: var(--border-light) !important; }
+.form-check-input:checked { background-color: var(--accent) !important; border-color: var(--accent) !important; }
+
+/* Buttons */
+.btn-primary {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: white !important;
+}
+.btn-primary:hover, .btn-primary:focus { background: var(--accent-hover) !important; border-color: var(--accent-hover) !important; }
+.btn-outline-light, .btn-outline-primary, .btn-outline-secondary {
+  color: var(--text-secondary) !important;
+  border-color: var(--border-light) !important;
+  background: transparent !important;
+}
+.btn-outline-light:hover, .btn-outline-primary:hover { background: var(--bg-elevated) !important; color: var(--text-primary) !important; }
+.btn-secondary { background: var(--bg-elevated) !important; border-color: var(--border) !important; color: var(--text-primary) !important; }
+.btn-secondary:hover { background: var(--bg-tertiary) !important; }
+.btn-success { background: var(--positive) !important; border-color: var(--positive) !important; }
+.btn-danger { background: var(--negative) !important; border-color: var(--negative) !important; }
+.btn-link { color: var(--accent) !important; }
+
+/* Alerts */
+.alert { background: var(--bg-tertiary) !important; color: var(--text-primary) !important; border-color: var(--border) !important; }
+.alert-info { background: rgba(59, 130, 246, 0.1) !important; border-color: rgba(59, 130, 246, 0.3) !important; color: #93c5fd !important; }
+.alert-warning { background: rgba(245, 158, 11, 0.1) !important; border-color: rgba(245, 158, 11, 0.3) !important; color: #fcd34d !important; }
+.alert-success { background: rgba(16, 185, 129, 0.1) !important; border-color: rgba(16, 185, 129, 0.3) !important; color: #6ee7b7 !important; }
+.alert-danger { background: rgba(239, 68, 68, 0.1) !important; border-color: rgba(239, 68, 68, 0.3) !important; color: #fca5a5 !important; }
+
+/* Badges */
+.badge { font-weight: 500; }
+.badge.bg-primary { background: var(--accent) !important; }
+.badge.bg-success { background: var(--positive) !important; }
+.badge.bg-danger { background: var(--negative) !important; }
+.badge.bg-warning { background: var(--warning) !important; color: #1a1a1a !important; }
+.badge.bg-info { background: var(--info) !important; }
+.badge.bg-secondary, .badge.bg-light { background: var(--bg-elevated) !important; color: var(--text-secondary) !important; }
+
+/* Modal */
+.modal-content { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); }
+.modal-backdrop { background: #000; opacity: 0.7 !important; }
+
+/* Dropdown */
+.dropdown-menu { box-shadow: var(--shadow); }
+.dropdown-item { color: var(--text-primary) !important; }
+.dropdown-item:hover, .dropdown-item:focus { background: var(--bg-elevated) !important; color: var(--accent) !important; }
+.dropdown-divider { border-color: var(--border) !important; }
+
+/* Pagination */
+.page-link { background: var(--bg-tertiary) !important; color: var(--text-primary) !important; border-color: var(--border) !important; }
+.page-item.active .page-link { background: var(--accent) !important; border-color: var(--accent) !important; color: white !important; }
+
+/* Progress */
+.progress { background: var(--bg-tertiary) !important; }
+.progress-bar { background: var(--accent) !important; }
+
+/* Tabs */
+.nav-tabs { border-bottom: 1px solid var(--border) !important; }
+.nav-tabs .nav-link { color: var(--text-secondary) !important; border-color: transparent !important; }
+.nav-tabs .nav-link:hover { color: var(--text-primary) !important; border-color: var(--border) !important; }
+.nav-tabs .nav-link.active { background: var(--bg-secondary) !important; color: var(--accent) !important; border-color: var(--border) var(--border) var(--bg-secondary) !important; }
+.nav-pills .nav-link { color: var(--text-secondary) !important; }
+.nav-pills .nav-link.active { background: var(--accent) !important; color: white !important; }
+
+/* List groups */
+.list-group-item { border-color: var(--border) !important; }
+.list-group-item.active { background: var(--accent) !important; border-color: var(--accent) !important; }
+
+/* HR */
+hr { border-color: var(--border) !important; opacity: 1; }
+
+/* Code */
+code, kbd, pre, samp { background: var(--bg-tertiary) !important; color: #e879f9 !important; }
+pre { border: 1px solid var(--border); }
+
+/* Text colors */
+.text-success { color: var(--positive) !important; }
+.text-danger { color: var(--negative) !important; }
+.text-warning { color: var(--warning) !important; }
+.text-info { color: var(--info) !important; }
+.text-primary { color: var(--accent) !important; }
+
+/* Spinner */
+.spinner-border, .spinner-grow { color: var(--accent) !important; }
+
+/* Border */
+.border, .border-top, .border-bottom, .border-start, .border-end { border-color: var(--border) !important; }
+
+/* ============================================
+   3) 사이드바 (모든 페이지 상단에 삽입)
+   ============================================ */
+.ds-sidebar {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: var(--sidebar-width);
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  padding: 20px 0;
+  overflow-y: auto;
+  z-index: 1030;
+  transition: transform 0.2s ease;
+}
+
+.ds-sidebar .ds-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px 24px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.ds-sidebar .ds-logo-icon {
+  width: 32px; height: 32px;
+  background: var(--accent);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: white;
+}
+.ds-sidebar .ds-nav-section {
+  padding: 12px 20px 6px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.ds-sidebar .ds-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: all 0.15s;
+}
+.ds-sidebar .ds-nav-item:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+.ds-sidebar .ds-nav-item.active {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-left-color: var(--accent);
+}
+.ds-sidebar .ds-nav-icon { width: 18px; text-align: center; font-size: 16px; }
+
+/* 본문: 사이드바만큼 들여쓰기 */
+body.has-sidebar { padding-left: var(--sidebar-width); }
+body.has-sidebar .ds-sidebar { /* fixed, 본문은 그냥 padding으로 */ }
+body.has-sidebar .sticky-top:not(.ds-sidebar) { left: var(--sidebar-width) !important; width: calc(100% - var(--sidebar-width)) !important; }
+
+/* 모바일: 사이드바 숨김 */
+@media (max-width: 768px) {
+  .ds-sidebar { transform: translateX(-100%); }
+  .ds-sidebar.open { transform: translateX(0); }
+  body.has-sidebar { padding-left: 0; }
+  .ds-sidebar-toggle { display: block !important; }
+}
+.ds-sidebar-toggle {
+  display: none;
+  position: fixed; top: 12px; left: 12px;
+  z-index: 1040;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 6px;
+  width: 36px; height: 36px;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+/* 기존 navbar 위치 보정 (사이드바가 있으므로) */
+body.has-sidebar .navbar.sticky-top { padding-left: 16px; }
+
+/* 카드 헤더 / KPI 영역 */
+.ds-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.ds-kpi {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+}
+.ds-kpi.accent {
+  background: linear-gradient(135deg, var(--accent) 0%, #e64a19 100%);
+  border: none;
+}
+.ds-kpi.accent .ds-kpi-label,
+.ds-kpi.accent .ds-kpi-value,
+.ds-kpi.accent .ds-kpi-delta { color: white; }
+.ds-kpi-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ds-kpi-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+.ds-kpi-delta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ds-kpi-delta.positive { color: var(--positive); }
+.ds-kpi-delta.negative { color: var(--negative); }
+
+@media (max-width: 1200px) {
+  .ds-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .ds-kpi-grid { grid-template-columns: 1fr; }
+}
+
+/* ============================================
+   4) 스크롤바 다크
+   ============================================ */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--bg-elevated); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+
+/* ============================================
+   5) 코드/시각화 헬퍼
+   ============================================ */
+.ds-num { text-align: right; font-variant-numeric: tabular-nums; }
+.text-pos { color: var(--positive) !important; }
+.text-neg { color: var(--negative) !important; }
+.fw-600 { font-weight: 600; }
+
+.ds-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 16px 0;
+}

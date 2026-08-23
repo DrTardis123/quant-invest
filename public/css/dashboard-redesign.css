@@ -1,0 +1,406 @@
+/* 대시보드 리디자인 — 다크 테마 + 사이드바 + KPI 카드
+   사진: AlphaSignal 스타일 (다크, 사이드바, KPI, 필터, 테이블) */
+
+:root {
+  --bg-primary: #0d0e10;
+  --bg-secondary: #16181c;
+  --bg-tertiary: #1c1e23;
+  --bg-elevated: #22252b;
+  --border: #2a2d34;
+  --border-light: #353841;
+  --text-primary: #e6e8eb;
+  --text-secondary: #9ca0a8;
+  --text-muted: #6c6f78;
+  --accent: #ff5722;       /* 주황 (강조) */
+  --accent-hover: #ff7043;
+  --positive: #10b981;     /* 초록 (수익) */
+  --negative: #ef4444;     /* 빨강 (손실) */
+  --neutral: #6b7280;
+  --info: #3b82f6;
+  --warning: #f59e0b;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --radius: 8px;
+  --radius-lg: 12px;
+  --sidebar-width: 240px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Pretendard', sans-serif;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* 사이드바 */
+.ds-sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--sidebar-width);
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  padding: 20px 0;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.ds-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px 24px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.ds-logo-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--accent);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: white;
+}
+
+.ds-nav-section {
+  padding: 12px 0 6px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-left: 20px;
+}
+
+.ds-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: all 0.15s;
+}
+
+.ds-nav-item:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.ds-nav-item.active {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-left-color: var(--accent);
+}
+
+.ds-nav-icon {
+  width: 18px;
+  text-align: center;
+  font-size: 16px;
+}
+
+/* 메인 영역 */
+.ds-main {
+  margin-left: var(--sidebar-width);
+  padding: 24px 32px;
+  min-height: 100vh;
+}
+
+.ds-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.ds-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ds-subtitle {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 0 0 24px;
+  max-width: 600px;
+}
+
+.ds-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  min-width: 280px;
+  color: var(--text-secondary);
+}
+
+.ds-search input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  flex: 1;
+  font-size: 14px;
+}
+
+/* 필터 */
+.ds-filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.ds-filter {
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ds-filter:hover {
+  border-color: var(--border-light);
+}
+
+.ds-filter.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  font-weight: 500;
+}
+
+/* KPI 카드 */
+.ds-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.ds-kpi {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  position: relative;
+}
+
+.ds-kpi.accent {
+  background: linear-gradient(135deg, var(--accent) 0%, #e64a19 100%);
+  border: none;
+}
+
+.ds-kpi.accent .ds-kpi-label,
+.ds-kpi.accent .ds-kpi-value,
+.ds-kpi.accent .ds-kpi-delta {
+  color: white;
+}
+
+.ds-kpi-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ds-kpi-menu {
+  color: inherit;
+  opacity: 0.5;
+  cursor: pointer;
+}
+
+.ds-kpi-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.ds-kpi-delta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ds-kpi-delta.positive { color: var(--positive); }
+.ds-kpi-delta.negative { color: var(--negative); }
+
+/* 테이블 */
+.ds-table-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.ds-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ds-table thead {
+  background: var(--bg-tertiary);
+}
+
+.ds-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ds-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.ds-table tr:last-child td { border-bottom: none; }
+.ds-table tr:hover td { background: var(--bg-tertiary); }
+
+.ds-table .asset {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ds-asset-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ds-asset-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ds-asset-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.ds-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.ds-badge.long { background: rgba(16, 185, 129, 0.15); color: var(--positive); }
+.ds-badge.short { background: rgba(239, 68, 68, 0.15); color: var(--negative); }
+.ds-badge.buy { background: var(--positive); color: white; }
+.ds-badge.sell { background: var(--negative); color: white; }
+.ds-badge.neutral { background: var(--bg-elevated); color: var(--text-secondary); }
+
+.ds-num { text-align: right; font-variant-numeric: tabular-nums; }
+.ds-num.positive { color: var(--positive); }
+.ds-num.negative { color: var(--negative); }
+
+/* 업그레이드 배너 */
+.ds-upgrade {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-top: 20px;
+}
+
+.ds-upgrade-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ds-upgrade-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.ds-upgrade-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.ds-btn {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: none;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ds-btn-primary { background: var(--accent); color: white; }
+.ds-btn-primary:hover { background: var(--accent-hover); }
+.ds-btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+.ds-btn-ghost:hover { background: var(--bg-elevated); }
+
+/* 반응형 */
+@media (max-width: 1200px) {
+  .ds-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .ds-sidebar { transform: translateX(-100%); transition: transform 0.2s; }
+  .ds-sidebar.open { transform: translateX(0); }
+  .ds-main { margin-left: 0; }
+  .ds-kpi-grid { grid-template-columns: 1fr; }
+  .ds-search { display: none; }
+}
+
+/* 유틸리티 */
+.text-pos { color: var(--positive); }
+.text-neg { color: var(--negative); }
+.text-muted { color: var(--text-muted); }
+.fw-600 { font-weight: 600; }

@@ -34,14 +34,16 @@ async function fetchAndStore(code, name) {
     // 기존 데이터 범위 확인 (incremental 모드면 sinceDate 계산)
     const existing = await db.all(`SELECT MAX(date) AS m FROM daily_prices WHERE code = ?`, [code]);
     const lastExisting = existing[0]?.m ? dateToStr(existing[0].m) : null;
+    // INCREMENTAL 모드일 때만 sinceDate로 1페이지만 호출
     const sinceDate = (INCREMENTAL && lastExisting) ? addOneDay(lastExisting) : null;
 
     // fetch5y 호출 (sinceDate 있으면 1페이지만 = 증분)
     const rows = await fetch5y(code, sinceDate);
     if (rows.length === 0) return { code, status: 'empty' };
 
-    // INCREMENTAL이 아니면 (1회성 5년치) 마지막 기존일자 이후만 insert
-    const toInsert = lastExisting
+    // 1회성 5년치 모드 (INCREMENTAL=false)면 5년치 전체를 insert (기존 데이터 덮어쓰기)
+    // INCREMENTAL 모드면 어제 이후만
+    const toInsert = INCREMENTAL && lastExisting
       ? rows.filter((r) => r.date > lastExisting)
       : rows;
     if (toInsert.length === 0) return { code, status: 'skip', kept: rows.length };
@@ -85,19 +87,37 @@ async function fetchAndStore(code, name) {
     process.exit(1);
   }
 
-  // Top N 종목 (factor_scores 최신 total_score 기준)
+  // Top N 종목 (factor_scores 최신 total_score 기준) — factor_scores 없으면 stocks만으로 폴백
   const markets = MARKET === 'BOTH' ? ['KOSPI', 'KOSDAQ'] : [MARKET];
   const allStocks = [];
   for (const m of markets) {
-    const stocks = await db.all(`
-      SELECT s.code, s.name
-      FROM factor_scores fs
-      JOIN stocks s ON fs.code = s.code
-      WHERE s.market = ? AND fs.total_score IS NOT NULL
-      ORDER BY fs.total_score DESC
-      LIMIT ?
-    `, [m, N]);
-    allStocks.push(...stocks);
+    let stocks = [];
+    try {
+      // 우선 factor_scores 점수 있는 종목
+      stocks = await db.all(`
+        SELECT s.code, s.name
+        FROM factor_scores fs
+        JOIN stocks s ON fs.code = s.code
+        WHERE s.market = ? AND fs.total_score IS NOT NULL
+        ORDER BY fs.total_score DESC
+        LIMIT ?
+      `, [m, N]);
+    } catch (e) {
+      stocks = [];
+    }
+    if (stocks.length < N) {
+      // 부족하면 stocks 테이블에서 보충 (factor_scores 의존 X)
+      const remaining = N - stocks.length;
+      const existingCodes = new Set(stocks.map((s) => s.code));
+      const extras = await db.all(`
+        SELECT code, name FROM stocks
+        WHERE market = ? AND code NOT IN (${[...existingCodes].map(() => '?').join(',') || "''"})
+        ORDER BY code
+        LIMIT ?
+      `, [m, ...[...existingCodes], remaining]);
+      stocks = stocks.concat(extras);
+    }
+    allStocks.push(...stocks.slice(0, N));
   }
   console.log(`[kis-5y] 대상: ${allStocks.length}개`);
 

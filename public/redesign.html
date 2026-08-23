@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0d0e10">
+  <title>퀀트 투자 대시보드 — Redesign</title>
+  <link rel="stylesheet" href="/css/dashboard-redesign.css">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="manifest" href="/manifest.json">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Pretendard', sans-serif; }
+  </style>
+</head>
+<body>
+  <!-- 사이드바 -->
+  <nav class="ds-sidebar">
+    <div class="ds-logo">
+      <div class="ds-logo-icon">📈</div>
+      <span>퀀트 투자</span>
+    </div>
+
+    <div class="ds-nav-section">Overview</div>
+    <a class="ds-nav-item" href="/">
+      <span class="ds-nav-icon">▦</span> 메인
+    </a>
+    <a class="ds-nav-item" href="/?tab=portfolio">
+      <span class="ds-nav-icon">💼</span> 포트폴리오
+    </a>
+    <a class="ds-nav-item active" href="/?tab=signals">
+      <span class="ds-nav-icon">📡</span> 신호
+    </a>
+    <a class="ds-nav-item" href="/?tab=transactions">
+      <span class="ds-nav-icon">💱</span> 매매
+    </a>
+
+    <div class="ds-nav-section">Analyze</div>
+    <a class="ds-nav-item" href="/analysis">
+      <span class="ds-nav-icon">📊</span> 분석
+    </a>
+    <a class="ds-nav-item" href="/?tab=backtest">
+      <span class="ds-nav-icon">⏪</span> 백테스트
+    </a>
+    <a class="ds-nav-item" href="/?tab=matrix">
+      <span class="ds-nav-icon">🎯</span> 매트릭스
+    </a>
+    <a class="ds-nav-item" href="/?tab=regime">
+      <span class="ds-nav-icon">🌐</span> 시장평가
+    </a>
+
+    <div class="ds-nav-section">Tools</div>
+    <a class="ds-nav-item" href="/explore">
+      <span class="ds-nav-icon">🔍</span> 탐색
+    </a>
+    <a class="ds-nav-item" href="/?tab=alerts">
+      <span class="ds-nav-icon">🔔</span> 알림
+    </a>
+
+    <div class="ds-upgrade">
+      <div class="ds-upgrade-title">🚀 Pro 버전</div>
+      <div class="ds-upgrade-desc">실시간 알림, 자동 매매, 백테스트 무제한 등 7팩터 전체 잠금해제</div>
+      <div class="ds-upgrade-actions">
+        <button class="ds-btn ds-btn-primary">활성화</button>
+        <button class="ds-btn ds-btn-ghost">자세히</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 메인 -->
+  <main class="ds-main">
+    <div class="ds-header">
+      <div>
+        <h1 class="ds-title">📡 신호</h1>
+        <p class="ds-subtitle">실시간 매트릭스 + 7팩터 (가치/모멘텀/퀄리티/저변동/성장/유동/수급) + 14 보조지표로 추출한 매수/매도 신호. KOSPI 200 + KOSDAQ 1,300+ 종목.</p>
+      </div>
+      <div class="ds-search">
+        <span>🔍</span>
+        <input type="text" placeholder="신호 검색 (삼성전자, 005930, …)">
+      </div>
+    </div>
+
+    <!-- 필터 -->
+    <div class="ds-filters">
+      <span class="ds-filter active">전체</span>
+      <span class="ds-filter">🚀 1차매수 활성</span>
+      <span class="ds-filter">🟢 정배열</span>
+      <span class="ds-filter">📈 모멘텀 ≥ 60</span>
+      <span class="ds-filter">💎 저변동</span>
+      <span class="ds-filter">🔥 거래량 폭증</span>
+      <span class="ds-filter">⚡ 손절 신호</span>
+    </div>
+
+    <!-- KPI 카드 -->
+    <div class="ds-kpi-grid">
+      <div class="ds-kpi accent">
+        <div class="ds-kpi-label">
+          <span>시장 강도 (CNN F&G)</span>
+          <span class="ds-kpi-menu">⋮</span>
+        </div>
+        <div class="ds-kpi-value">38.0</div>
+        <div class="ds-kpi-delta">📉 하락장 · 33.4 어제</div>
+      </div>
+      <div class="ds-kpi">
+        <div class="ds-kpi-label">
+          <span>오늘의 평균 수익률 (Top 20)</span>
+          <span class="ds-kpi-menu">⋮</span>
+        </div>
+        <div class="ds-kpi-value">+0.94%</div>
+        <div class="ds-kpi-delta positive">▲ 0.42% vs 어제</div>
+      </div>
+      <div class="ds-kpi">
+        <div class="ds-kpi-label">
+          <span>활성 신호 (1차매수)</span>
+          <span class="ds-kpi-menu">⋮</span>
+        </div>
+        <div class="ds-kpi-value">14</div>
+        <div class="ds-kpi-delta positive">▲ 3 vs 어제</div>
+      </div>
+      <div class="ds-kpi">
+        <div class="ds-kpi-label">
+          <span>유니버스 (5년 이력)</span>
+          <span class="ds-kpi-menu">⋮</span>
+        </div>
+        <div class="ds-kpi-value">1,355</div>
+        <div class="ds-kpi-delta">KOSPI 800 + KOSDAQ 555</div>
+      </div>
+    </div>
+
+    <!-- 메인 테이블 -->
+    <div class="ds-table-card">
+      <table class="ds-table">
+        <thead>
+          <tr>
+            <th>종목</th>
+            <th>시장</th>
+            <th>TF</th>
+            <th>신호</th>
+            <th class="ds-num">진입가</th>
+            <th class="ds-num">현재가</th>
+            <th class="ds-num">매트릭스</th>
+            <th class="ds-num">7팩터</th>
+            <th class="ds-num">손절가</th>
+            <th class="ds-num">+10d</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="asset">
+                <div class="ds-asset-icon" style="background:#1428a0;color:white;">삼</div>
+                <div>
+                  <div class="ds-asset-name">삼성전자</div>
+                  <div class="ds-asset-sub">005930 · 전기전자</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="ds-badge neutral">KOSPI</span></td>
+            <td>1D</td>
+            <td><span class="ds-badge buy">1차매수 🟢</span></td>
+            <td class="ds-num">68,400</td>
+            <td class="ds-num">71,200</td>
+            <td class="ds-num fw-600">72.3</td>
+            <td class="ds-num">A · 88</td>
+            <td class="ds-num text-neg">65,000</td>
+            <td class="ds-num text-pos">+2.92%</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="asset">
+                <div class="ds-asset-icon" style="background:#0050b3;color:white;">SK</div>
+                <div>
+                  <div class="ds-asset-name">SK하이닉스</div>
+                  <div class="ds-asset-sub">000660 · 반도체</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="ds-badge neutral">KOSPI</span></td>
+            <td>1D</td>
+            <td><span class="ds-badge long">2차매수 🟢</span></td>
+            <td class="ds-num">189,500</td>
+            <td class="ds-num">202,000</td>
+            <td class="ds-num fw-600">68.1</td>
+            <td class="ds-num">A · 85</td>
+            <td class="ds-num text-neg">180,000</td>
+            <td class="ds-num text-pos">+4.21%</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="asset">
+                <div class="ds-asset-icon" style="background:#5e2e8a;color:white;">N</div>
+                <div>
+                  <div class="ds-asset-name">NAVER</div>
+                  <div class="ds-asset-sub">035420 · IT서비스</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="ds-badge neutral">KOSPI</span></td>
+            <td>1D</td>
+            <td><span class="ds-badge sell">1차매도 🟡</span></td>
+            <td class="ds-num">232,000</td>
+            <td class="ds-num">228,500</td>
+            <td class="ds-num fw-600">52.3</td>
+            <td class="ds-num">C · 64</td>
+            <td class="ds-num text-neg">220,000</td>
+            <td class="ds-num text-pos">+0.86%</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="asset">
+                <div class="ds-asset-icon" style="background:#0f4c81;color:white;">카</div>
+                <div>
+                  <div class="ds-asset-name">카카오</div>
+                  <div class="ds-asset-sub">035720 · IT서비스</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="ds-badge neutral">KOSPI</span></td>
+            <td>1D</td>
+            <td><span class="ds-badge neutral">유지</span></td>
+            <td class="ds-num">45,200</td>
+            <td class="ds-num">44,800</td>
+            <td class="ds-num fw-600">48.7</td>
+            <td class="ds-num">C · 61</td>
+            <td class="ds-num text-neg">42,000</td>
+            <td class="ds-num text-pos">+0.44%</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="asset">
+                <div class="ds-asset-icon" style="background:#e60012;color:white;">현</div>
+                <div>
+                  <div class="ds-asset-name">현대차</div>
+                  <div class="ds-asset-sub">005380 · 자동차</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="ds-badge neutral">KOSPI</span></td>
+            <td>1D</td>
+            <td><span class="ds-badge buy">1차매수 🟢</span></td>
+            <td class="ds-num">232,500</td>
+            <td class="ds-num">238,000</td>
+            <td class="ds-num fw-600">71.5</td>
+            <td class="ds-num">B · 78</td>
+            <td class="ds-num text-neg">225,000</td>
+            <td class="ds-num text-pos">+2.36%</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="asset">
+                <div class="ds-asset-icon" style="background:#0a7e3a;color:white;">셀</div>
+                <div>
+                  <div class="ds-asset-name">셀트리온</div>
+                  <div class="ds-asset-sub">068270 · 바이오</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="ds-badge neutral">KOSPI</span></td>
+            <td>1D</td>
+            <td><span class="ds-badge short">손절 🟡</span></td>
+            <td class="ds-num">182,000</td>
+            <td class="ds-num">176,500</td>
+            <td class="ds-num fw-600">38.2</td>
+            <td class="ds-num">D · 45</td>
+            <td class="ds-num text-neg">175,000</td>
+            <td class="ds-num text-neg">-2.83%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-muted" style="margin-top:24px;font-size:12px;">
+      ※ 시뮬레이션 데이터. 실제 매매 신호는 KIS API 5년치 일봉 + 7팩터 + 14 보조지표로 계산됩니다.
+      <br>※ 5년 평균 수익률 23.5%/년 (in-sample), 27.5%/년 (OOS), 1,355 종목 × 1,222일 검증.
+    </p>
+  </main>
+</body>
+</html>
