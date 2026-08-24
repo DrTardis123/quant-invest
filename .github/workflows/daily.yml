@@ -1,112 +1,152 @@
-name: Daily Data Update
+name: Daily Data + Signals + Report
+# 평일 16:30 KST = 07:30 UTC: 데이터 fetch + 17:00 신호 + 17:30 알림 + 18:00 리포트
 
 on:
-  # 평일 17:30 KST = 08:30 UTC
   schedule:
+    # 1. 데이터 fetch (16:30 KST = 07:30 UTC)
+    - cron: '30 7 * * 1-5'
+    # 2. 일일 신호 생성 (17:00 KST = 08:00 UTC)
+    - cron: '0 8 * * 1-5'
+    # 3. 손절/익절 알림 (17:30 KST = 08:30 UTC)
     - cron: '30 8 * * 1-5'
-  # 수동 트리거 (GitHub UI 의 Actions 탭에서 "Run workflow")
+    # 4. 일일 리포트 (18:00 KST = 09:00 UTC)
+    - cron: '0 9 * * 1-5'
   workflow_dispatch:
     inputs:
-      full:
-        description: '전체 백필 (느림, 초기화)'
-        required: false
+      task:
+        description: '실행할 작업'
+        required: true
         type: choice
-        options: ['no', 'yes']
-        default: 'no'
+        options: ['all', 'data', 'signals', 'alerts', 'report']
+        default: 'all'
 
 concurrency:
-  group: quant-update
+  group: quant-daily
   cancel-in-progress: false
 
 jobs:
-  update:
+  data:
+    if: github.event.inputs.task == 'all' || github.event.inputs.task == 'data'
+    name: 1. 데이터 fetch
     runs-on: ubuntu-latest
     timeout-minutes: 90
-
     permissions:
-      contents: write   # git push 위해
-
+      contents: write
     steps:
       - name: 체크아웃
         uses: actions/checkout@v4
-
       - name: Node.js 24 세팅
         uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: 'npm'
-
       - name: 의존성 설치
-        # npm install 사용 (lock 파일이 package.json과 달라도 동작)
-        # 캐시 활용으로 속도는 비슷
         run: npm install --no-audit --no-fund --prefer-offline
-
-      - name: 사전 스모크 테스트
-        run: |
-          echo "=== 모듈 로드 검증 ==="
-          node -e "
-            const m = ['./src/scheduler/jobs','./src/scoring/optimizer','./src/scoring/backtest','./src/data/indices','./src/factors','./src/scoring','./src/strategies','./src/db/connection'];
-            for (const p of m) {
-              try { require(p); console.log('  ✓', p); } catch (e) { console.error('  ✗', p, ':', e.message); process.exit(1); }
-            }
-          "
-          echo "=== 스모크 테스트 ==="
-          node tests/smoke.js && node tests/smoke2.js && node tests/smoke3.js
-
-      - name: 데이터 갱신
+      - name: KIS 일봉 증분 fetch
         env:
-          DATA_SOURCE: naver
-          # KIS API 키 (있으면 활성화, 없어도 동작)
           KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
           KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
           KIS_ACCOUNT_NO: ${{ secrets.KIS_ACCOUNT_NO }}
           KIS_IS_PAPER: 'true'
-          FULL: ${{ github.event.inputs.full || 'no' }}
         run: |
-          set -e
-          if [ "$FULL" = "yes" ]; then
-            echo "FULL 모드 (전체 백필)"
-            export FULL=1
-          else
-            echo "증분 모드"
-          fi
-          echo "=== KIS 5년치 일봉 증분 fetch (DB의 MAX(date) +1일부터) ==="
           if [ -n "$KIS_APP_KEY" ]; then
-            INCREMENTAL=true N=300 MARKET=BOTH CONCURRENCY=3 node scripts/fetch-kis-5y.js 2>&1 | tee logs/kis-5y.log
+            echo "KIS 모의투자 일봉 fetch"
+            INCREMENTAL=true N=300 MARKET=BOTH CONCURRENCY=3 node scripts/fetch-kis-5y.js
           else
-            echo "KIS_APP_KEY 없음 — KIS fetch 스킵 (Naver로만 진행)"
+            echo "KIS 키 없음, Naver로만 진행"
           fi
-          echo "=== npm run update 시작 ==="
-          npm run update 2>&1 | tee logs/run.log
-          echo "=== 완료 ==="
-
-      - name: 변경 확인
-        id: check
+      - name: 메인 갱신
+        run: npm run update
+      - name: 변경 확인 + 푸시
         run: |
           if git diff --quiet public/data/ 2>/dev/null; then
             echo "변경 없음"
-            echo "changed=false" >> $GITHUB_OUTPUT
           else
-            echo "변경 있음"
-            echo "changed=true" >> $GITHUB_OUTPUT
-            git diff --stat public/data/ | head -20
+            git config user.name 'github-actions[bot]'
+            git config user.email 'github-actions[bot]@users.noreply.github.com'
+            git add public/data/
+            git commit -m "data: $(date -u +%Y-%m-%d) 자동 갱신"
+            git push
           fi
 
-      - name: 커밋 & 푸시
-        if: steps.check.outputs.changed == 'true'
+  signals:
+    if: github.event.inputs.task == 'all' || github.event.inputs.task == 'signals'
+    name: 2. 일일 신호 생성
+    needs: data
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm install --no-audit --no-fund --prefer-offline
+      - name: 일일 신호 생성
+        env:
+          ALERT_WEBHOOK: ${{ secrets.ALERT_WEBHOOK }}
+        run: node scripts/daily-signals.js
+      - name: 변경 확인 + 푸시
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add public/data/
-          git commit -m "data: $(date -u +%Y-%m-%d) 자동 갱신"
-          git push
-
-      - name: 실패시 로그
-        if: failure()
-        run: |
-          echo "=== 실패 로그 (logs/run.log) ==="
-          if [ -f logs/run.log ]; then
-            tail -100 logs/run.log
+          if git diff --quiet public/data/signals.json 2>/dev/null; then
+            echo "변경 없음"
           else
-            echo "run.log 없음"
+            git config user.name 'github-actions[bot]'
+            git config user.email 'github-actions[bot]@users.noreply.github.com'
+            git add public/data/signals.json
+            git commit -m "signals: $(date -u +%Y-%m-%d) 신호"
+            git push
+          fi
+
+  alerts:
+    if: github.event.inputs.task == 'all' || github.event.inputs.task == 'alerts'
+    name: 3. 손절/익절 알림
+    needs: signals
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm install --no-audit --no-fund --prefer-offline
+      - name: 손절/익절 알림
+        env:
+          ALERT_WEBHOOK: ${{ secrets.ALERT_WEBHOOK }}
+        run: node scripts/stop-alert.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alerts-${{ env.today }}
+          path: public/data/alerts.json
+
+  report:
+    if: github.event.inputs.task == 'all' || github.event.inputs.task == 'report'
+    name: 4. 일일 리포트
+    needs: alerts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm install --no-audit --no-fund --prefer-offline
+      - name: 일일 리포트 생성
+        run: node scripts/daily-report.js
+      - name: 변경 확인 + 푸시
+        run: |
+          if git diff --quiet docs/DAILY-*.md 2>/dev/null; then
+            echo "변경 없음"
+          else
+            git config user.name 'github-actions[bot]'
+            git config user.email 'github-actions[bot]@users.noreply.github.com'
+            git add docs/DAILY-*.md
+            git commit -m "report: $(date -u +%Y-%m-%d) 일일 리포트"
+            git push
           fi

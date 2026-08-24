@@ -1,190 +1,126 @@
 # 📊 퀀트 투자 대시보드
 
-한국 주식 멀티팩터 퀀트 점수화 + 로컬/클라우드 대시보드.
+> **"신호는 시스템이, 매매는 사람이."**
+> 30 알파 (모멘텀/반전/거래량/변동성/추세/유동성) + 14개 매트릭스 + 5-fold walk-forward CV
+> KOSPI/KOSDAQ 1,355개 종목 × 1,222일 (5년치) 일봉 데이터 기반
 
-- **팩터 5종**: 가치 / 모멘텀 / 퀄리티 / 저변동성 / 성장
-- **전략 5종**: 밸런스 / 가치 / 성장 / 모멘텀 / 방어 (가중치 즉시 변경)
-- **시각화 8개**: TOP 픽, 히트맵, 섹터, 레이더, 상관, 분포, 등급, 백테스트
-- **데이터**: 네이버 금융 (무료) 또는 KIS Developers (선택)
-- **호스팅**: Vercel + GitHub Actions (로컬 서버 24시간 안 켜도 됨)
+## 🎯 시스템 역할
 
-## 🚀 빠른 시작 (호스팅 / Vercel)
-
-### 1. GitHub에 코드 올리기
-
-```powershell
-# 프로젝트 폴더에서
-cd C:\Users\LG\Documents\quant_invest
-git init
-git add .
-git commit -m "initial commit"
-git branch -M main
-
-# GitHub에서 빈 repo 만든 후 (https://github.com/new)
-git remote add origin https://github.com/Drtardis/quant-invest.git
-git push -u origin main
-```
-
-### 2. Vercel 연결
-
-1. https://vercel.com 접속 → GitHub 계정으로 가입
-2. "Add New Project" → 방금 만든 `quant-invest` repo 선택
-3. Framework Preset: **Other** (자동 감지)
-4. **Deploy** 클릭 → 1~2분 후 `https://quant-invest-xxx.vercel.app` 생성
-
-### 3. GitHub Actions 로 데이터 갱신 세팅
-
-- 자동으로 평일 17:00 KST 에 실행됨
-- 첫 데이터는 **수동으로 1회 트리거** 필요:
-  - GitHub repo → **Actions** 탭 → "Daily Data Update" → **Run workflow**
-  - 초기 풀백필이므로 30~60분 걸림
-
-### 4. (선택) KIS API 키 추가
-
-더 정확한 데이터를 원하면 KIS API 키 발급:
-
-1. https://apiportal.koreainvestment.com/ → 회원가입 → API 신청
-2. GitHub repo → **Settings** → **Secrets and variables** → **Actions** → New repository secret:
-   - `KIS_APP_KEY`: 발급받은 앱키
-   - `KIS_APP_SECRET`: 발급받은 앱시크릿
-3. 다음 Actions 실행 시 자동으로 KIS 모드로 전환
-
-### 5. (선택) 대시보드에서 수동 갱신 버튼 활성화
-
-Vercel에서:
-1. Vercel 프로젝트 → **Settings** → **Environment Variables**
-2. 추가:
-   - `GITHUB_PAT`: GitHub Personal Access Token (생성: https://github.com/settings/tokens, `repo` 권한 필요)
-   - `GITHUB_REPO`: `Drtardis/quant-invest`
-
-그러면 우측 상단 "지금 갱신" 버튼이 동작합니다.
-
----
-
-## 💻 로컬 개발
-
-로컬에서도 같은 대시보드를 쓸 수 있습니다 (Express + DuckDB 풀버전).
-
-```powershell
-cd C:\Users\LG\Documents\quant_invest
-npm install            # 처음 1회
-npm start              # http://localhost:3000
-```
-
-**로컬의 장점** (호스팅 버전에는 없는 기능):
-- 백테스트 (DuckDB + 과거 점수 이력)
-- 수동 갱신 즉시 반영
-- 데이터 즉시 갱신 (15:30 장 마감 후 5분 안에 시도 가능)
-
-**자동 시작 등록** (PC 부팅 시 자동 실행):
-```powershell
-.\install-autostart.bat
-```
-
----
-
-## 📁 프로젝트 구조
-
-```
-quant-invest/
-├── .github/workflows/daily.yml   # GitHub Actions: 평일 17:00 KST 자동 갱신
-├── api/                          # Vercel Functions
-│   ├── health.js                 # 상태 확인
-│   ├── update.js                 # 수동 갱신 (GitHub Actions 트리거)
-│   └── backtest.js               # 호스팅에서는 비활성 (로컬 권장)
-├── public/                       # Vercel 정적 파일
-│   ├── index.html
-│   ├── css/style.css
-│   ├── js/                       # 대시보드 로직
-│   └── data/                     # GitHub Actions 가 생성하는 JSON
-│       ├── strategies-static.json
-│       ├── top.json
-│       ├── all.json
-│       ├── sectors.json
-│       ├── heatmap.json
-│       ├── correlation.json
-│       ├── distribution.json
-│       ├── log.json
-│       ├── meta.json
-│       └── stock/{code}.json     # 종목별 상세
-├── scripts/
-│   └── update.js                 # 데이터 갱신 스크립트 (GitHub Actions 전용)
-├── src/                          # Node.js 백엔드 (로컬 개발용)
-│   ├── data/                     # 네이버/KIS 클라이언트
-│   ├── factors/                  # 팩터 계산
-│   ├── scoring/                  # 등급/섹터/상관/히트맵
-│   ├── strategies.js
-│   ├── config/
-│   ├── db/                       # DuckDB
-│   ├── scheduler/                # cron
-│   └── server/                   # Express (로컬)
-├── tests/
-├── vercel.json                   # Vercel 설정 (rewrite)
-├── package.json
-└── start.bat                     # 로컬 시작 스크립트
-```
-
-## ⚙️ 환경 변수
-
-로컬용 (`.env` 파일):
-```env
-PORT=3000
-DATA_SOURCE=naver                # naver | kis
-KIS_APP_KEY=...                  # KIS 사용 시
-KIS_APP_SECRET=...
-UPDATE_HOUR=17
-UPDATE_MINUTE=0
-```
-
-Vercel 환경변수:
-- `GITHUB_PAT` (선택) — 수동 갱신 버튼용
-- `GITHUB_REPO` (선택) — `Drtardis/quant-invest` 형식
-
-GitHub Actions Secrets:
-- `KIS_APP_KEY` (선택)
-- `KIS_APP_SECRET` (선택)
-
-## 🔧 데이터 갱신 흐름
-
-```
-GitHub Actions (17:00 KST)
-   ↓
-네이버 금융 (또는 KIS)
-   ↓
-DuckDB (메모리 → 파일)
-   ↓
-팩터 계산
-   ↓
-JSON 파일 (public/data/*.json)
-   ↓
-git commit & push
-   ↓
-Vercel 자동 배포
-   ↓
-전 세계에서 https://quant-invest.vercel.app 접속
-```
-
-## 📊 팩터 정의
-
-| 팩터 | 가중치 | 지표 |
+| | 시스템 | 사람 |
 |---|---|---|
-| **가치** (Value) | 35% | PER ↓, PBR ↓, PSR ↓ (낮을수록 좋음) |
-| **모멘텀** (Momentum) | 20% | 12M - 1M 수익률 (Jegadeesh-Titman) |
-| **퀄리티** (Quality) | 20% | ROE ↑, ROA ↑, 부채비율 ↓ |
-| **저변동성** (Low Vol) | 15% | 60일 일별수익률 표준편차 ↓ |
-| **성장** (Growth) | 10% | 매출 YoY, 순이익 YoY |
+| **데이터 수집** | ✅ 자동 (cron) | - |
+| **신호 생성** | ✅ 자동 (장 마감 후) | - |
+| **알림** | ✅ Slack/이메일/대시보드 | 수신 |
+| **매수/매도 실행** | - | ✅ 직접 |
+| **포지션 사이징** | 추천 (Kelly + vol) | ✅ 직접 결정 |
+| **손절/익절** | 알림 (매트릭스 변화) | ✅ 직접 실행 |
 
-전략 프로파일로 가중치를 자유롭게 변경 가능.
+## 🚀 빠른 시작
 
-## 🛠 기술 스택
+### 라이브 대시보드
+- 🌐 https://tardisquantinvest.vercel.app
+- 📱 모바일 / 데스크톱 / PWA 지원
 
-- **런타임**: Node.js 20+
-- **DB**: DuckDB (컬럼형 OLAP, 분석에 최적)
-- **백엔드**: Express (로컬) / Vercel Functions (호스팅)
-- **프론트**: Alpine.js + Bootstrap 5 + Chart.js (CDN, 빌드 불필요)
-- **스케줄러**: node-cron (로컬) / GitHub Actions (호스팅)
-- **데이터**: 네이버 금융 JSON API (무료, 키 불필요) / KIS Open API (선택)
+### 로컬 실행
+```bash
+# 1. 저장소 클론
+git clone https://github.com/DrTardis123/quant-invest.git
+cd quant-invest
 
-## 📝 라이선스
+# 2. 의존성 설치
+npm install
 
-MIT
+# 3. 환경변수 (.env)
+# KIS_APP_KEY=your_key
+# KIS_APP_SECRET=your_secret
+# KIS_ACCOUNT_NO=your_account
+# KIS_IS_PAPER=true
+
+# 4. 일일 갱신
+node scripts/update.js
+
+# 5. 로컬 서버 (테스트)
+node scripts/dev-server.js
+# http://localhost:5180
+```
+
+## 📁 문서
+
+### 운영
+- 📐 [SYSTEM-ARCHITECTURE.md](./docs/SYSTEM-ARCHITECTURE.md) — 시스템 구조
+- 📋 [OPERATIONS-GUIDE.md](./docs/OPERATIONS-GUIDE.md) — 일일/주간/월간 운영 가이드
+- 🚨 [ALERT-RUNBOOK.md](./docs/ALERT-RUNBOOK.md) — 문제 대응 매뉴얼
+- 📊 [HISTORY.md](./docs/HISTORY.md) — 전체 진행 히스토리
+
+### 데이터
+- 🔑 [KIS-API-GUIDE.md](./docs/KIS-API-GUIDE.md) — KIS 모의투자 API 사용법
+- 🔑 [KIS-LIVE-API-KEY.md](./docs/KIS-LIVE-API-KEY.md) — 실전투자 키 발급
+
+### 분석 결과
+- 📈 [ALPHA-30-IC.md](./docs/ALPHA-30-IC.md) — 30 알파 IC 분석
+- 🔄 [CV-30-ALPHAS.md](./docs/CV-30-ALPHAS.md) — 5-fold walk-forward CV
+- 📊 [CV-30-SUMMARY.md](./docs/CV-30-SUMMARY.md) — CV 결과 분석
+- 📋 [QUANT-IMPROVEMENTS-SUMMARY.md](./docs/QUANT-IMPROVEMENTS-SUMMARY.md) — 개선 작업 요약
+- 🔬 [BACKTEST-ALPHA-3Y.md](./docs/BACKTEST-ALPHA-3Y.md) — 3년 OOS 백테스트
+
+## 🏗️ 시스템 구성
+
+### 30 알파 (6 카테고리)
+- **모멘텀** (5): a_mom5, a_mom20, a_mom60, a_mom5_neg, a_mom_clipped
+- **반전** (5): a_053, a_055, a_rev5, a_rev10, a_no_new_high
+- **거래량** (5): a_006, a_010, a_vol_rank, a_006_pos, a_dolv_rank
+- **변동성** (5): a_017, a_034, a_vol20, a_range_pct, a_path5
+- **추세** (5): a_009, a_022, a_trend20_sign, a_trend_score, a_up_ratio_20
+- **유동성** (5): a_028, a_041, a_liq_lev, a_liq_rank, a_liq_score
+
+### 가중치 4가지
+1. **균등 30 알파**: 1/30 = 3.3% each
+2. **IC 가중치**: t-statistic 비례
+3. **Cross-correlation 보정**: IC × 독립성 (Ledoit-Wolf style)
+4. **카테고리 best 1개씩**: 6 알파 (분산 극대화) — **권장**
+
+### 5-fold walk-forward CV 결과
+**최고**: 카테고리 best + Top 3 + 40일 리밸 — **Sharpe +0.066**, MDD -25.9%
+
+### 14개 매트릭스 요소
+- 골든크로스 / 정배열
+- 60일선 지지 / 볼린저밴드
+- 52주 저점 / RSI
+- MACD / 피보나치
+- 이격도 / ADX
+- 캔들 패턴 / OBV
+- 스윙 로우/하이 / Polarity / 라운드
+
+## ⏰ 자동화 (GitHub Actions cron)
+
+| 시간 (KST) | 작업 | 스크립트 |
+|---|---|---|
+| 16:30 (월~금) | 데이터 fetch + 갱신 | `scripts/update.js` |
+| 17:00 (월~금) | 일일 신호 생성 | `scripts/daily-signals.js` |
+| 17:30 (월~금) | 손절/익절 알림 | `scripts/stop-alert.js` |
+| 18:00 (월~금) | 일일 리포트 | `scripts/daily-report.js` |
+| 매일 자정 | DuckDB 백업 | `scripts/backup-db.js` |
+| 일요일 23:00 | 주간 리포트 | (예정) |
+
+## 📦 기술 스택
+
+- **Backend**: Node.js 24, DuckDB 1.x (AlphaSignal 호환)
+- **Frontend**: HTML/CSS/JS (Bootstrap 5.3 + 다크 테마)
+- **Deploy**: Vercel + GitHub Actions
+- **Data**: KIS Developers API (모의투자)
+- **Math**: alpha-engine.js (30 알파 + 5-fold CV + Deflated Sharpe)
+- **PWA**: Service Worker (오프라인 지원)
+
+## 🛡️ 보안
+
+- KIS API 키: `.env` (gitignore) + GitHub Secrets
+- 모의투자 키만 사용 (1일 200건 한도)
+- 실전 키는 사용자 판단 하에 발급 ([KIS-LIVE-API-KEY.md](./docs/KIS-LIVE-API-KEY.md))
+
+## 📜 라이선스
+
+MIT License — 개인 사용/연구 목적
+
+## 🤝 기여
+
+이슈/PR 환영. 단, 자동 매매 실행은 포함하지 않음 (사용자 판단 영역).
