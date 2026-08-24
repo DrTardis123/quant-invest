@@ -1,0 +1,232 @@
+{
+  "timestamp": "2026-08-24T13:56:42.588Z",
+  "selectedAlphas": [
+    "a_up_ratio_20",
+    "a_006_pos",
+    "a_009",
+    "a_006",
+    "a_trend20_sign"
+  ],
+  "nAlphas": 30,
+  "nFolds": 5,
+  "rebalDays": 20,
+  "topN": 10,
+  "minHistory": 1000,
+  "panelSize": 1355,
+  "nDays": 1222,
+  "costModel": {
+    "enabled": true,
+    "baseCost": 0.0015,
+    "slippage": 0.0005,
+    "marketImpactCoef": 0.001,
+    "spreadHalf": 0.001
+  },
+  "hasRegimeHistory": true,
+  "regimeSummary": {
+    "K": 3,
+    "fitInfo": {
+      "converged": false,
+      "iter": 49,
+      "logLikelihood": -72089.40287875567
+    },
+    "dist": {
+      "low_vol": 171,
+      "mid_vol": 43,
+      "high_vol": 30
+    }
+  },
+  "results": [
+    {
+      "method": "카테고리 best",
+      "topN": 5,
+      "rebal": 40,
+      "avgSharpe": 0.12104620665505103,
+      "avgRet": 0.014541160843854067,
+      "avgMdd": -0.2209249009945454,
+      "bestFold": 4,
+      "bestSharpe": 0.546062167756627,
+      "worstFold": 1,
+      "worstSharpe": -0.3265655471552843
+    },
+    {
+      "method": "Per-alpha best 5",
+      "topN": 10,
+      "rebal": 40,
+      "avgSharpe": 0.049880051378512924,
+      "avgRet": 0.0028105329564630218,
+      "avgMdd": -0.12700608647122852,
+      "bestFold": 5,
+      "bestSharpe": 0.687773908513591,
+      "worstFold": 1,
+      "worstSharpe": -0.7422689124405881
+    },
+    {
+      "method": "Per-alpha best 5",
+      "topN": 10,
+      "rebal": 20,
+      "avgSharpe": -0.07600270147647485,
+      "avgRet": -0.00048608555544516136,
+      "avgMdd": -0.19007036509024555,
+      "bestFold": 5,
+      "bestSharpe": 0.8265719553116184,
+      "worstFold": 2,
+      "worstSharpe": -0.7149615907682153
+    },
+    {
+      "method": "Regime-aware",
+      "topN": 10,
+      "rebal": 40,
+      "avgSharpe": -0.08124914654480522,
+      "avgRet": -0.0004558956149655506,
+      "avgMdd": -0.1329953982459639,
+      "bestFold": 5,
+      "bestSharpe": 0.6168199492229574,
+      "worstFold": 1,
+      "worstSharpe": -0.8459808394274525
+    },
+    {
+      "method": "Per-alpha best 5",
+      "topN": 5,
+      "rebal": 40,
+      "avgSharpe": -0.08728606337601104,
+      "avgRet": -0.0007405586556557639,
+      "avgMdd": -0.16845078162884639,
+      "bestFold": 5,
+      "bestSharpe": 1.0208545670455713,
+      "worstFold": 1,
+      "worstSharpe": -0.6399767733058949
+    },
+    {
+      "method": "Regime-aware",
+      "topN": 5,
+      "rebal": 40,
+      "avgSharpe": -0.193780519384126,
+      "avgRet": -0.003993415798512906,
+      "avgMdd": -0.17707893222327625,
+      "bestFold": 5,
+      "bestSharpe": 0.9556238600653708,
+      "worstFold": 1,
+      "worstSharpe": -0.7270258093520207
+    },
+    {
+      "method": "카테고리 best",
+      "topN": 5,
+      "rebal": 20,
+      "avgSharpe": -0.21946189501033744,
+      "avgRet": 0.002412891218637407,
+      "avgMdd": -0.3561106543989606,
+      "bestFold": 5,
+      "bestSharpe": 0.6077862507532834,
+      "worstFold": 3,
+      "worstSharpe": -1.068361291605913
+    },
+    {
+      "method": "카테고리 best",
+      "topN": 10,
+      "rebal": 40,
+      "avgSharpe": -0.2590599566482158,
+      "avgRet": 0.00042300106229418847,
+      "avgMdd": -0.22906918606588933,
+      "bestFold": 5,
+      "bestSharpe": 0.4805755327281431,
+      "worstFold": 1,
+      "worstSharpe": -1.518622197917183
+    },
+    {
+      "method": "Regime-aware",
+      "topN": 10,
+      "rebal": 20,
+      "avgSharpe": -0.2636591980296622,
+      "avgRet": -0.0036387778631374705,
+      "avgMdd": -0.19666415736424478,
+      "bestFold": 5,
+      "bestSharpe": 0.709471613034876,
+      "worstFold": 3,
+      "worstSharpe": -0.9058858671410771
+    },
+    {
+      "method": "Per-alpha best 5",
+      "topN": 5,
+      "rebal": 20,
+      "avgSharpe": -0.2946243891381233,
+      "avgRet": -0.0011759772023340943,
+      "avgMdd": -0.25832131951935977,
+      "bestFold": 5,
+      "bestSharpe": 1.2372842406211384,
+      "worstFold": 2,
+      "worstSharpe": -1.220908925240927
+    },
+    {
+      "method": "Regime-aware",
+      "topN": 5,
+      "rebal": 20,
+      "avgSharpe": -0.43522003099766027,
+      "avgRet": -0.004309054125411019,
+      "avgMdd": -0.27404980734723744,
+      "bestFold": 5,
+      "bestSharpe": 1.167234868549727,
+      "worstFold": 2,
+      "worstSharpe": -1.3277316575068516
+    },
+    {
+      "method": "카테고리 best",
+      "topN": 10,
+      "rebal": 20,
+      "avgSharpe": -0.473616078231082,
+      "avgRet": -0.006276945626912463,
+      "avgMdd": -0.3405488228101342,
+      "bestFold": 5,
+      "bestSharpe": 0.6811365584321202,
+      "worstFold": 3,
+      "worstSharpe": -1.461105237508028
+    },
+    {
+      "method": "균등 30",
+      "topN": 10,
+      "rebal": 40,
+      "avgSharpe": -0.9859285893830441,
+      "avgRet": -0.01714812233653775,
+      "avgMdd": -0.24665328016605362,
+      "bestFold": 2,
+      "bestSharpe": 0.8529969978614345,
+      "worstFold": 1,
+      "worstSharpe": -4.510739863033825
+    },
+    {
+      "method": "균등 30",
+      "topN": 10,
+      "rebal": 20,
+      "avgSharpe": -1.2423791166749154,
+      "avgRet": -0.020444797548027725,
+      "avgMdd": -0.4228403907705358,
+      "bestFold": 5,
+      "bestSharpe": 0.5813709764481441,
+      "worstFold": 1,
+      "worstSharpe": -4.221192272619374
+    },
+    {
+      "method": "균등 30",
+      "topN": 5,
+      "rebal": 20,
+      "avgSharpe": -1.5945633063767637,
+      "avgRet": -0.03205953513331257,
+      "avgMdd": -0.4777376659507998,
+      "bestFold": 5,
+      "bestSharpe": 0.2633252401962982,
+      "worstFold": 1,
+      "worstSharpe": -4.796740311829412
+    },
+    {
+      "method": "균등 30",
+      "topN": 5,
+      "rebal": 40,
+      "avgSharpe": -1.6122776659160973,
+      "avgRet": -0.024956475423791962,
+      "avgMdd": -0.29766906243694524,
+      "bestFold": 5,
+      "bestSharpe": 0.7819367662359439,
+      "worstFold": 1,
+      "worstSharpe": -7.772001691548582
+    }
+  ]
+}

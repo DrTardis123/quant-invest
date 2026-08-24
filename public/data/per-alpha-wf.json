@@ -1,0 +1,542 @@
+{
+  "timestamp": "2026-08-24T13:26:11.760Z",
+  "nAlphas": 30,
+  "nFolds": 5,
+  "rebalDays": 20,
+  "topN": 10,
+  "minHistory": 1000,
+  "panelSize": 1355,
+  "nDays": 1222,
+  "alphaStats": [
+    {
+      "alpha": "a_up_ratio_20",
+      "meanSharpe": 0.648856413646303,
+      "stdSharpe": 1.2623512880032044,
+      "meanRet": 0.010329068009132882,
+      "signConsistency": 0.6,
+      "stability": 0.5140062198317779,
+      "score": 0.38931384818778175,
+      "foldSharpes": [
+        -1.24,
+        -0.163,
+        1.373,
+        0.842,
+        2.432
+      ],
+      "category": "추세"
+    },
+    {
+      "alpha": "a_006_pos",
+      "meanSharpe": 0.24363079276939387,
+      "stdSharpe": 1.055457786948289,
+      "meanRet": 0.009441446117739265,
+      "signConsistency": 0.8,
+      "stability": 0.23082949956134083,
+      "score": 0.1949046342155151,
+      "foldSharpes": [
+        -1.857,
+        0.924,
+        0.593,
+        0.775,
+        0.783
+      ],
+      "category": "거래량"
+    },
+    {
+      "alpha": "a_009",
+      "meanSharpe": 0.07505581597512753,
+      "stdSharpe": 0.3885059432825132,
+      "meanRet": 0.0017144681315975786,
+      "signConsistency": 0.6,
+      "stability": 0.1931909080745994,
+      "score": 0.04503348958507652,
+      "foldSharpes": [
+        -0.22,
+        -0.372,
+        0.064,
+        0.147,
+        0.755
+      ],
+      "category": "추세"
+    },
+    {
+      "alpha": "a_006",
+      "meanSharpe": 0.08389999994420103,
+      "stdSharpe": 0.8311100758912041,
+      "meanRet": 0.002298948917853716,
+      "signConsistency": 0.4,
+      "stability": 0.10094932353483331,
+      "score": 0.03355999997768041,
+      "foldSharpes": [
+        -0.771,
+        -0.064,
+        -0.785,
+        0.706,
+        1.333
+      ],
+      "category": "거래량"
+    },
+    {
+      "alpha": "a_trend20_sign",
+      "meanSharpe": 0.02824491282035335,
+      "stdSharpe": 0.7456741830118901,
+      "meanRet": 0.0021165867454011654,
+      "signConsistency": 0.4,
+      "stability": 0.037878356880035595,
+      "score": 0.011297965128141341,
+      "foldSharpes": [
+        -0.649,
+        -0.855,
+        0.589,
+        1.131,
+        -0.073
+      ],
+      "category": "추세"
+    },
+    {
+      "alpha": "a_mom_clipped",
+      "meanSharpe": -1.6968756382832073,
+      "stdSharpe": 1.2714333830990356,
+      "meanRet": -0.045405641204883704,
+      "signConsistency": 0,
+      "stability": 0,
+      "score": 0,
+      "foldSharpes": [
+        -2.814,
+        -0.523,
+        -3.605,
+        -0.547,
+        -0.994
+      ],
+      "category": "모멘텀"
+    },
+    {
+      "alpha": "a_no_new_high",
+      "meanSharpe": -0.9076859756220668,
+      "stdSharpe": 0.5556249826208941,
+      "meanRet": -0.013656754765963064,
+      "signConsistency": 0,
+      "stability": 0,
+      "score": 0,
+      "foldSharpes": [
+        -0.514,
+        -1.136,
+        -1.323,
+        -1.536,
+        -0.03
+      ],
+      "category": "반전"
+    },
+    {
+      "alpha": "a_trend_score",
+      "meanSharpe": -1.074317635114482,
+      "stdSharpe": 0.9835599430322718,
+      "meanRet": -0.02490087475734427,
+      "signConsistency": 0,
+      "stability": 0,
+      "score": 0,
+      "foldSharpes": [
+        -2.537,
+        -0.206,
+        -1.92,
+        -0.046,
+        -0.661
+      ],
+      "category": "추세"
+    },
+    {
+      "alpha": "a_dolv_rank",
+      "meanSharpe": -0.1677864603059302,
+      "stdSharpe": 1.197818740314542,
+      "meanRet": 0.016568284717329917,
+      "signConsistency": 0.4,
+      "stability": 0,
+      "score": -0.06711458412237208,
+      "foldSharpes": [
+        -1.84,
+        -0.011,
+        -1.026,
+        0.388,
+        1.65
+      ],
+      "category": "거래량"
+    },
+    {
+      "alpha": "a_liq_score",
+      "meanSharpe": -0.1751960220060333,
+      "stdSharpe": 0.952820666486593,
+      "meanRet": 0.00017446691676685397,
+      "signConsistency": 0.4,
+      "stability": 0,
+      "score": -0.07007840880241333,
+      "foldSharpes": [
+        -1,
+        -1.246,
+        0.048,
+        1.456,
+        -0.133
+      ],
+      "category": "유동성"
+    },
+    {
+      "alpha": "a_053",
+      "meanSharpe": -0.5863015458089438,
+      "stdSharpe": 0.5250318589793487,
+      "meanRet": -0.013460998692819604,
+      "signConsistency": 0.2,
+      "stability": 0,
+      "score": -0.11726030916178876,
+      "foldSharpes": [
+        -0.612,
+        -1.499,
+        -0.169,
+        0.017,
+        -0.668
+      ],
+      "category": "반전"
+    },
+    {
+      "alpha": "a_017",
+      "meanSharpe": -0.7048283664736845,
+      "stdSharpe": 1.4197041402184596,
+      "meanRet": -0.00845486487995675,
+      "signConsistency": 0.2,
+      "stability": 0,
+      "score": -0.14096567329473692,
+      "foldSharpes": [
+        -2.612,
+        -0.087,
+        -0.484,
+        -1.819,
+        1.479
+      ],
+      "category": "변동성"
+    },
+    {
+      "alpha": "a_010",
+      "meanSharpe": -0.4089131981468882,
+      "stdSharpe": 1.5922257890009892,
+      "meanRet": 0.00011834838792034851,
+      "signConsistency": 0.4,
+      "stability": 0,
+      "score": -0.1635652792587553,
+      "foldSharpes": [
+        -3.333,
+        -0.326,
+        0.32,
+        1.472,
+        -0.177
+      ],
+      "category": "거래량"
+    },
+    {
+      "alpha": "a_028",
+      "meanSharpe": -0.29769177194719676,
+      "stdSharpe": 1.787377980689162,
+      "meanRet": 0.007406520216880624,
+      "signConsistency": 0.6,
+      "stability": 0,
+      "score": -0.17861506316831804,
+      "foldSharpes": [
+        -3.673,
+        0.97,
+        -0.356,
+        0.225,
+        1.346
+      ],
+      "category": "유동성"
+    },
+    {
+      "alpha": "a_mom5_neg",
+      "meanSharpe": -1.0852510488570861,
+      "stdSharpe": 1.4242102709153501,
+      "meanRet": -0.0037168408288423853,
+      "signConsistency": 0.2,
+      "stability": 0,
+      "score": -0.21705020977141723,
+      "foldSharpes": [
+        -1.414,
+        -1.904,
+        -0.811,
+        -2.759,
+        1.462
+      ],
+      "category": "모멘텀"
+    },
+    {
+      "alpha": "a_liq_lev",
+      "meanSharpe": -0.3712885530138087,
+      "stdSharpe": 2.279259865153246,
+      "meanRet": 0.01502998115273344,
+      "signConsistency": 0.6,
+      "stability": 0,
+      "score": -0.2227731318082852,
+      "foldSharpes": [
+        -4.548,
+        1.537,
+        -1.036,
+        0.824,
+        1.366
+      ],
+      "category": "유동성"
+    },
+    {
+      "alpha": "a_liq_rank",
+      "meanSharpe": -0.3712885530138087,
+      "stdSharpe": 2.279259865153246,
+      "meanRet": 0.01502998115273344,
+      "signConsistency": 0.6,
+      "stability": 0,
+      "score": -0.2227731318082852,
+      "foldSharpes": [
+        -4.548,
+        1.537,
+        -1.036,
+        0.824,
+        1.366
+      ],
+      "category": "유동성"
+    },
+    {
+      "alpha": "a_path5",
+      "meanSharpe": -1.1623728806229574,
+      "stdSharpe": 1.823405462569163,
+      "meanRet": -0.01853632419334788,
+      "signConsistency": 0.2,
+      "stability": 0,
+      "score": -0.2324745761245915,
+      "foldSharpes": [
+        -3.71,
+        -0.086,
+        -0.994,
+        -2.523,
+        1.501
+      ],
+      "category": "변동성"
+    },
+    {
+      "alpha": "a_055",
+      "meanSharpe": -0.6732584884927142,
+      "stdSharpe": 2.1601774307896306,
+      "meanRet": 0.008872984338059022,
+      "signConsistency": 0.4,
+      "stability": 0,
+      "score": -0.2693033953970857,
+      "foldSharpes": [
+        -4.452,
+        1.046,
+        -0.84,
+        -0.901,
+        1.78
+      ],
+      "category": "반전"
+    },
+    {
+      "alpha": "a_vol_rank",
+      "meanSharpe": -0.7132755983959826,
+      "stdSharpe": 1.2761240234959481,
+      "meanRet": -0.005664898332633418,
+      "signConsistency": 0.4,
+      "stability": 0,
+      "score": -0.28531023935839306,
+      "foldSharpes": [
+        -2.787,
+        -1.086,
+        -0.924,
+        0.87,
+        0.36
+      ],
+      "category": "거래량"
+    },
+    {
+      "alpha": "a_vol20",
+      "meanSharpe": -1.4429131115485478,
+      "stdSharpe": 1.1884014804805696,
+      "meanRet": -0.033729428327275233,
+      "signConsistency": 0.2,
+      "stability": 0,
+      "score": -0.2885826223097096,
+      "foldSharpes": [
+        -2.406,
+        -1.265,
+        -2.1,
+        -2.244,
+        0.8
+      ],
+      "category": "변동성"
+    },
+    {
+      "alpha": "a_034",
+      "meanSharpe": -1.455301931837969,
+      "stdSharpe": 1.565387602290385,
+      "meanRet": -0.027149589650974203,
+      "signConsistency": 0.2,
+      "stability": 0,
+      "score": -0.2910603863675938,
+      "foldSharpes": [
+        -3.448,
+        -0.123,
+        -2.131,
+        -2.393,
+        0.819
+      ],
+      "category": "변동성"
+    },
+    {
+      "alpha": "a_mom60",
+      "meanSharpe": -0.7362677019796036,
+      "stdSharpe": 1.1505572965320825,
+      "meanRet": -0.012989514042952191,
+      "signConsistency": 0.4,
+      "stability": 0,
+      "score": -0.29450708079184146,
+      "foldSharpes": [
+        -2.888,
+        0.065,
+        -0.893,
+        -0.288,
+        0.322
+      ],
+      "category": "모멘텀"
+    },
+    {
+      "alpha": "a_022",
+      "meanSharpe": -0.7831134291877444,
+      "stdSharpe": 1.2719373663894866,
+      "meanRet": -0.006712435855304624,
+      "signConsistency": 0.4,
+      "stability": 0,
+      "score": -0.3132453716750978,
+      "foldSharpes": [
+        -2,
+        -2.557,
+        0.28,
+        -0.306,
+        0.667
+      ],
+      "category": "추세"
+    },
+    {
+      "alpha": "a_041",
+      "meanSharpe": -0.8668710337519558,
+      "stdSharpe": 1.1836106202319328,
+      "meanRet": -0.010919248929437414,
+      "signConsistency": 0.4,
+      "stability": 0,
+      "score": -0.34674841350078234,
+      "foldSharpes": [
+        -2.136,
+        0.138,
+        -2.467,
+        -0.138,
+        0.27
+      ],
+      "category": "유동성"
+    },
+    {
+      "alpha": "a_rev10",
+      "meanSharpe": -0.8726067408792367,
+      "stdSharpe": 1.3322643017247249,
+      "meanRet": -0.013002101046215025,
+      "signConsistency": 0.4,
+      "stability": 0,
+      "score": -0.3490426963516947,
+      "foldSharpes": [
+        -2.576,
+        0.248,
+        -2.008,
+        -1.001,
+        0.974
+      ],
+      "category": "반전"
+    },
+    {
+      "alpha": "a_range_pct",
+      "meanSharpe": -0.9528983514069314,
+      "stdSharpe": 1.5652488918291887,
+      "meanRet": -0.008305817138418336,
+      "signConsistency": 0.4,
+      "stability": 0,
+      "score": -0.38115934056277256,
+      "foldSharpes": [
+        -2.628,
+        0.953,
+        -1.708,
+        -2.288,
+        0.906
+      ],
+      "category": "변동성"
+    },
+    {
+      "alpha": "a_mom20",
+      "meanSharpe": -1.0869414663653898,
+      "stdSharpe": 1.5213278074300332,
+      "meanRet": -0.021322084546794295,
+      "signConsistency": 0.4,
+      "stability": 0,
+      "score": -0.4347765865461559,
+      "foldSharpes": [
+        -3.287,
+        0.772,
+        -2.079,
+        -1.258,
+        0.417
+      ],
+      "category": "모멘텀"
+    },
+    {
+      "alpha": "a_mom5",
+      "meanSharpe": -1.1213003362143164,
+      "stdSharpe": 1.8090093816720414,
+      "meanRet": -0.015783524702589712,
+      "signConsistency": 0.4,
+      "stability": 0,
+      "score": -0.4485201344857266,
+      "foldSharpes": [
+        -4.193,
+        0.15,
+        -0.419,
+        -2.025,
+        0.88
+      ],
+      "category": "모멘텀"
+    },
+    {
+      "alpha": "a_rev5",
+      "meanSharpe": -1.1213003362143164,
+      "stdSharpe": 1.8090093816720414,
+      "meanRet": -0.015783524702589712,
+      "signConsistency": 0.4,
+      "stability": 0,
+      "score": -0.4485201344857266,
+      "foldSharpes": [
+        -4.193,
+        0.15,
+        -0.419,
+        -2.025,
+        0.88
+      ],
+      "category": "반전"
+    }
+  ],
+  "robust": [
+    "a_up_ratio_20",
+    "a_006_pos",
+    "a_009"
+  ],
+  "marginal": [
+    "a_006",
+    "a_trend20_sign"
+  ],
+  "selected": [
+    "a_up_ratio_20",
+    "a_006_pos",
+    "a_009",
+    "a_006",
+    "a_trend20_sign"
+  ],
+  "catDist": {
+    "추세": 3,
+    "거래량": 2
+  }
+}
