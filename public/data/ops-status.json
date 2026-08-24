@@ -1,0 +1,68 @@
+{
+  "date": "2026-08-24",
+  "preflight": {
+    "ok": true,
+    "errors": [],
+    "warnings": [],
+    "stats": {
+      "lastDataDate": "2026-08-21",
+      "universeSize": 3921,
+      "totalRows": 2367308,
+      "dataAgeDays": 3,
+      "activeStocks": 3921,
+      "circuitBreaker": "NORMAL"
+    }
+  },
+  "circuitBreaker": {
+    "halt": false,
+    "warnings": [],
+    "status": "NORMAL",
+    "reason": null,
+    "thresholds": {
+      "maxPositionPct": 0.1,
+      "minPositionPct": 0.02,
+      "maxTotalPositions": 10,
+      "kellyFraction": 0.5,
+      "maxKellyFraction": 0.25,
+      "kellyMinSharpe": 0.3,
+      "targetVol": 0.15,
+      "lookbackVol": 20,
+      "mddLimit": -0.25,
+      "dailyLimit": -0.08,
+      "consecutiveLossLimit": 5,
+      "weeklyLimit": -0.15,
+      "maxDataAgeDays": 5,
+      "minUniverseSize": 1000
+    }
+  },
+  "portfolio": {},
+  "holdings": {
+    "count": 0,
+    "items": []
+  },
+  "thresholds": {
+    "maxPositionPct": 0.1,
+    "minPositionPct": 0.02,
+    "maxTotalPositions": 10,
+    "kellyFraction": 0.5,
+    "maxKellyFraction": 0.25,
+    "kellyMinSharpe": 0.3,
+    "targetVol": 0.15,
+    "lookbackVol": 20,
+    "mddLimit": -0.25,
+    "dailyLimit": -0.08,
+    "consecutiveLossLimit": 5,
+    "weeklyLimit": -0.15,
+    "maxDataAgeDays": 5,
+    "minUniverseSize": 1000
+  },
+  "updatedAt": "2026-08-24T15:56:46.122Z",
+  "signalGeneration": "OK",
+  "lastSignals": {
+    "buy1Count": 0,
+    "buy2Count": 0,
+    "sell1Count": 0,
+    "sell2Count": 0,
+    "topPicks": []
+  }
+}

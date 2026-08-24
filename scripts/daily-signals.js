@@ -3,6 +3,8 @@
 // — public/data/signals.json 갱신
 // — 1차매수/2차매수/1차매도/2차매도 신호 추출
 // — KOSPI/KOSDAQ Top 신호 종목 표시
+// — [신규] position sizing (Kelly + vol targeting)
+// — [신규] pre-flight + circuit breaker (data/risk.js)
 'use strict';
 process.chdir('C:/Users/LG/Documents/quant_invest');
 delete process.env.DUCKDB_READ_ONLY;
@@ -13,9 +15,12 @@ const db = require('../src/db/connection');
 const signals = require('../src/data/signals');
 const { calculateMarketRegime } = require('../src/data/market');
 const { isExcludedProduct } = require('../src/data/filters');
+const risk = require('../src/data/risk');
 
 const DATA_DIR = path.join(__dirname, '..', 'public', 'data');
 const SIGNALS_FILE = path.join(DATA_DIR, 'signals.json');
+const OPS_FILE = path.join(DATA_DIR, 'ops-status.json');
+const PORTFOLIO_FILE = path.join(DATA_DIR, 'portfolio-state.json');
 
 function n(v) {
   if (v === null || v === undefined) return null;
@@ -31,8 +36,44 @@ async function main() {
   const today = new Date().toISOString().slice(0, 10);
   console.log(`=== 일일 신호 생성 (${today}) ===\n`);
 
+  // 0) Pre-flight 검증 (DB 신선도, 회로차단기)
+  console.log('[0/4] Pre-flight 검증...');
+  const pf = await risk.preFlight(db);
+  if (!pf.ok) {
+    console.log('  ⛔ 데이터 신선도 / 유니버스 오류:');
+    pf.errors.forEach((e) => console.log(`    - ${e}`));
+    process.exit(1);
+  }
+  // 회로차단기 체크
+  let portfolio = {};
+  if (fs.existsSync(PORTFOLIO_FILE)) {
+    try { portfolio = JSON.parse(fs.readFileSync(PORTFOLIO_FILE, 'utf-8')); } catch (e) {}
+  }
+  const cb = risk.circuitBreaker({
+    totalEquity: portfolio.totalEquity || 0,
+    peakEquity: portfolio.peakEquity || 0,
+    dailyReturn: portfolio.dailyReturn || 0,
+    weeklyReturn: portfolio.weeklyReturn || 0,
+    mdd: portfolio.mdd || 0,
+    consecutiveLosses: portfolio.consecutiveLosses || 0,
+  });
+  if (cb.halt) {
+    console.log(`  ⛔ 회로차단기 작동: ${cb.reason}`);
+    risk.updateOpsStatus(OPS_FILE, {
+      date: today,
+      preflight: { ok: true, errors: [], warnings: [], stats: pf.stats },
+      circuitBreaker: cb,
+      signalGeneration: 'BLOCKED',
+    });
+    process.exit(1);
+  }
+  console.log(`  ✅ Pre-flight OK (마지막 데이터: ${pf.stats.lastDataDate}, 유니버스: ${pf.stats.universeSize}개)`);
+  if (cb.warnings.length > 0) {
+    cb.warnings.forEach((w) => console.log(`  ⚠️  ${w}`));
+  }
+
   // 1) DB에서 모든 활성 종목 + 최근 일봉 로드
-  console.log('[1/4] 활성 종목 + 일봉 로드...');
+  console.log('\n[1/4] 활성 종목 + 일봉 로드...');
   const sql = `
     SELECT s.code, s.name, s.market, s.sector,
       dp.date, dp.open, dp.high, dp.low, dp.close, dp.volume, dp.trading_value, dp.market_cap
@@ -133,6 +174,21 @@ async function main() {
   }
 
   // JSON 저장
+  // Position sizing (Kelly + vol targeting) — 1차매수 신호에 적용
+  console.log('\n[포지션] position sizing...');
+  const equity = portfolio.totalEquity || 10000000;  // 기본 1천만원
+  const recentSharpe = portfolio.recentSharpe || 0;
+  const recentVol = portfolio.recentVol || 0.15;
+  const top1 = buy1.slice(0, risk.DEFAULTS.maxTotalPositions);
+  const sized = risk.sizePortfolio(
+    top1.map((s) => ({ code: s.code, name: s.name, score: s.score, price: s.price, vol20: 0.2 })),
+    { totalEquity: equity, recentSharpe, recentVol, maxPositions: risk.DEFAULTS.maxTotalPositions }
+  );
+  console.log(`  총자산: ${equity.toLocaleString()}원, Kelly 활성화: ${recentSharpe >= risk.DEFAULTS.kellyMinSharpe ? '예' : '아니오 (Sharpe 부족)'}`);
+  for (const sz of sized) {
+    console.log(`    ${sz.code} (${sz.name}): ${sz.shares}주 @ ${(sz.weight * 100).toFixed(1)}% = ${Math.round(sz.cost).toLocaleString()}원`);
+  }
+
   const out = {
     date: today,
     updatedAt: new Date().toISOString(),
@@ -144,6 +200,14 @@ async function main() {
     sell1: sell1.slice(0, 30),
     sell2: sell2.slice(0, 20),
     marketRegime,
+    positionSizing: {
+      totalEquity: equity,
+      recentSharpe,
+      recentVol,
+      recommendations: sized,
+      thresholds: risk.DEFAULTS,
+    },
+    circuitBreaker: cb,
     stats: {
       buy1Count: buy1.length,
       buy2Count: buy2.length,
@@ -156,6 +220,21 @@ async function main() {
   console.log(`  ${SIGNALS_FILE} 저장 완료`);
   console.log(`  → 1차매수: ${buy1.length}개, 2차매수: ${buy2.length}개`);
   console.log(`  → 1차매도: ${sell1.length}개, 2차매도: ${sell2.length}개`);
+
+  // ops-status.json 갱신
+  risk.updateOpsStatus(OPS_FILE, {
+    date: today,
+    preflight: { ok: true, errors: [], warnings: [], stats: pf.stats },
+    circuitBreaker: cb,
+    signalGeneration: 'OK',
+    lastSignals: {
+      buy1Count: buy1.length,
+      buy2Count: buy2.length,
+      sell1Count: sell1.length,
+      sell2Count: sell2.length,
+      topPicks: sized.slice(0, 5).map((s) => ({ code: s.code, name: s.name, weight: s.weight, shares: s.shares })),
+    },
+  });
 
   // 알림 (Slack/Telegram webhook - 환경변수로 활성화)
   if (process.env.ALERT_WEBHOOK) {

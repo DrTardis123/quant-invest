@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>퀀트투자 운영 대시보드</title>
+  <link rel="stylesheet" href="css/dark.css">
+  <style>
+    .status-pill { padding: 4px 12px; border-radius: 12px; font-weight: 600; font-size: 12px; display: inline-block; }
+    .status-NORMAL { background: rgba(76, 175, 80, 0.2); color: #4caf50; }
+    .status-WARNING { background: rgba(255, 152, 0, 0.2); color: #ff9800; }
+    .status-HALT { background: rgba(244, 67, 54, 0.2); color: #f44336; }
+    .status-OK { background: rgba(76, 175, 80, 0.2); color: #4caf50; }
+    .status-BLOCKED { background: rgba(244, 67, 54, 0.2); color: #f44336; }
+    .kpi-card { background: #1a1c20; border: 1px solid #2a2c30; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+    .kpi-label { color: #8a8d92; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-value { color: #e8eaed; font-size: 28px; font-weight: 700; margin-top: 4px; }
+    .kpi-delta { color: #8a8d92; font-size: 12px; margin-top: 2px; }
+    .kpi-delta.pos { color: #4caf50; }
+    .kpi-delta.neg { color: #f44336; }
+    table.dark { width: 100%; border-collapse: collapse; }
+    table.dark th, table.dark td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #2a2c30; }
+    table.dark th { background: #15171a; color: #b8bcc1; font-weight: 600; font-size: 12px; text-transform: uppercase; }
+    table.dark tr:hover td { background: #15171a; }
+    .grade-A { color: #4caf50; font-weight: 700; }
+    .grade-B { color: #8bc34a; }
+    .grade-C { color: #ffc107; }
+    .grade-D { color: #ff9800; }
+    .grade-F { color: #f44336; }
+    .refresh-btn { background: #2a2c30; color: #e8eaed; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+    .refresh-btn:hover { background: #3a3c40; }
+    .panel-title { color: #b8bcc1; font-size: 16px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #ff5722; }
+    pre.json-preview { background: #15171a; color: #b8bcc1; padding: 12px; border-radius: 6px; font-size: 11px; max-height: 400px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <div id="sidebar-mount"></div>
+
+  <main class="main-content">
+    <div class="container-fluid py-4">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 style="color: #e8eaed; font-weight: 700;">🛡️ 운영 대시보드 (Production)</h2>
+        <div>
+          <span class="kpi-delta me-3">마지막 갱신: <span id="last-updated">--</span></span>
+          <button class="refresh-btn" onclick="loadAll()">🔄 새로고침</button>
+        </div>
+      </div>
+
+      <!-- 회로차단기 상태 -->
+      <div class="panel-title">⚡ 회로차단기 (Circuit Breaker)</div>
+      <div class="row g-3 mb-4">
+        <div class="col-md-3">
+          <div class="kpi-card">
+            <div class="kpi-label">상태</div>
+            <div class="kpi-value"><span id="cb-status" class="status-pill status-NORMAL">--</span></div>
+            <div class="kpi-delta" id="cb-reason">--</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="kpi-card">
+            <div class="kpi-label">MDD 한도</div>
+            <div class="kpi-value" id="cb-mdd">--%</div>
+            <div class="kpi-delta">현재 MDD: <span id="portfolio-mdd">--%</span></div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="kpi-card">
+            <div class="kpi-label">일일 손실 한도</div>
+            <div class="kpi-value" id="cb-daily">--%</div>
+            <div class="kpi-delta">현재 일일: <span id="portfolio-daily">--%</span></div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="kpi-card">
+            <div class="kpi-label">연속 손실</div>
+            <div class="kpi-value" id="cb-consecutive">--</div>
+            <div class="kpi-delta">한도: <span id="cb-consec-limit">--</span>일</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pre-flight 검증 -->
+      <div class="panel-title">✅ Pre-flight 검증</div>
+      <div class="row g-3 mb-4">
+        <div class="col-md-3">
+          <div class="kpi-card">
+            <div class="kpi-label">데이터 신선도</div>
+            <div class="kpi-value" id="pf-freshness">--일</div>
+            <div class="kpi-delta">마지막: <span id="pf-last-date">--</span></div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="kpi-card">
+            <div class="kpi-label">유니버스</div>
+            <div class="kpi-value" id="pf-universe">--</div>
+            <div class="kpi-delta">활성: <span id="pf-active">--</span></div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="kpi-card">
+            <div class="kpi-label">Pre-flight</div>
+            <div class="kpi-value"><span id="pf-status" class="status-pill status-NORMAL">--</span></div>
+            <div class="kpi-delta" id="pf-errors">--</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="kpi-card">
+            <div class="kpi-label">신호 생성</div>
+            <div class="kpi-value"><span id="signal-status" class="status-pill status-OK">--</span></div>
+            <div class="kpi-delta" id="signal-stats">--</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 포트폴리오 + Holdings -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <div class="panel-title">💰 포트폴리오</div>
+          <div class="kpi-card">
+            <div class="row">
+              <div class="col-6">
+                <div class="kpi-label">총 자산</div>
+                <div class="kpi-value" id="portfolio-equity">--</div>
+              </div>
+              <div class="col-6">
+                <div class="kpi-label">최고점</div>
+                <div class="kpi-value" id="portfolio-peak">--</div>
+              </div>
+            </div>
+            <hr style="border-color: #2a2c30;">
+            <div class="row">
+              <div class="col-6">
+                <div class="kpi-label">일일</div>
+                <div class="kpi-value" id="portfolio-daily-ret">--%</div>
+              </div>
+              <div class="col-6">
+                <div class="kpi-label">주간</div>
+                <div class="kpi-value" id="portfolio-weekly-ret">--%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="panel-title">📦 보유 종목 (<span id="holdings-count">0</span>개)</div>
+          <div id="holdings-table-container">
+            <table class="dark" id="holdings-table">
+              <thead>
+                <tr>
+                  <th>코드</th>
+                  <th>이름</th>
+                  <th>수량</th>
+                  <th>평단</th>
+                  <th>현재</th>
+                  <th>수익률</th>
+                  <th>손절/익절</th>
+                </tr>
+              </thead>
+              <tbody id="holdings-tbody">
+                <tr><td colspan="7" style="text-align: center; color: #8a8d92;">보유 종목 없음 (holdings.json 등록 필요)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 오늘의 신호 -->
+      <div class="panel-title">📊 오늘의 신호 (Top 10)</div>
+      <div class="kpi-card">
+        <div id="top10-container">
+          <table class="dark">
+            <thead>
+              <tr>
+                <th>코드</th>
+                <th>이름</th>
+                <th>시장</th>
+                <th>점수</th>
+                <th>등급</th>
+                <th>현재가</th>
+                <th>사유</th>
+              </tr>
+            </thead>
+            <tbody id="top10-tbody">
+              <tr><td colspan="7" style="text-align: center; color: #8a8d92;">신호 로드 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Position Sizing 추천 -->
+      <div class="panel-title">💼 Position Sizing 추천 (Kelly + vol targeting)</div>
+      <div class="kpi-card">
+        <div id="position-sizing-container">
+          <table class="dark">
+            <thead>
+              <tr>
+                <th>코드</th>
+                <th>이름</th>
+                <th>추천 비중</th>
+                <th>추천 금액</th>
+                <th>추천 수량</th>
+                <th>Kelly %</th>
+                <th>Vol %</th>
+              </tr>
+            </thead>
+            <tbody id="sizing-tbody">
+              <tr><td colspan="7" style="text-align: center; color: #8a8d92;">추천 로드 중...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="kpi-d mt-3" style="font-size: 11px; color: #8a8d92;">
+          ※ Kelly fraction (half-Kelly 25% cap) + vol targeting (target 15% / max 10% min 2%) + 포트폴리오 슬롯 (10종목) 기반.
+          ※ 실제 매매는 본인이 결정 (시스템은 신호 + 추천만 제공).
+        </div>
+      </div>
+
+      <!-- 1차 매수/매도 신호 -->
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="panel-title">🟢 1차 매수 (Top 10)</div>
+          <div class="kpi-card">
+            <div id="buy1-container">
+              <table class="dark">
+                <thead><tr><th>코드</th><th>이름</th><th>점수</th><th>사유</th></tr></thead>
+                <tbody id="buy1-tbody">
+                  <tr><td colspan="4" style="text-align: center; color: #8a8d92;">신호 로드 중...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="panel-title">🔴 1차 매도 (Top 10)</div>
+          <div class="kpi-card">
+            <div id="sell1-container">
+              <table class="dark">
+                <thead><tr><th>코드</th><th>이름</th><th>점수</th><th>사유</th></tr></thead>
+                <tbody id="sell1-tbody">
+                  <tr><td colspan="4" style="text-align: center; color: #8a8d92;">신호 로드 중...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/dark.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    async function fetchJSON(path) {
+      try {
+        const r = await fetch(path + '?t=' + Date.now());
+        if (!r.ok) return null;
+        return await r.json();
+      } catch (e) { return null; }
+    }
+
+    function fmtPct(v) { return (v == null || !isFinite(v)) ? '--' : (v * 100).toFixed(2) + '%'; }
+    function fmtNum(v) { return v == null ? '--' : v.toLocaleString(); }
+    function gradeClass(g) { return `grade-${g || 'F'}`; }
+
+    async function loadOpsStatus() {
+      const ops = await fetchJSON('data/ops-status.json');
+      if (!ops) {
+        $('last-updated').textContent = 'ops-status.json 없음';
+        return;
+      }
+      $('last-updated').textContent = ops.updatedAt ? new Date(ops.updatedAt).toLocaleString('ko-KR') : '--';
+
+      // 회로차단기
+      const cb = ops.circuitBreaker || {};
+      const cbEl = $('cb-status');
+      cbEl.textContent = cb.status || 'UNKNOWN';
+      cbEl.className = 'status-pill status-' + (cb.status || 'NORMAL');
+      $('cb-reason').textContent = cb.reason || (cb.warnings?.length > 0 ? '⚠️ ' + cb.warnings.join(', ') : '정상 작동');
+
+      const th = cb.thresholds || {};
+      $('cb-mdd').textContent = (th.mddLimit * 100).toFixed(0) + '%';
+      $('cb-daily').textContent = (th.dailyLimit * 100).toFixed(0) + '%';
+      $('cb-consecutive').textContent = ops.portfolio?.consecutiveLosses || 0;
+      $('cb-consec-limit').textContent = th.consecutiveLossLimit || 5;
+
+      // 포트폴리오
+      const pf = ops.portfolio || {};
+      $('portfolio-equity').textContent = fmtNum(pf.totalEquity);
+      $('portfolio-peak').textContent = fmtNum(pf.peakEquity);
+      $('portfolio-mdd').textContent = fmtPct(pf.mdd);
+      const dEl = $('portfolio-daily-ret');
+      dEl.textContent = fmtPct(pf.dailyReturn);
+      dEl.className = 'kpi-value ' + (pf.dailyReturn > 0 ? 'pos' : pf.dailyReturn < 0 ? 'neg' : '');
+      const wEl = $('portfolio-weekly-ret');
+      wEl.textContent = fmtPct(pf.weeklyReturn);
+      wEl.className = 'kpi-value ' + (pf.weeklyReturn > 0 ? 'pos' : pf.weeklyReturn < 0 ? 'neg' : '');
+
+      // Pre-flight
+      const pre = ops.preflight || {};
+      $('pf-freshness').textContent = pre.stats?.dataAgeDays + '일';
+      $('pf-last-date').textContent = pre.stats?.lastDataDate || '--';
+      $('pf-universe').textContent = fmtNum(pre.stats?.universeSize);
+      $('pf-active').textContent = fmtNum(pre.stats?.activeStocks);
+      const pfEl = $('pf-status');
+      pfEl.textContent = pre.ok ? 'OK' : 'ERROR';
+      pfEl.className = 'status-pill status-' + (pre.ok ? 'OK' : 'HALT');
+      $('pf-errors').textContent = pre.errors?.length > 0 ? '⛔ ' + pre.errors.length + '개 오류' : (pre.warnings?.length > 0 ? '⚠️ ' + pre.warnings.length + '개 경고' : '정상');
+
+      // 신호 상태
+      const sEl = $('signal-status');
+      sEl.textContent = ops.signalGeneration || 'UNKNOWN';
+      sEl.className = 'status-pill status-' + (ops.signalGeneration === 'OK' ? 'OK' : ops.signalGeneration === 'BLOCKED' ? 'HALT' : 'WARNING');
+      $('signal-stats').textContent = ops.lastSignals ? `1차매수 ${ops.lastSignals.buy1Count}개, 1차매도 ${ops.lastSignals.sell1Count}개` : '--';
+
+      // Holdings
+      const h = ops.holdings || { count: 0, items: [] };
+      $('holdings-count').textContent = h.count;
+      if (h.items && h.items.length > 0) {
+        const tbody = $('holdings-tbody');
+        tbody.innerHTML = '';
+        for (const it of h.items) {
+          const pnl = it.currentPrice ? (it.currentPrice / it.avgPrice - 1) : 0;
+          const pnlClass = pnl > 0 ? 'pos' : pnl < 0 ? 'neg' : '';
+          const sp = it.stopLoss ? `손절 ${(it.stopLoss * 100).toFixed(0)}%` : '';
+          const tp = it.takeProfit ? `익절 ${(it.takeProfit * 100).toFixed(0)}%` : '';
+          tbody.innerHTML += `<tr>
+            <td>${it.code}</td>
+            <td>${it.name || '?'}</td>
+            <td>${fmtNum(it.shares)}</td>
+            <td>${fmtNum(it.avgPrice)}</td>
+            <td>${fmtNum(it.currentPrice || it.avgPrice)}</td>
+            <td class="${pnlClass}">${fmtPct(pnl)}</td>
+            <td style="font-size: 11px; color: #8a8d92;">${sp}${sp && tp ? ' / ' : ''}${tp}</td>
+          </tr>`;
+        }
+      }
+    }
+
+    async function loadSignals() {
+      const sig = await fetchJSON('data/signals.json');
+      if (!sig) return;
+      // top10
+      const top10 = sig.top10 || [];
+      const tbody = $('top10-tbody');
+      tbody.innerHTML = '';
+      for (const t of top10.slice(0, 10)) {
+        tbody.innerHTML += `<tr>
+          <td>${t.code}</td>
+          <td>${t.name}</td>
+          <td>${t.market}</td>
+          <td>${(t.score || 0).toFixed(2)}</td>
+          <td class="${gradeClass(t.grade)}">${t.grade}</td>
+          <td>${fmtNum(t.close || t.price)}</td>
+          <td style="font-size: 11px; color: #8a8d92;">${(t.matrix?.contribs ? Object.entries(t.matrix.contribs).slice(0, 2).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${(v * 100).toFixed(0)}%`).join(', ') : '--')}</td>
+        </tr>`;
+      }
+      // buy1
+      const buy1 = sig.buy1 || [];
+      const buy1Tbody = $('buy1-tbody');
+      buy1Tbody.innerHTML = '';
+      for (const s of buy1.slice(0, 10)) {
+        buy1Tbody.innerHTML += `<tr>
+          <td>${s.code}</td>
+          <td>${s.name}</td>
+          <td>${(s.score || 0).toFixed(2)}</td>
+          <td style="font-size: 11px; color: #8a8d92;">${(s.reason || []).slice(0, 2).join(', ')}</td>
+        </tr>`;
+      }
+      // sell1
+      const sell1 = sig.sell1 || [];
+      const sell1Tbody = $('sell1-tbody');
+      sell1Tbody.innerHTML = '';
+      for (const s of sell1.slice(0, 10)) {
+        sell1Tbody.innerHTML += `<tr>
+          <td>${s.code}</td>
+          <td>${s.name}</td>
+          <td>${(s.score || 0).toFixed(2)}</td>
+          <td style="font-size: 11px; color: #8a8d92;">${(s.reason || []).slice(0, 2).join(', ')}</td>
+        </tr>`;
+      }
+      // Position Sizing
+      const sizing = sig.positionSizing?.recommendations || [];
+      const sizingTbody = $('sizing-tbody');
+      sizingTbody.innerHTML = '';
+      if (sizing.length === 0) {
+        sizingTbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #8a8d92;">추천 없음 (Sharpe 부족 또는 1차매수 신호 없음)</td></tr>';
+      } else {
+        for (const sz of sizing) {
+          sizingTbody.innerHTML += `<tr>
+            <td>${sz.code}</td>
+            <td>${sz.name}</td>
+            <td>${(sz.weight * 100).toFixed(1)}%</td>
+            <td>${fmtNum(Math.round(sz.cost))}</td>
+            <td>${fmtNum(sz.shares)}</td>
+            <td>${(sz.kellyPct * 100).toFixed(1)}%</td>
+            <td>${(sz.volPct * 100).toFixed(1)}%</td>
+          </tr>`;
+        }
+      }
+    }
+
+    async function loadAll() {
+      await loadOpsStatus();
+      await loadSignals();
+    }
+    loadAll();
+    // 1분마다 자동 갱신
+    setInterval(loadAll, 60000);
+  </script>
+</body>
+</html>

@@ -21,6 +21,7 @@
     else activeKey = 'home';
   } else if (path === '/explore' || path === '/explore.html') activeKey = 'explore';
   else if (path === '/analysis' || path === '/analysis.html') activeKey = 'analysis';
+  else if (path === '/ops' || path === '/ops.html') activeKey = 'ops';
 
   const NAV = [
     { section: 'Overview' },
@@ -37,6 +38,7 @@
 
     { section: 'Tools' },
     { key: 'explore',      label: '탐색',        icon: '🔍', href: '/explore' },
+    { key: 'ops',          label: '운영',        icon: '🛡️', href: '/ops' },
   ];
 
   // 사이드바 HTML

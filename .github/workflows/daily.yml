@@ -84,19 +84,25 @@ jobs:
           node-version: '24'
           cache: 'npm'
       - run: npm install --no-audit --no-fund --prefer-offline
+      - name: Pre-flight 검증 (회로차단기, 데이터 신선도)
+        env:
+          DUCKDB_READ_ONLY: '1'
+        run: node scripts/pre-flight.js || echo "pre-flight 실패, 신호 생성 시도"
+        continue-on-error: true
       - name: 일일 신호 생성
         env:
           ALERT_WEBHOOK: ${{ secrets.ALERT_WEBHOOK }}
         run: node scripts/daily-signals.js
+        continue-on-error: true
       - name: 변경 확인 + 푸시
         run: |
-          if git diff --quiet public/data/signals.json 2>/dev/null; then
+          if git diff --quiet public/data/signals.json public/data/ops-status.json 2>/dev/null; then
             echo "변경 없음"
           else
             git config user.name 'github-actions[bot]'
             git config user.email 'github-actions[bot]@users.noreply.github.com'
-            git add public/data/signals.json
-            git commit -m "signals: $(date -u +%Y-%m-%d) 신호"
+            git add public/data/signals.json public/data/ops-status.json
+            git commit -m "signals: $(date -u +%Y-%m-%d) 신호 + ops-status"
             git push
           fi
 

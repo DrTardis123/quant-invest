@@ -1,0 +1,92 @@
+{
+  "date": "2026-08-24",
+  "updatedAt": "2026-08-24T15:56:46.119Z",
+  "universeSize": 799,
+  "matrixCalculated": 0,
+  "top10": [],
+  "buy1": [],
+  "buy2": [],
+  "sell1": [],
+  "sell2": [],
+  "marketRegime": {
+    "score": 50,
+    "label": "중립",
+    "emoji": "➖",
+    "bgColor": "#9ca3af",
+    "advice": "관망 유지, 선별 매수",
+    "components": {
+      "trend": {
+        "score": 50,
+        "weight": 0.25
+      },
+      "momentum": {
+        "score": 50,
+        "weight": 0.2
+      },
+      "breadth": {
+        "score": 50,
+        "weight": 0.25
+      },
+      "newHighLow": {
+        "score": 50,
+        "weight": 0.15
+      },
+      "volatility": {
+        "score": 50,
+        "weight": 0.15
+      }
+    },
+    "breadthSize": 0,
+    "generatedAt": "2026-08-24T15:56:46.042Z"
+  },
+  "positionSizing": {
+    "totalEquity": 10000000,
+    "recentSharpe": 0,
+    "recentVol": 0.15,
+    "recommendations": [],
+    "thresholds": {
+      "maxPositionPct": 0.1,
+      "minPositionPct": 0.02,
+      "maxTotalPositions": 10,
+      "kellyFraction": 0.5,
+      "maxKellyFraction": 0.25,
+      "kellyMinSharpe": 0.3,
+      "targetVol": 0.15,
+      "lookbackVol": 20,
+      "mddLimit": -0.25,
+      "dailyLimit": -0.08,
+      "consecutiveLossLimit": 5,
+      "weeklyLimit": -0.15,
+      "maxDataAgeDays": 5,
+      "minUniverseSize": 1000
+    }
+  },
+  "circuitBreaker": {
+    "halt": false,
+    "warnings": [],
+    "status": "NORMAL",
+    "reason": null,
+    "thresholds": {
+      "maxPositionPct": 0.1,
+      "minPositionPct": 0.02,
+      "maxTotalPositions": 10,
+      "kellyFraction": 0.5,
+      "maxKellyFraction": 0.25,
+      "kellyMinSharpe": 0.3,
+      "targetVol": 0.15,
+      "lookbackVol": 20,
+      "mddLimit": -0.25,
+      "dailyLimit": -0.08,
+      "consecutiveLossLimit": 5,
+      "weeklyLimit": -0.15,
+      "maxDataAgeDays": 5,
+      "minUniverseSize": 1000
+    }
+  },
+  "stats": {
+    "buy1Count": 0,
+    "buy2Count": 0,
+    "sell1Count": 0,
+    "sell2Count": 0
+  }
+}
