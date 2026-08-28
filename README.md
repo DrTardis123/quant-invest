@@ -4,6 +4,8 @@
 > 30 알파 (모멘텀/반전/거래량/변동성/추세/유동성) + 14개 매트릭스 + 5-fold walk-forward CV
 > KOSPI/KOSDAQ 1,355개 종목 × 1,222일 (5년치) 일봉 데이터 기반
 
+> **🤖 AI 도구 인수인계**: [HANDOFF.md](./HANDOFF.md) + [STATE.md](./STATE.md) — Claude Code / Gemini 등 어느 AI로도 작업 재개 가능
+
 ## 🎯 시스템 역할
 
 | | 시스템 | 사람 |
@@ -46,11 +48,17 @@ node scripts/dev-server.js
 
 ## 📁 문서
 
+### 🤖 AI 도구 인수인계 (필수)
+- 🤖 [HANDOFF.md](./HANDOFF.md) — AI 도구 인수인계 가이드 (Claude Code / Gemini 등)
+- 📍 [STATE.md](./STATE.md) — 현재 상태 스냅샷 (진행 중, 알려진 이슈, 다음 작업)
+
 ### 운영
 - 📐 [SYSTEM-ARCHITECTURE.md](./docs/SYSTEM-ARCHITECTURE.md) — 시스템 구조
 - 📋 [OPERATIONS-GUIDE.md](./docs/OPERATIONS-GUIDE.md) — 일일/주간/월간 운영 가이드
 - 🚨 [ALERT-RUNBOOK.md](./docs/ALERT-RUNBOOK.md) — 문제 대응 매뉴얼
 - 📊 [HISTORY.md](./docs/HISTORY.md) — 전체 진행 히스토리
+- 🛡️ [PRODUCTION-READY.md](./docs/PRODUCTION-READY.md) — 실전 투입 가이드
+- 🎯 [PER-ALPHA-SELECTION.md](./docs/PER-ALPHA-SELECTION.md) — 30 알파 5-fold CV + HMM 3-state
 
 ### 데이터
 - 🔑 [KIS-API-GUIDE.md](./docs/KIS-API-GUIDE.md) — KIS 모의투자 API 사용법
