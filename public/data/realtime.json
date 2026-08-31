@@ -1,6 +1,6 @@
 {
-  "asOf": "2026-08-31T06:30:29.275Z",
-  "fetchedAt": "2026-08-31T06:30:29.275Z",
+  "asOf": "2026-08-31T06:42:59.080Z",
+  "fetchedAt": "2026-08-31T06:42:59.080Z",
   "n": 20,
   "quotes": [
     {
@@ -10,7 +10,7 @@
       "close": 5770,
       "change": -180,
       "change_pct": -3.03,
-      "volume": "4843882",
+      "volume": "4843982",
       "market_cap": "5011418100000",
       "rank": 1
     },
@@ -54,7 +54,7 @@
       "close": 2090,
       "change": -70,
       "change_pct": -3.24,
-      "volume": "1903332",
+      "volume": "1904056",
       "market_cap": "674541940600",
       "rank": 5
     },
@@ -65,7 +65,7 @@
       "close": 8410,
       "change": -40,
       "change_pct": -0.47,
-      "volume": "801053",
+      "volume": "813425",
       "market_cap": "981774275150",
       "rank": 6
     },
@@ -76,7 +76,7 @@
       "close": 127100,
       "change": -2100,
       "change_pct": -1.63,
-      "volume": "494564",
+      "volume": "494565",
       "market_cap": "11807017414500",
       "rank": 7
     },
@@ -98,7 +98,7 @@
       "close": 8020,
       "change": 100,
       "change_pct": 1.26,
-      "volume": "334289",
+      "volume": "334491",
       "market_cap": "280061688200",
       "rank": 9
     },
@@ -109,7 +109,7 @@
       "close": 190600,
       "change": -1800,
       "change_pct": -0.94,
-      "volume": "167681",
+      "volume": "167752",
       "market_cap": "6664125058000",
       "rank": 10
     },
@@ -120,7 +120,7 @@
       "close": 5560,
       "change": -60,
       "change_pct": -1.07,
-      "volume": "105731",
+      "volume": "105804",
       "market_cap": "556049467320",
       "rank": 11
     },
@@ -164,7 +164,7 @@
       "close": 2035,
       "change": -10,
       "change_pct": -0.49,
-      "volume": "185153",
+      "volume": "187256",
       "market_cap": "316458200025",
       "rank": 15
     },
@@ -172,11 +172,11 @@
       "code": "001200",
       "name": "유진투자증권",
       "sector": "",
-      "close": 4395,
-      "change": 0,
-      "change_pct": 0,
-      "volume": "455271",
-      "market_cap": "425727907110",
+      "close": 4390,
+      "change": -5,
+      "change_pct": -0.11,
+      "volume": "461072",
+      "market_cap": "425243575020",
       "rank": 16
     },
     {
@@ -194,11 +194,11 @@
       "code": "010780",
       "name": "아이에스동서",
       "sector": "",
-      "close": 16010,
-      "change": -330,
-      "change_pct": -2.02,
-      "volume": "76841",
-      "market_cap": "483293485760",
+      "close": 16070,
+      "change": -270,
+      "change_pct": -1.65,
+      "volume": "78516",
+      "market_cap": "485104704320",
       "rank": 18
     },
     {
@@ -216,11 +216,11 @@
       "code": "139130",
       "name": "iM금융지주",
       "sector": "",
-      "close": 18510,
-      "change": 390,
-      "change_pct": 2.15,
-      "volume": "290842",
-      "market_cap": "2931306682080",
+      "close": 18490,
+      "change": 370,
+      "change_pct": 2.04,
+      "volume": "368349",
+      "market_cap": "2928139413920",
       "rank": 20
     }
   ]
