@@ -1,6 +1,6 @@
 {
-  "asOf": "2026-08-31T06:42:59.080Z",
-  "fetchedAt": "2026-08-31T06:42:59.080Z",
+  "asOf": "2026-08-31T06:55:35.878Z",
+  "fetchedAt": "2026-08-31T06:55:35.878Z",
   "n": 20,
   "quotes": [
     {
@@ -10,7 +10,7 @@
       "close": 5770,
       "change": -180,
       "change_pct": -3.03,
-      "volume": "4843982",
+      "volume": "4852410",
       "market_cap": "5011418100000",
       "rank": 1
     },
@@ -32,7 +32,7 @@
       "close": 31900,
       "change": -650,
       "change_pct": -2,
-      "volume": "1363546",
+      "volume": "1363559",
       "market_cap": "20478654056300",
       "rank": 3
     },
@@ -54,7 +54,7 @@
       "close": 2090,
       "change": -70,
       "change_pct": -3.24,
-      "volume": "1904056",
+      "volume": "1904836",
       "market_cap": "674541940600",
       "rank": 5
     },
@@ -65,7 +65,7 @@
       "close": 8410,
       "change": -40,
       "change_pct": -0.47,
-      "volume": "813425",
+      "volume": "813513",
       "market_cap": "981774275150",
       "rank": 6
     },
@@ -76,7 +76,7 @@
       "close": 127100,
       "change": -2100,
       "change_pct": -1.63,
-      "volume": "494565",
+      "volume": "494568",
       "market_cap": "11807017414500",
       "rank": 7
     },
@@ -87,7 +87,7 @@
       "close": 37450,
       "change": 350,
       "change_pct": 0.94,
-      "volume": "132014",
+      "volume": "132015",
       "market_cap": "3457121850000",
       "rank": 8
     },
@@ -98,7 +98,7 @@
       "close": 8020,
       "change": 100,
       "change_pct": 1.26,
-      "volume": "334491",
+      "volume": "334530",
       "market_cap": "280061688200",
       "rank": 9
     },
@@ -109,7 +109,7 @@
       "close": 190600,
       "change": -1800,
       "change_pct": -0.94,
-      "volume": "167752",
+      "volume": "167786",
       "market_cap": "6664125058000",
       "rank": 10
     },
@@ -120,7 +120,7 @@
       "close": 5560,
       "change": -60,
       "change_pct": -1.07,
-      "volume": "105804",
+      "volume": "105876",
       "market_cap": "556049467320",
       "rank": 11
     },
@@ -175,7 +175,7 @@
       "close": 4390,
       "change": -5,
       "change_pct": -0.11,
-      "volume": "461072",
+      "volume": "461573",
       "market_cap": "425243575020",
       "rank": 16
     },
@@ -186,7 +186,7 @@
       "close": 30400,
       "change": -600,
       "change_pct": -1.94,
-      "volume": "337017",
+      "volume": "337019",
       "market_cap": "4056751864000",
       "rank": 17
     },
