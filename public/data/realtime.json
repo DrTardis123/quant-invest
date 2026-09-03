@@ -1,6 +1,6 @@
 {
-  "asOf": "2026-09-03T06:31:18.637Z",
-  "fetchedAt": "2026-09-03T06:31:18.637Z",
+  "asOf": "2026-09-03T06:50:53.658Z",
+  "fetchedAt": "2026-09-03T06:50:53.658Z",
   "n": 20,
   "quotes": [
     {
@@ -10,7 +10,7 @@
       "close": 6110,
       "change": 340,
       "change_pct": 5.89,
-      "volume": "22315917",
+      "volume": "22329532",
       "market_cap": "5306718300000",
       "rank": 1
     },
@@ -32,7 +32,7 @@
       "close": 32450,
       "change": 1200,
       "change_pct": 3.84,
-      "volume": "2547538",
+      "volume": "2547840",
       "market_cap": "20831734298650",
       "rank": 3
     },
@@ -43,7 +43,7 @@
       "close": 21700,
       "change": 450,
       "change_pct": 2.12,
-      "volume": "350471",
+      "volume": "350770",
       "market_cap": "193800681900",
       "rank": 4
     },
@@ -54,7 +54,7 @@
       "close": 2075,
       "change": 65,
       "change_pct": 3.23,
-      "volume": "2619585",
+      "volume": "2622808",
       "market_cap": "669700730500",
       "rank": 5
     },
@@ -65,7 +65,7 @@
       "close": 8950,
       "change": 370,
       "change_pct": 4.31,
-      "volume": "1569319",
+      "volume": "1569467",
       "market_cap": "1044813289250",
       "rank": 6
     },
@@ -76,7 +76,7 @@
       "close": 118900,
       "change": -1100,
       "change_pct": -0.92,
-      "volume": "562734",
+      "volume": "562742",
       "market_cap": "11045274355500",
       "rank": 7
     },
@@ -87,7 +87,7 @@
       "close": 37700,
       "change": 700,
       "change_pct": 1.89,
-      "volume": "243071",
+      "volume": "243076",
       "market_cap": "3480200100000",
       "rank": 8
     },
@@ -98,7 +98,7 @@
       "close": 7590,
       "change": -60,
       "change_pct": -0.78,
-      "volume": "194353",
+      "volume": "194374",
       "market_cap": "265045911900",
       "rank": 9
     },
@@ -109,7 +109,7 @@
       "close": 184600,
       "change": 4600,
       "change_pct": 2.56,
-      "volume": "82189",
+      "volume": "82219",
       "market_cap": "6454341478000",
       "rank": 10
     },
@@ -142,7 +142,7 @@
       "close": 133100,
       "change": 5900,
       "change_pct": 4.64,
-      "volume": "206090",
+      "volume": "206100",
       "market_cap": "3348439957500",
       "rank": 13
     },
@@ -153,7 +153,7 @@
       "close": 34900,
       "change": -800,
       "change_pct": -2.24,
-      "volume": "59053",
+      "volume": "59058",
       "market_cap": "266188302800",
       "rank": 14
     },
@@ -164,7 +164,7 @@
       "close": 2025,
       "change": 38,
       "change_pct": 1.91,
-      "volume": "379935",
+      "volume": "379942",
       "market_cap": "314903122875",
       "rank": 15
     },
@@ -186,7 +186,7 @@
       "close": 31650,
       "change": 1750,
       "change_pct": 5.85,
-      "volume": "954821",
+      "volume": "954930",
       "market_cap": "4223559095250",
       "rank": 17
     },
@@ -208,7 +208,7 @@
       "close": 21150,
       "change": 300,
       "change_pct": 1.44,
-      "volume": "1274242",
+      "volume": "1274274",
       "market_cap": "16865557129350",
       "rank": 19
     },
@@ -219,7 +219,7 @@
       "close": 19050,
       "change": 190,
       "change_pct": 1.01,
-      "volume": "632445",
+      "volume": "632458",
       "market_cap": "3016822922400",
       "rank": 20
     }
