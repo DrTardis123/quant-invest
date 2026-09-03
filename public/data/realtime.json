@@ -1,6 +1,6 @@
 {
-  "asOf": "2026-09-03T06:50:53.658Z",
-  "fetchedAt": "2026-09-03T06:50:53.658Z",
+  "asOf": "2026-09-03T07:07:24.151Z",
+  "fetchedAt": "2026-09-03T07:07:24.151Z",
   "n": 20,
   "quotes": [
     {
@@ -10,7 +10,7 @@
       "close": 6110,
       "change": 340,
       "change_pct": 5.89,
-      "volume": "22329532",
+      "volume": "22332647",
       "market_cap": "5306718300000",
       "rank": 1
     },
@@ -32,7 +32,7 @@
       "close": 32450,
       "change": 1200,
       "change_pct": 3.84,
-      "volume": "2547840",
+      "volume": "2547845",
       "market_cap": "20831734298650",
       "rank": 3
     },
@@ -54,7 +54,7 @@
       "close": 2075,
       "change": 65,
       "change_pct": 3.23,
-      "volume": "2622808",
+      "volume": "2623655",
       "market_cap": "669700730500",
       "rank": 5
     },
@@ -65,7 +65,7 @@
       "close": 8950,
       "change": 370,
       "change_pct": 4.31,
-      "volume": "1569467",
+      "volume": "1569468",
       "market_cap": "1044813289250",
       "rank": 6
     },
@@ -87,7 +87,7 @@
       "close": 37700,
       "change": 700,
       "change_pct": 1.89,
-      "volume": "243076",
+      "volume": "243084",
       "market_cap": "3480200100000",
       "rank": 8
     },
@@ -98,7 +98,7 @@
       "close": 7590,
       "change": -60,
       "change_pct": -0.78,
-      "volume": "194374",
+      "volume": "194423",
       "market_cap": "265045911900",
       "rank": 9
     },
@@ -109,7 +109,7 @@
       "close": 184600,
       "change": 4600,
       "change_pct": 2.56,
-      "volume": "82219",
+      "volume": "82222",
       "market_cap": "6454341478000",
       "rank": 10
     },
@@ -164,7 +164,7 @@
       "close": 2025,
       "change": 38,
       "change_pct": 1.91,
-      "volume": "379942",
+      "volume": "380066",
       "market_cap": "314903122875",
       "rank": 15
     },
@@ -197,7 +197,7 @@
       "close": 15670,
       "change": 60,
       "change_pct": 0.38,
-      "volume": "111731",
+      "volume": "111732",
       "market_cap": "473029913920",
       "rank": 18
     },
